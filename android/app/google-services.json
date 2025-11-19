@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1074635639605",
+    "project_id": "arteria-cc308",
+    "storage_bucket": "arteria-cc308.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074635639605:android:da3ad1e2b444192aef9a7c",
+        "android_client_info": {
+          "package_name": "app.arteria.blm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1074635639605-n3pi09i2vvqnsdlap4qnhftnmr38p2bg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.arteria.blm",
+            "certificate_hash": "048fd63f0bb04b55036db6a31aafe3a3b7bed5fa"
+          }
+        },
+        {
+          "client_id": "1074635639605-mt2uk705j8t6erllf8ln7ujgtn58tuvl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNY9pPbwYh77gGm6-zJz2bVWbLqng2H50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1074635639605-mt2uk705j8t6erllf8ln7ujgtn58tuvl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
