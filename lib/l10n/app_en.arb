@@ -1,0 +1,337 @@
+{
+  "appTitle": "Arteria",
+  "@appTitle": {
+    "description": "Application title"
+  },
+  
+  "welcomeBack": "Welcome back!",
+  "@welcomeBack": {
+    "description": "Login page welcome message"
+  },
+  
+  "loginSubtitle": "Log in to continue monitoring with Arteria",
+  "@loginSubtitle": {
+    "description": "Login page subtitle"
+  },
+  
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+  
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  
+  "emailRequired": "Email is required",
+  "@emailRequired": {
+    "description": "Email validation error"
+  },
+  
+  "passwordRequired": "Password is required",
+  "@passwordRequired": {
+    "description": "Password validation error"
+  },
+  
+  "forgotPassword": "Forgot Password?",
+  "@forgotPassword": {
+    "description": "Forgot password button text"
+  },
+  
+  "forgotPasswordTitle": "Forgot Password",
+  "@forgotPasswordTitle": {
+    "description": "Forgot password dialog title"
+  },
+  
+  "enterEmail": "Enter your email...",
+  "@enterEmail": {
+    "description": "Email input placeholder"
+  },
+  
+  "cancel": "CANCEL",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  
+  "reset": "RESET",
+  "@reset": {
+    "description": "Reset button text"
+  },
+  
+  "login": "Login",
+  "@login": {
+    "description": "Login button text"
+  },
+  
+  "orContinueWith": "Or continue with",
+  "@orContinueWith": {
+    "description": "Divider text for alternative login methods"
+  },
+  
+  "continueWithGoogle": "Continue with Google",
+  "@continueWithGoogle": {
+    "description": "Google sign-in button text"
+  },
+  
+  "dontHaveAccount": "Don't have an account?",
+  "@dontHaveAccount": {
+    "description": "Sign up prompt text"
+  },
+  
+  "signUp": "Sign up",
+  "@signUp": {
+    "description": "Sign up link text"
+  },
+  
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings page title"
+  },
+  
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation label"
+  },
+  
+  "insights": "Insights",
+  "@insights": {
+    "description": "Insights navigation label"
+  },
+  
+  "history": "History",
+  "@history": {
+    "description": "History navigation label"
+  },
+  
+  "more": "More",
+  "@more": {
+    "description": "More navigation label"
+  },
+  
+  "welcomeFirstTime": "Welcome, {name}! 🎉",
+  "@welcomeFirstTime": {
+    "description": "First time user welcome message",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "John"
+      }
+    }
+  },
+  
+  "goodMorning": "Good morning",
+  "@goodMorning": {
+    "description": "Morning greeting"
+  },
+  
+  "goodAfternoon": "Good afternoon",
+  "@goodAfternoon": {
+    "description": "Afternoon greeting"
+  },
+  
+  "goodEvening": "Good evening",
+  "@goodEvening": {
+    "description": "Evening greeting"
+  },
+  
+  "greetingWithName": "{greeting}, {name}",
+  "@greetingWithName": {
+    "description": "Greeting with user's name",
+    "placeholders": {
+      "greeting": {
+        "type": "String",
+        "example": "Good morning"
+      },
+      "name": {
+        "type": "String",
+        "example": "John"
+      }
+    }
+  },
+  
+  "trackBPWithAI": "Track your blood pressure with AI",
+  "@trackBPWithAI": {
+    "description": "Subtitle for first-time users"
+  },
+  
+  "noRecentReadings": "No recent readings",
+  "@noRecentReadings": {
+    "description": "Message when no BP readings exist"
+  },
+  
+  "criticalBP": "Critical BP - Please consult a doctor",
+  "@criticalBP": {
+    "description": "Critical blood pressure warning"
+  },
+  
+  "bpHighToday": "Your BP is high today",
+  "@bpHighToday": {
+    "description": "High blood pressure message"
+  },
+  
+  "bpSlightlyElevated": "Your BP is slightly elevated",
+  "@bpSlightlyElevated": {
+    "description": "Elevated blood pressure message"
+  },
+  
+  "bpNormalToday": "Your BP is normal today ✓",
+  "@bpNormalToday": {
+    "description": "Normal blood pressure message"
+  },
+  
+  "recordNewReading": "Record New Reading",
+  "@recordNewReading": {
+    "description": "Button to record new BP reading"
+  },
+  
+  "viewTrends": "View Trends",
+  "@viewTrends": {
+    "description": "Button to view BP trends"
+  },
+  
+  "reminders": "Reminders",
+  "@reminders": {
+    "description": "Reminders button text"
+  },
+  
+  "setUpReminders": "Set Up Reminders",
+  "@setUpReminders": {
+    "description": "Set up reminders button text"
+  },
+  
+  "reminderSettings": "Reminder Settings",
+  "@reminderSettings": {
+    "description": "Reminder settings dialog title"
+  },
+  
+  "reminderSettingsDescription": "Set up reminders to track your blood pressure regularly.",
+  "@reminderSettingsDescription": {
+    "description": "Reminder settings description"
+  },
+  
+  "featureComingSoon": "This feature will be available soon!",
+  "@featureComingSoon": {
+    "description": "Coming soon message"
+  },
+  
+  "gotIt": "Got it",
+  "@gotIt": {
+    "description": "Acknowledgment button text"
+  },
+  
+  "trendsPageComingSoon": "Trends page coming soon",
+  "@trendsPageComingSoon": {
+    "description": "Trends page coming soon message"
+  },
+  
+  "aiInsightsComingSoon": "AI Insights coming soon!",
+  "@aiInsightsComingSoon": {
+    "description": "AI insights coming soon message"
+  },
+  
+  "bpHistoryWillAppear": "Your BP history will appear here.",
+  "@bpHistoryWillAppear": {
+    "description": "Empty history page message"
+  },
+  
+  "yourInfo": "Your Info",
+  "@yourInfo": {
+    "description": "User info section title"
+  },
+  
+  "age": "Age",
+  "@age": {
+    "description": "Age label"
+  },
+  
+  "height": "Height",
+  "@height": {
+    "description": "Height label"
+  },
+  
+  "weight": "Weight",
+  "@weight": {
+    "description": "Weight label"
+  },
+  
+  "gender": "Gender",
+  "@gender": {
+    "description": "Gender label"
+  },
+  
+  "appHealthSettings": "App & Health Settings",
+  "@appHealthSettings": {
+    "description": "App and health settings section title"
+  },
+  
+  "measurementHistoryExport": "Measurement History & Export",
+  "@measurementHistoryExport": {
+    "description": "Measurement history menu item"
+  },
+  
+  "reminderSettingsMenu": "Reminder Settings",
+  "@reminderSettingsMenu": {
+    "description": "Reminder settings menu item"
+  },
+  
+  "securityPrivacy": "Security & Privacy",
+  "@securityPrivacy": {
+    "description": "Security and privacy menu item"
+  },
+  
+  "appSettings": "App Settings",
+  "@appSettings": {
+    "description": "App settings section title"
+  },
+  
+  "darkMode": "Dark Mode",
+  "@darkMode": {
+    "description": "Dark mode toggle label"
+  },
+  
+  "language": "Language",
+  "@language": {
+    "description": "Language menu item"
+  },
+  
+  "faqHelpCenter": "FAQ / Help Center",
+  "@faqHelpCenter": {
+    "description": "FAQ/Help center menu item"
+  },
+  
+  "logOut": "Log Out",
+  "@logOut": {
+    "description": "Log out button text"
+  },
+  
+  "comingSoon": "Coming soon!",
+  "@comingSoon": {
+    "description": "Generic coming soon message"
+  },
+  
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Language selection dialog title"
+  },
+  
+  "english": "English",
+  "@english": {
+    "description": "English language option"
+  },
+  
+  "french": "French",
+  "@french": {
+    "description": "French language option"
+  },
+  
+  "takeNextReading": "Take your next reading",
+  "@takeNextReading": {
+    "description": "Next step reminder text"
+  },
+  
+  "tomorrowAt8AM": "Tomorrow at 8:00 AM",
+  "@tomorrowAt8AM": {
+    "description": "Example reminder time"
+  }
+}

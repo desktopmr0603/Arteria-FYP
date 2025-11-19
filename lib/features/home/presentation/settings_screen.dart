@@ -1,8 +1,12 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
 import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
+import 'package:arteria/features/settings/settings_bloc.dart';
+import 'package:arteria/features/settings/settings_event.dart';
+import 'package:arteria/l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -134,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       // App & Health Settings
                       Text(
-                        "App & Health Settings",
+                        AppLocalizations.of(context)!.appHealthSettings,
                         style: GoogleFonts.montserrat(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -146,7 +150,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildTile(
                         context,
                         theme: theme,
-                        title: "Measurement History & Export",
+                        title: AppLocalizations.of(
+                          context,
+                        )!.measurementHistoryExport,
                         icon: Icons.history_outlined,
                         onTap: () => _showComingSoon(context),
                         darkMode: darkMode,
@@ -156,7 +162,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildTile(
                         context,
                         theme: theme,
-                        title: "Reminder Settings",
+                        title: AppLocalizations.of(
+                          context,
+                        )!.reminderSettingsMenu,
                         icon: Icons.notifications_active_outlined,
                         onTap: () => _showComingSoon(context),
                         darkMode: darkMode,
@@ -166,7 +174,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildTile(
                         context,
                         theme: theme,
-                        title: "Security & Privacy",
+                        title: AppLocalizations.of(context)!.securityPrivacy,
                         icon: Icons.lock_outline,
                         onTap: () => _showComingSoon(context),
                         darkMode: darkMode,
@@ -176,7 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       // App Settings
                       Text(
-                        "App Settings",
+                        AppLocalizations.of(context)!.appSettings,
                         style: GoogleFonts.montserrat(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -189,7 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildSwitchTile(
                         context,
                         theme: theme,
-                        title: "Dark Mode",
+                        title: AppLocalizations.of(context)!.darkMode,
                         value: darkMode,
                         onChanged: (bool value) {
                           // 🔹 Instant theme update
@@ -205,9 +213,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildTile(
                         context,
                         theme: theme,
-                        title: "Language",
+                        title: AppLocalizations.of(context)!.language,
                         icon: Icons.language_rounded,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => _showLanguagePicker(context),
                         darkMode: darkMode,
                       ),
                       const SizedBox(height: 10),
@@ -215,7 +223,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildTile(
                         context,
                         theme: theme,
-                        title: "FAQ / Help Center",
+                        title: AppLocalizations.of(context)!.faqHelpCenter,
                         icon: Icons.help_outline_rounded,
                         onTap: () => _showComingSoon(context),
                         darkMode: darkMode,
@@ -231,7 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: Colors.redAccent,
                           ),
                           label: Text(
-                            "Log Out",
+                            AppLocalizations.of(context)!.logOut,
                             style: GoogleFonts.montserrat(
                               color: Colors.redAccent,
                               fontWeight: FontWeight.w600,
@@ -290,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             vertical: 8,
           ),
           title: Text(
-            "Your Info",
+            AppLocalizations.of(context)!.yourInfo,
             style: GoogleFonts.montserrat(
               fontWeight: FontWeight.w600,
               fontSize: 16,
@@ -301,11 +309,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           collapsedIconColor: textColor,
           children: [
             const SizedBox(height: 6),
-            _infoRow("Email", email, textColor),
-            _infoRow("Age", age, textColor),
-            _infoRow("Height", "$height cm", textColor),
-            _infoRow("Weight", "$weight kg", textColor),
-            _infoRow("Gender", gender, textColor),
+            _infoRow(AppLocalizations.of(context)!.email, email, textColor),
+            _infoRow(AppLocalizations.of(context)!.age, age, textColor),
+            _infoRow(
+              AppLocalizations.of(context)!.height,
+              "$height cm",
+              textColor,
+            ),
+            _infoRow(
+              AppLocalizations.of(context)!.weight,
+              "$weight kg",
+              textColor,
+            ),
+            _infoRow(AppLocalizations.of(context)!.gender, gender, textColor),
             const SizedBox(height: 6),
           ],
         ),
@@ -395,9 +411,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showLanguagePicker(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.language, color: Color(0xFFE63946)),
+            const SizedBox(width: 12),
+            Expanded(
+              // <-- prevents overflow & keeps size stable
+              child: Text(
+                AppLocalizations.of(context)!.selectLanguage,
+                style: GoogleFonts.montserrat(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+                softWrap: true,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildLanguageTile(
+              emoji: '🇬🇧',
+              text: AppLocalizations.of(context)!.english,
+              onTap: () {
+                context.read<SettingsBloc>().add(ChangeLocale(Locale('en')));
+                Navigator.pop(dialogContext);
+              },
+            ),
+            _buildLanguageTile(
+              emoji: '🇫🇷',
+              text: AppLocalizations.of(context)!.french,
+              onTap: () {
+                context.read<SettingsBloc>().add(ChangeLocale(Locale('fr')));
+                Navigator.pop(dialogContext);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageTile({
+    required String emoji,
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Text(emoji, style: const TextStyle(fontSize: 32)),
+      title: Text(
+        text,
+        style: GoogleFonts.openSans(fontSize: 16),
+        softWrap: true,
+      ),
+      onTap: onTap,
+    );
+  }
+
   void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Coming soon!')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
+    );
   }
 }

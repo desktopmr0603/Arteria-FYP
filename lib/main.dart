@@ -9,6 +9,7 @@ import 'package:arteria/features/auth/presentation/pages/profile_setup_screen.da
 import 'package:arteria/features/auth/presentation/pages/signup_page.dart';
 import 'package:arteria/features/home/presentation/homepage.dart';
 import 'package:arteria/features/settings/settings_bloc.dart';
+import 'package:arteria/features/settings/settings_state.dart';
 import 'package:arteria/features/user%20data/user_bloc.dart';
 import 'package:arteria/features/user%20data/user_event.dart';
 import 'package:arteria/Core/Theme/app_theme.dart';
@@ -17,6 +18,8 @@ import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:arteria/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:arteria/env/env.dart'; // Import the Env class
 
@@ -56,25 +59,42 @@ class MyApp extends StatelessWidget {
               ),
               BlocProvider<SettingsBloc>(create: (context) => SettingsBloc()),
             ],
-            child: AnimatedTheme(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              data: themeCubit.isDarkMode ? darkTheme : lightTheme,
-              child: MaterialApp(
-                debugShowCheckedModeBanner: false,
-                title: 'Arteria',
-                theme: lightTheme,
-                darkTheme: darkTheme,
-                themeMode: themeCubit.isDarkMode
-                    ? ThemeMode.dark
-                    : ThemeMode.light,
-                routes: {
-                  '/': (context) => const _AuthWrapper(),
-                  '/login': (context) => const LoginPage(),
-                  '/signup': (context) => const SignupPage(),
-                  '/profile-setup': (context) => const ProfileSetupScreen(),
-                },
-              ),
+            child: BlocBuilder<SettingsBloc, SettingsState>(
+              builder: (context, settingsState) {
+                // Debug: Print current locale
+                debugPrint('🌍 Current locale: ${settingsState.locale.languageCode}');
+                return AnimatedTheme(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  data: themeCubit.isDarkMode ? darkTheme : lightTheme,
+                  child: MaterialApp(
+                    localizationsDelegates: [
+                      AppLocalizations.delegate,
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    supportedLocales: [
+                      Locale('en'), // English
+                      Locale('fr'), // French
+                    ],
+                    locale: settingsState.locale,
+                    debugShowCheckedModeBanner: false,
+                    title: 'Arteria',
+                    theme: lightTheme,
+                    darkTheme: darkTheme,
+                    themeMode: themeCubit.isDarkMode
+                        ? ThemeMode.dark
+                        : ThemeMode.light,
+                    routes: {
+                      '/': (context) => const _AuthWrapper(),
+                      '/login': (context) => const LoginPage(),
+                      '/signup': (context) => const SignupPage(),
+                      '/profile-setup': (context) => const ProfileSetupScreen(),
+                    },
+                  ),
+                );
+              },
             ),
           );
         },

@@ -40,6 +40,11 @@ class AuthCubits extends Cubit<AuthStates> {
   Future<void> login(String email, String pw) async {
     try {
       emit(AuthLoading());
+      
+      // Validate email format first
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      final isValidEmailFormat = emailRegex.hasMatch(email);
+      
       final user = await authRepo.loginWithEmailPassword(email, pw);
       if (user != null) {
         final complete = await authRepo.isProfileComplete();
@@ -53,12 +58,36 @@ class AuthCubits extends Cubit<AuthStates> {
         emit(Unauthenticated());
       }
     } on FirebaseAuthException catch (e) {
-      final errorMessage = _getFriendlyErrorMessage(e);
-      emit(AuthError(errorMessage));
-      emit(Unauthenticated());
+      // Validate email format for better error messages
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      final isValidEmailFormat = emailRegex.hasMatch(email);
+      
+      // Handle modern Firebase error codes
+      if (e.code == 'invalid-credential') {
+        // Modern Firebase returns this for both wrong email and wrong password
+        // If email format is invalid, it's likely an email issue
+        // If email format is valid, it's likely a password issue
+        if (!isValidEmailFormat) {
+          emit(AuthCredentialError(emailError: "Incorrect email"));
+        } else {
+          emit(AuthCredentialError(passwordError: "Incorrect password"));
+        }
+      } else if (e.code == 'user-not-found') {
+        emit(AuthCredentialError(emailError: "Incorrect email"));
+      } else if (e.code == 'invalid-email') {
+        emit(AuthCredentialError(emailError: "Invalid email format"));
+      } else if (e.code == 'wrong-password') {
+        emit(AuthCredentialError(passwordError: "Incorrect password"));
+      } else if (e.code == 'user-disabled') {
+        emit(AuthCredentialError(emailError: "This account has been disabled"));
+      } else if (e.code == 'too-many-requests') {
+        emit(AuthCredentialError(generalError: "Too many failed attempts. Please try again later."));
+      } else {
+        final errorMessage = _getFriendlyErrorMessage(e);
+        emit(AuthCredentialError(generalError: errorMessage));
+      }
     } catch (e) {
-      emit(AuthError("An unexpected error occurred. Please try again."));
-      emit(Unauthenticated());
+      emit(AuthCredentialError(generalError: "An unexpected error occurred."));
     }
   }
 

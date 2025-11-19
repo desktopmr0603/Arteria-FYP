@@ -1,0 +1,129 @@
+{
+  "appTitle": "Arteria",
+  
+  "welcomeBack": "Bon retour!",
+  
+  "loginSubtitle": "Connectez-vous pour continuer à surveiller avec Arteria",
+  
+  "email": "Email",
+  
+  "password": "Mot de passe",
+  
+  "emailRequired": "L'email est requis",
+  
+  "passwordRequired": "Le mot de passe est requis",
+  
+  "forgotPassword": "Mot de passe oublié?",
+  
+  "forgotPasswordTitle": "Mot de passe oublié",
+  
+  "enterEmail": "Entrez votre email...",
+  
+  "cancel": "ANNULER",
+  
+  "reset": "RÉINITIALISER",
+  
+  "login": "Connexion",
+  
+  "orContinueWith": "Ou continuer avec",
+  
+  "continueWithGoogle": "Continuer avec Google",
+  
+  "dontHaveAccount": "Vous n'avez pas de compte?",
+  
+  "signUp": "S'inscrire",
+  
+  "settings": "Paramètres",
+  
+  "home": "Accueil",
+  
+  "insights": "Aperçus",
+  
+  "history": "Historique",
+  
+  "more": "Plus",
+  
+  "welcomeFirstTime": "Bienvenue, {name}! 🎉",
+  
+  "goodMorning": "Bonjour",
+  
+  "goodAfternoon": "Bon après-midi",
+  
+  "goodEvening": "Bonsoir",
+  
+  "greetingWithName": "{greeting}, {name}",
+  
+  "trackBPWithAI": "Suivez votre tension artérielle avec l'IA",
+  
+  "noRecentReadings": "Aucune lecture récente",
+  
+  "criticalBP": "TA critique - Veuillez consulter un médecin",
+  
+  "bpHighToday": "Votre TA est élevée aujourd'hui",
+  
+  "bpSlightlyElevated": "Votre TA est légèrement élevée",
+  
+  "bpNormalToday": "Votre TA est normale aujourd'hui ✓",
+  
+  "recordNewReading": "Enregistrer une nouvelle lecture",
+  
+  "viewTrends": "Voir les tendances",
+  
+  "reminders": "Rappels",
+  
+  "setUpReminders": "Configurer les rappels",
+  
+  "reminderSettings": "Paramètres de rappel",
+  
+  "reminderSettingsDescription": "Configurez des rappels pour suivre régulièrement votre tension artérielle.",
+  
+  "featureComingSoon": "Cette fonctionnalité sera bientôt disponible!",
+  
+  "gotIt": "Compris",
+  
+  "trendsPageComingSoon": "Page des tendances bientôt disponible",
+  
+  "aiInsightsComingSoon": "Aperçus IA bientôt disponibles!",
+  
+  "bpHistoryWillAppear": "Votre historique de TA apparaîtra ici.",
+  
+  "yourInfo": "Vos informations",
+  
+  "age": "Âge",
+  
+  "height": "Taille",
+  
+  "weight": "Poids",
+  
+  "gender": "Genre",
+  
+  "appHealthSettings": "Paramètres de l'application et de la santé",
+  
+  "measurementHistoryExport": "Historique et exportation des mesures",
+  
+  "reminderSettingsMenu": "Paramètres de rappel",
+  
+  "securityPrivacy": "Sécurité et confidentialité",
+  
+  "appSettings": "Paramètres de l'application",
+  
+  "darkMode": "Mode sombre",
+  
+  "language": "Langue",
+  
+  "faqHelpCenter": "FAQ / Centre d'aide",
+  
+  "logOut": "Se déconnecter",
+  
+  "comingSoon": "Bientôt disponible!",
+  
+  "selectLanguage": "Sélectionner la langue",
+  
+  "english": "Anglais",
+  
+  "french": "Français",
+  
+  "takeNextReading": "Prenez votre prochaine lecture",
+  
+  "tomorrowAt8AM": "Demain à 8h00"
+}

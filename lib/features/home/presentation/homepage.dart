@@ -1,12 +1,16 @@
+import 'package:arteria/features/home/presentation/components/bp_reading_card.dart';
+import 'package:arteria/features/home/presentation/components/next_steps_card.dart';
 import 'package:arteria/features/home/presentation/microphone_transcribe.dart';
 import 'package:arteria/features/home/presentation/settings_screen.dart';
 import 'package:arteria/features/user data/user_bloc.dart';
 import 'package:arteria/features/user data/user_event.dart';
 import 'package:arteria/features/user data/user_state.dart';
+import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -43,8 +47,8 @@ class _HomepageState extends State<Homepage> {
       const SettingsScreen(),
     ];
 
-    return WillPopScope(
-      onWillPop: () async => false, // Disable system back button
+    return PopScope<Object?>(
+      canPop: false,
       child: BlocListener<UserBloc, UserState>(
         listener: (context, state) {
           if (state is UserLoaded) {
@@ -63,10 +67,14 @@ class _HomepageState extends State<Homepage> {
           appBar: AppBar(
             automaticallyImplyLeading: false, // Remove back button
             backgroundColor: theme.appBarTheme.backgroundColor,
+            scrolledUnderElevation: 0.0,
             elevation: 0,
             centerTitle: true,
             title: _currentIndex == 3
-                ? Text('Settings', style: theme.appBarTheme.titleTextStyle)
+                ? Text(
+                    AppLocalizations.of(context)!.settings,
+                    style: theme.appBarTheme.titleTextStyle,
+                  )
                 : const Text(
                     'Arteria',
                     style: TextStyle(
@@ -86,25 +94,25 @@ class _HomepageState extends State<Homepage> {
                 theme.bottomNavigationBarTheme.unselectedItemColor,
             showUnselectedLabels: true,
             type: BottomNavigationBarType.fixed,
-            items: const [
+            items: [
               BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'Home',
+                icon: const Icon(Icons.home_outlined),
+                activeIcon: const Icon(Icons.home),
+                label: AppLocalizations.of(context)!.home,
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.insights_outlined),
-                activeIcon: Icon(Icons.insights),
-                label: 'Insights',
+                icon: const Icon(Icons.insights_outlined),
+                activeIcon: const Icon(Icons.insights),
+                label: AppLocalizations.of(context)!.insights,
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.history),
-                activeIcon: Icon(Icons.history_toggle_off),
-                label: 'History',
+                icon: const Icon(Icons.history),
+                activeIcon: const Icon(Icons.history_toggle_off),
+                label: AppLocalizations.of(context)!.history,
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.more_horiz),
-                label: 'More',
+                icon: const Icon(Icons.more_horiz),
+                label: AppLocalizations.of(context)!.more,
               ),
             ],
           ),
@@ -125,41 +133,63 @@ class HomepageContent extends StatelessWidget {
   });
 
   static const Color _primaryBlue = Color(0xFF1976D2);
-  static const Color _accentCoral = Color(0xFFFF6F61);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final bgCardColor = isDark
-        ? const Color(0xFF1E1E1E)
-        : const Color(0xFFF5F7FA);
 
     return BlocBuilder<UserBloc, UserState>(
       builder: (context, state) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildGreeting(state, theme),
-              const SizedBox(height: 4),
-              Text(
-                'Track your blood pressure with AI',
-                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 17),
-              ),
+              // Greeting section
+              _buildGreeting(context, state, theme, isDark),
               const SizedBox(height: 32),
+
+              // Loading state
               if (state is UserLoading) ...[
-                _buildSkeletonCard(bgCardColor),
-                const SizedBox(height: 40),
+                _buildSkeletonCard(),
+                const SizedBox(height: 24),
                 _buildSkeletonButton(isDark),
-              ] else if (state is UserLoaded && state.isFirstTimeUser) ...[
-                _buildFirstTimeCard(bgCardColor, theme),
-                const SizedBox(height: 40),
+              ]
+              // First time user
+              else if (state is UserLoaded && state.isFirstTimeUser) ...[
+                BPReadingCard(isFirstTime: true),
+                const SizedBox(height: 24),
                 _buildRecordButton(context),
+                const SizedBox(height: 16),
+                _buildReminderButton(context, theme),
+              ]
+              // Regular user with data
+              else if (state is UserLoaded) ...[
+                // Latest BP Reading Card
+                BPReadingCard(
+                  systolic: latestReading?['systolic'],
+                  diastolic: latestReading?['diastolic'],
+                  readingDate: _extractDate(latestReading?['date']),
+                  category: _getCategory(
+                    latestReading?['systolic'],
+                    latestReading?['diastolic'],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Next Steps Card
+                NextStepsCard(steps: _getNextSteps(context, state)),
+                const SizedBox(height: 32),
+
+                // Primary Action Button
+                _buildRecordButton(context),
+                const SizedBox(height: 16),
+
+                // Action Buttons Row
+                _buildActionButtons(context, theme),
               ] else ...[
-                _buildReadingCard(bgCardColor, theme),
-                const SizedBox(height: 40),
+                // Error or other states
                 _buildRecordButton(context),
               ],
             ],
@@ -169,137 +199,89 @@ class HomepageContent extends StatelessWidget {
     );
   }
 
-  Widget _buildGreeting(UserState state, ThemeData theme) {
-    final text = state is UserLoaded
+  Widget _buildGreeting(
+    BuildContext context,
+    UserState state,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final firstName = state is UserLoaded
+        ? _capitalizeFirstLetter(state.firstName)
+        : '';
+
+    final greeting = state is UserLoaded
         ? (state.isFirstTimeUser
-              ? "Welcome, ${state.firstName}! 🎉"
-              : "Hello, ${state.firstName}")
-        : 'Welcome Back';
+              ? AppLocalizations.of(context)!.welcomeFirstTime(firstName)
+              : AppLocalizations.of(
+                  context,
+                )!.greetingWithName(_getGreetingByTime(context), firstName))
+        : AppLocalizations.of(context)!.welcomeBack;
 
-    return Text(
-      text,
-      style: theme.textTheme.titleLarge?.copyWith(fontSize: 34),
-    );
-  }
+    final statusText = state is UserLoaded && !state.isFirstTimeUser
+        ? _getBPStatusMessage(
+            context,
+            latestReading?['systolic'],
+            latestReading?['diastolic'],
+          )
+        : AppLocalizations.of(context)!.trackBPWithAI;
 
-  Widget _buildFirstTimeCard(Color bgColor, ThemeData theme) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.brightness == Brightness.dark
-              ? Colors.grey.shade800
-              : Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "You're all set!",
-            style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Record your first blood pressure reading to begin tracking your health.",
-            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 15),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReadingCard(Color bgColor, ThemeData theme) {
-    DateTime? readingDate;
-    final rawDate = latestReading?['date'];
-    if (rawDate is DateTime) {
-      readingDate = rawDate;
-    } else if (rawDate is Timestamp) {
-      readingDate = rawDate.toDate();
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.brightness == Brightness.dark
-              ? Colors.grey.shade800
-              : Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Latest Reading',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _primaryBlue,
-                ),
-              ),
-              Icon(Icons.favorite, color: _accentCoral, size: 28),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _bpColumn(
-                label: "Systolic",
-                value: "${latestReading?['systolic'] ?? '--'}",
-                theme: theme,
-              ),
-              Text(
-                "/",
-                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 28),
-              ),
-              _bpColumn(
-                label: "Diastolic",
-                value: "${latestReading?['diastolic'] ?? '--'}",
-                theme: theme,
-                alignEnd: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            readingDate != null
-                ? "Recorded on ${dateFormat.format(readingDate)}"
-                : "No readings yet",
-            style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _bpColumn({
-    required String label,
-    required String value,
-    required ThemeData theme,
-    bool alignEnd = false,
-  }) {
     return Column(
-      crossAxisAlignment: alignEnd
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontSize: 15)),
-        const SizedBox(height: 4),
-        Text(value, style: theme.textTheme.titleLarge?.copyWith(fontSize: 28)),
-        Text("mmHg", style: theme.textTheme.bodySmall),
+        Text(
+          greeting,
+          style: GoogleFonts.montserrat(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: theme.textTheme.titleLarge?.color,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          statusText,
+          style: GoogleFonts.openSans(
+            fontSize: 15,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+          ),
+        ),
       ],
     );
+  }
+
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
+  String _getGreetingByTime(BuildContext context) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return AppLocalizations.of(context)!.goodMorning;
+    } else if (hour < 17) {
+      return AppLocalizations.of(context)!.goodAfternoon;
+    } else {
+      return AppLocalizations.of(context)!.goodEvening;
+    }
+  }
+
+  String _getBPStatusMessage(
+    BuildContext context,
+    int? systolic,
+    int? diastolic,
+  ) {
+    if (systolic == null || diastolic == null) {
+      return AppLocalizations.of(context)!.noRecentReadings;
+    }
+
+    if (systolic >= 180 || diastolic >= 120) {
+      return AppLocalizations.of(context)!.criticalBP;
+    } else if (systolic >= 140 || diastolic >= 90) {
+      return AppLocalizations.of(context)!.bpHighToday;
+    } else if (systolic >= 130 || diastolic >= 80) {
+      return AppLocalizations.of(context)!.bpSlightlyElevated;
+    } else {
+      return AppLocalizations.of(context)!.bpNormalToday;
+    }
   }
 
   Widget _buildRecordButton(BuildContext context) {
@@ -321,9 +303,9 @@ class HomepageContent extends StatelessWidget {
           }
         },
         icon: const Icon(Icons.mic),
-        label: const Text(
-          "Record New Reading",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        label: Text(
+          AppLocalizations.of(context)!.recordNewReading,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: _primaryBlue,
@@ -337,11 +319,175 @@ class HomepageContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSkeletonCard(Color bgColor) => Container(
-    height: 140,
-    width: double.infinity,
+  DateTime? _extractDate(dynamic dateValue) {
+    if (dateValue is DateTime) {
+      return dateValue;
+    } else if (dateValue is Timestamp) {
+      return dateValue.toDate();
+    }
+    return null;
+  }
+
+  String _getCategory(int? systolic, int? diastolic) {
+    if (systolic == null || diastolic == null) return 'normal';
+    if (systolic >= 180 || diastolic >= 120) return 'critical';
+    if (systolic >= 140 || diastolic >= 90) return 'high';
+    if (systolic >= 130 || diastolic >= 80) return 'elevated';
+    return 'normal';
+  }
+
+  List<NextStepItem> _getNextSteps(BuildContext context, UserLoaded state) {
+    // TODO: Generate dynamic reminders based on user schedule and medication
+    final nextSteps = <NextStepItem>[];
+
+    // Example: Add reading reminder
+    nextSteps.add(
+      NextStepItem(
+        title: AppLocalizations.of(context)!.takeNextReading,
+        time: AppLocalizations.of(context)!.tomorrowAt8AM,
+        color: const Color(0xFF1976D2),
+      ),
+    );
+
+    return nextSteps;
+  }
+
+  Widget _buildActionButtons(BuildContext context, ThemeData theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              // Navigate to History/Trends page
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(context)!.trendsPageComingSoon,
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            icon: const Icon(Icons.show_chart, size: 22),
+            label: Text(
+              AppLocalizations.of(context)!.viewTrends,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: theme.colorScheme.primary,
+              side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              _openReminderSettings(context);
+            },
+            icon: const Icon(Icons.notifications_outlined, size: 22),
+            label: Text(
+              AppLocalizations.of(context)!.reminders,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: theme.colorScheme.primary,
+              side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReminderButton(BuildContext context, ThemeData theme) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          _openReminderSettings(context);
+        },
+        icon: const Icon(Icons.notifications_outlined, size: 20),
+        label: Text(
+          AppLocalizations.of(context)!.setUpReminders,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: theme.colorScheme.primary,
+          side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openReminderSettings(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.notifications_active, color: Color(0xFF1976D2)),
+            const SizedBox(width: 12),
+            Text(
+              AppLocalizations.of(context)!.reminderSettings,
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppLocalizations.of(context)!.reminderSettingsDescription,
+              style: GoogleFonts.openSans(fontSize: 15),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              AppLocalizations.of(context)!.featureComingSoon,
+              style: GoogleFonts.openSans(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              AppLocalizations.of(context)!.gotIt,
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1976D2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard() => Container(
     decoration: BoxDecoration(
-      color: bgColor,
+      color: Colors.grey.shade300,
       borderRadius: BorderRadius.circular(20),
     ),
   );
@@ -369,7 +515,7 @@ class InsightsPage extends StatelessWidget {
           const Icon(Icons.insights, size: 64, color: Colors.blueGrey),
           const SizedBox(height: 16),
           Text(
-            "AI Insights coming soon!",
+            AppLocalizations.of(context)!.aiInsightsComingSoon,
             style: theme.textTheme.titleLarge?.copyWith(fontSize: 20),
           ),
         ],
@@ -392,7 +538,7 @@ class HistoryPage extends StatelessWidget {
           const Icon(Icons.history, size: 64, color: Colors.blueGrey),
           const SizedBox(height: 16),
           Text(
-            "Your BP history will appear here.",
+            AppLocalizations.of(context)!.bpHistoryWillAppear,
             style: theme.textTheme.titleLarge?.copyWith(fontSize: 20),
           ),
         ],

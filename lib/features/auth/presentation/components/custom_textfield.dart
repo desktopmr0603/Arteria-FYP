@@ -8,6 +8,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final void Function(String)? onSubmitted;
   final bool isError;
+  final String? errorText;
 
   const CustomTextField({
     super.key,
@@ -18,6 +19,7 @@ class CustomTextField extends StatelessWidget {
     this.textInputAction,
     this.onSubmitted,
     this.isError = false,
+    this.errorText,
   });
 
   @override
@@ -38,6 +40,7 @@ class CustomTextField extends StatelessWidget {
           icon,
           color: isError ? theme.colorScheme.error : theme.iconTheme.color,
         ),
+        errorText: errorText,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

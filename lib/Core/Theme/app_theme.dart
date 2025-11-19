@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 // Define Light Theme
 final ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
@@ -29,7 +30,10 @@ final ThemeData lightTheme = ThemeData(
   textTheme: const TextTheme(
     bodyLarge: TextStyle(color: Color(0xFF1A1A1A)),
     bodyMedium: TextStyle(color: Color(0xFF4B4B4B)),
-    titleLarge: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold),
+    titleLarge: TextStyle(
+      color: Color(0xFF1A1A1A),
+      fontWeight: FontWeight.bold,
+    ),
     titleMedium: TextStyle(color: Color(0xFF1A1A1A)),
     titleSmall: TextStyle(color: Color(0xFF4B4B4B)),
   ),

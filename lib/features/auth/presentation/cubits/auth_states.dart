@@ -24,3 +24,16 @@ class AuthError extends AuthStates {
 }
 
 class AuthenticatedNeedsProfileSetup extends AuthStates {}
+
+//credential errors
+class AuthCredentialError extends AuthStates {
+  final String? emailError;
+  final String? passwordError;
+  final String? generalError;
+
+  AuthCredentialError({
+    this.emailError,
+    this.passwordError,
+    this.generalError,
+  });
+}

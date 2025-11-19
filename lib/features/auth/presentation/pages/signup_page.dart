@@ -39,6 +39,10 @@ class _SignupPageState extends State<SignupPage>
   bool _emailValid = true;
   bool _passwordValid = true;
 
+  // Progressive reveal flags
+  bool _showPasswordField = false;
+  bool _showConfirmPasswordField = false;
+
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
 
@@ -65,6 +69,36 @@ class _SignupPageState extends State<SignupPage>
         weight: 1,
       ),
     ]).animate(_animationController);
+
+    // Add listeners for progressive reveal
+    _emailCtrl.addListener(_onEmailChanged);
+    _passwordCtrl.addListener(_onPasswordChanged);
+  }
+
+  void _onEmailChanged() {
+    final email = _emailCtrl.text.trim();
+    final emailRegex = RegExp(r"^[^\s@]+@[^\s@]+\.[a-z]{2,}$");
+    final shouldShow = email.isNotEmpty && emailRegex.hasMatch(email);
+    
+    if (shouldShow != _showPasswordField) {
+      setState(() {
+        _showPasswordField = shouldShow;
+        if (!shouldShow) {
+          _showConfirmPasswordField = false;
+        }
+      });
+    }
+  }
+
+  void _onPasswordChanged() {
+    final password = _passwordCtrl.text;
+    final shouldShow = password.length >= 8;
+    
+    if (shouldShow != _showConfirmPasswordField) {
+      setState(() {
+        _showConfirmPasswordField = shouldShow;
+      });
+    }
   }
 
   @override
@@ -266,6 +300,7 @@ class _SignupPageState extends State<SignupPage>
                       ),
                       const SizedBox(height: 16),
 
+
                       // Email
                       CustomTextField(
                         controller: _emailCtrl,
@@ -273,45 +308,110 @@ class _SignupPageState extends State<SignupPage>
                         icon: Icons.email_outlined,
                         focusNode: _emailFocus,
                         textInputAction: TextInputAction.next,
-                        onSubmitted: (_) => _passwordFocus.requestFocus(),
+                        onSubmitted: (_) {
+                          if (_showPasswordField) {
+                            _passwordFocus.requestFocus();
+                          }
+                        },
                         isError: !_emailValid,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Password
-                      CustomPasswordField(
-                        controller: _passwordCtrl,
-                        label: "Password",
-                        icon: Icons.lock_outline,
-                        isVisible: _passwordVisible,
-                        onToggleVisibility: () => setState(
-                          () => _passwordVisible = !_passwordVisible,
-                        ),
-                        focusNode: _passwordFocus,
-                        textInputAction: TextInputAction.next,
-                        onSubmitted: (_) =>
-                            _confirmPasswordFocus.requestFocus(),
-                        isError: !_passwordValid,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Confirm Password
-                      SlideTransition(
-                        position: _slideAnimation,
-                        child: CustomPasswordField(
-                          controller: _confirmPasswordCtrl,
-                          label: "Confirm Password",
-                          icon: Icons.lock,
-                          isVisible: _confirmPasswordVisible,
-                          onToggleVisibility: () => setState(
-                            () => _confirmPasswordVisible =
-                                !_confirmPasswordVisible,
+                      
+                      // Helper text for email
+                      if (!_showPasswordField && _emailCtrl.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            "Please enter a valid email address",
+                            style: GoogleFonts.openSans(
+                              fontSize: 12,
+                              color: const Color(0xFFE63946),
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
-                          focusNode: _confirmPasswordFocus,
-                          isError: !_passwordsMatch,
-                          errorText: _passwordsMatch
-                              ? null
-                              : "Passwords do not match",
+                        ),
+                      
+                      // Password - Progressive Reveal
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: _showPasswordField ? 1.0 : 0.0,
+                          child: _showPasswordField
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 16),
+                                    CustomPasswordField(
+                                      controller: _passwordCtrl,
+                                      label: "Password",
+                                      icon: Icons.lock_outline,
+                                      isVisible: _passwordVisible,
+                                      onToggleVisibility: () => setState(
+                                        () => _passwordVisible = !_passwordVisible,
+                                      ),
+                                      focusNode: _passwordFocus,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) {
+                                        if (_showConfirmPasswordField) {
+                                          _confirmPasswordFocus.requestFocus();
+                                        }
+                                      },
+                                      isError: !_passwordValid,
+                                    ),
+                                    // Password strength indicator
+                                    if (_passwordCtrl.text.isNotEmpty && !_showConfirmPasswordField)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8, left: 12),
+                                        child: Text(
+                                          "Password must be at least 8 characters",
+                                          style: GoogleFonts.openSans(
+                                            fontSize: 12,
+                                            color: _passwordCtrl.text.length >= 8
+                                                ? const Color(0xFF4CAF50)
+                                                : const Color(0xFFE63946),
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
+
+                      // Confirm Password - Progressive Reveal
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: _showConfirmPasswordField ? 1.0 : 0.0,
+                          child: _showConfirmPasswordField
+                              ? Column(
+                                  children: [
+                                    const SizedBox(height: 16),
+                                    SlideTransition(
+                                      position: _slideAnimation,
+                                      child: CustomPasswordField(
+                                        controller: _confirmPasswordCtrl,
+                                        label: "Confirm Password",
+                                        icon: Icons.lock,
+                                        isVisible: _confirmPasswordVisible,
+                                        onToggleVisibility: () => setState(
+                                          () => _confirmPasswordVisible =
+                                              !_confirmPasswordVisible,
+                                        ),
+                                        focusNode: _confirmPasswordFocus,
+                                        isError: !_passwordsMatch,
+                                        errorText: _passwordsMatch
+                                            ? null
+                                            : "Passwords do not match",
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ),
                       const SizedBox(height: 12),
