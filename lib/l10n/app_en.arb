@@ -333,5 +333,185 @@
   "tomorrowAt8AM": "Tomorrow at 8:00 AM",
   "@tomorrowAt8AM": {
     "description": "Example reminder time"
+  },
+  
+  "latestReading": "Latest Reading",
+  "@latestReading": {
+    "description": "BP card title for latest reading"
+  },
+  
+  "elevated": "Elevated",
+  "@elevated": {
+    "description": "BP status label for elevated blood pressure"
+  },
+  
+  "high": "High",
+  "@high": {
+    "description": "BP status label for high blood pressure"
+  },
+  
+  "critical": "Critical",
+  "@critical": {
+    "description": "BP status label for critical blood pressure"
+  },
+  
+  "normal": "Normal",
+  "@normal": {
+    "description": "BP status label for normal blood pressure"
+  },
+  
+  "nextSteps": "Next Steps",
+  "@nextSteps": {
+    "description": "Next steps card title"
+  },
+  
+  "noPendingActions": "No pending actions",
+  "@noPendingActions": {
+    "description": "Message when no next steps are available"
+  },
+  
+  "systolic": "Systolic",
+  "@systolic": {
+    "description": "Systolic blood pressure label"
+  },
+  
+  "diastolic": "Diastolic",
+  "@diastolic": {
+    "description": "Diastolic blood pressure label"
+  },
+  
+  "justNow": "Just now",
+  "@justNow": {
+    "description": "Time format for very recent readings"
+  },
+  
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "description": "Time format for readings from minutes ago",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "description": "Time format for readings from hours ago",
+    "placeholders": {
+      "hours": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  
+  "daysAgo": "{days}d ago",
+  "@daysAgo": {
+    "description": "Time format for readings from days ago",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Time format for yesterday's readings"
+  },
+  
+  "youreAllSet": "You're all set!",
+  "@youreAllSet": {
+    "description": "First time user welcome title"
+  },
+  
+  "firstTimeDescription": "Record your first blood pressure reading to begin tracking your health journey with AI-powered insights.",
+  "@firstTimeDescription": {
+    "description": "First time user description text"
+  },
+  
+  "noDateRecorded": "No date recorded",
+  "@noDateRecorded": {
+    "description": "Message when reading has no date"
+  },
+
+  "faqTitle": "FAQ & Help Center",
+  "@faqTitle": {
+    "description": "Title for the FAQ screen"
+  },
+
+  "faqVoiceAIQuestion": "How does the app use voice commands and AI?",
+  "@faqVoiceAIQuestion": {
+    "description": "FAQ Question about Voice and AI"
+  },
+  "faqVoiceAIAnswer": "When you speak your health data (e.g., \"My BP is 130 over 80, and I took my Lisinopril\"), the app's Speech-to-Text (STT) engine securely transcribes the information. This transcribed data, including readings, medications, and lifestyle notes, is fed to the specialized Mistral 7B Instruct v0.3 LLM. The LLM performs clinical reasoning to:\n\n• Identify subtle patterns and trends in your data.\n• Suggest potential correlations between your actions (diet, exercise, stress) and your blood pressure readings.\n• Provide reasoned, actionable advice directly tailored to your unique profile and recorded history.",
+  "@faqVoiceAIAnswer": {
+    "description": "FAQ Answer about Voice and AI"
+  },
+
+  "faqLoggingInfoQuestion": "What types of information can I log using my voice?",
+  "@faqLoggingInfoQuestion": {
+    "description": "FAQ Question about Logging Info"
+  },
+  "faqLoggingInfoAnswer": "Arteria supports logging all critical health metrics related to your cardiovascular profile:\n\n• Blood Pressure Readings: Systolic, Diastolic, and Pulse (Heart Rate).\n• Medication Adherence: Name, dosage, and time taken.\n• Lifestyle Factors: Diet, exercise, sleep quality, stress levels, and specific symptoms.",
+  "@faqLoggingInfoAnswer": {
+    "description": "FAQ Answer about Logging Info"
+  },
+
+  "faqAlertsQuestion": "What are the alert and reminder features?",
+  "@faqAlertsQuestion": {
+    "description": "FAQ Question about Alerts"
+  },
+  "faqAlertsAnswer": "Arteria provides essential proactive tools for adherence and consistency:\n\n• BP Measurement Reminders: Configurable alerts to prompt you to take your readings at consistent times (e.g., morning and evening), providing the most valuable data set for trend analysis.\n• Medication Reminders: Timely, reliable alerts to ensure you never miss a dose, a critical factor in effective hypertension management.",
+  "@faqAlertsAnswer": {
+    "description": "FAQ Answer about Alerts"
+  },
+
+  "faqDoctorReplacementQuestion": "Can Arteria replace my doctor or pharmacist?",
+  "@faqDoctorReplacementQuestion": {
+    "description": "FAQ Question about Doctor Replacement"
+  },
+  "faqDoctorReplacementAnswer": "Absolutely not. Arteria is a monitoring and informational support tool only. The advice and insights generated by the LLM are based on established clinical knowledge and your self-reported data, but they are not a substitute for professional medical diagnosis, advice, or treatment. Always consult your physician or healthcare provider regarding any health concerns, changes to your medication, or before acting on any information provided by the app.",
+  "@faqDoctorReplacementAnswer": {
+    "description": "FAQ Answer about Doctor Replacement"
+  },
+
+  "faqShareDataQuestion": "How can I share the data from Arteria with my healthcare team?",
+  "@faqShareDataQuestion": {
+    "description": "FAQ Question about Sharing Data"
+  },
+  "faqShareDataAnswer": "Arteria offers robust reporting features. You can generate comprehensive, structured reports (e.g., PDF or CSV files) that summarize your:\n\n• Average BP over custom timeframes.\n• Detailed history of readings with corresponding tags and notes.\n• Medication adherence log.\n\nThis allows for efficient review and discussion during your medical appointments.",
+  "@faqShareDataAnswer": {
+    "description": "FAQ Answer about Sharing Data"
+  },
+
+  "faqSecurityQuestion": "How is my personal health information secured in Arteria?",
+  "@faqSecurityQuestion": {
+    "description": "FAQ Question about Security"
+  },
+  "faqSecurityAnswer": "We take data security and user privacy extremely seriously, following best practices for mobile health applications:\n\n• Encryption In Transit: All data transmitted between the app and our secure servers uses Transport Layer Security (TLS 1.2/1.3) for end-to-end encryption.\n• Encryption At Rest: Your sensitive data is stored on secure, encrypted backend infrastructure.\n• Data Minimization: We only collect and store the necessary data required for the app's core functions (tracking, analysis, advice generation).\n• Compliance: Our systems are designed with architecture and safeguards to meet relevant data protection standards (e.g., HIPAA, GDPR, or equivalent global standards).",
+  "@faqSecurityAnswer": {
+    "description": "FAQ Answer about Security"
+  },
+
+  "faqVoiceRecordingQuestion": "Is the voice recording saved?",
+  "@faqVoiceRecordingQuestion": {
+    "description": "FAQ Question about Voice Recording"
+  },
+  "faqVoiceRecordingAnswer": "The raw voice audio is primarily used for immediate transcription via the STT engine and is not permanently stored. The resulting text transcription and the structured health data derived from it are securely logged and retained to power the longitudinal tracking and LLM reasoning features.",
+  "@faqVoiceRecordingAnswer": {
+    "description": "FAQ Answer about Voice Recording"
+  },
+
+  "faqDataTrainingQuestion": "Is my data used to train the LLM?",
+  "@faqDataTrainingQuestion": {
+    "description": "FAQ Question about Data Training"
+  },
+  "faqDataTrainingAnswer": "We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model's reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.",
+  "@faqDataTrainingAnswer": {
+    "description": "FAQ Answer about Data Training"
   }
 }

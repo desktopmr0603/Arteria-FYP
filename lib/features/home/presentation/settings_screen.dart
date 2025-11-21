@@ -1,5 +1,6 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
 import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
+import 'package:arteria/features/home/presentation/faq_screen.dart';
 import 'package:arteria/features/settings/settings_bloc.dart';
 import 'package:arteria/features/settings/settings_event.dart';
 import 'package:arteria/l10n/app_localizations.dart';
@@ -193,7 +194,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // ✅ FIXED: Instant Dark Mode Toggle
                       _buildSwitchTile(
                         context,
                         theme: theme,
@@ -225,7 +225,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         theme: theme,
                         title: AppLocalizations.of(context)!.faqHelpCenter,
                         icon: Icons.help_outline_rounded,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const FaqScreen(),
+                            ),
+                          );
+                        },
                         darkMode: darkMode,
                       ),
 
@@ -378,8 +385,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: const Color(0xFFE57373),
-        activeTrackColor: const Color(0xFFF9B7B7),
+        activeThumbColor: const Color(0xFFE63946),
+        activeTrackColor: const Color(0xFFf28482),
       ),
     );
   }

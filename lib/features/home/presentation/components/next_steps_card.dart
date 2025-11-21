@@ -1,3 +1,4 @@
+import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -37,7 +38,7 @@ class NextStepsCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                'Next Steps',
+                AppLocalizations.of(context)!.nextSteps,
                 style: GoogleFonts.montserrat(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -51,7 +52,7 @@ class NextStepsCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'No pending actions',
+                AppLocalizations.of(context)!.noPendingActions,
                 style: GoogleFonts.openSans(
                   fontSize: 14,
                   color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),

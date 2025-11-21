@@ -161,8 +161,6 @@ class HomepageContent extends StatelessWidget {
                 BPReadingCard(isFirstTime: true),
                 const SizedBox(height: 24),
                 _buildRecordButton(context),
-                const SizedBox(height: 16),
-                _buildReminderButton(context, theme),
               ]
               // Regular user with data
               else if (state is UserLoaded) ...[
@@ -368,15 +366,15 @@ class HomepageContent extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(Icons.show_chart, size: 22),
+            icon: const Icon(Icons.show_chart, size: 20),
             label: Text(
               AppLocalizations.of(context)!.viewTrends,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.primary,
               side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),

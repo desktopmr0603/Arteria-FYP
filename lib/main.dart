@@ -21,7 +21,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:arteria/env/env.dart'; // Import the Env class
+import 'package:arteria/env/env.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,7 +62,9 @@ class MyApp extends StatelessWidget {
             child: BlocBuilder<SettingsBloc, SettingsState>(
               builder: (context, settingsState) {
                 // Debug: Print current locale
-                debugPrint('🌍 Current locale: ${settingsState.locale.languageCode}');
+                debugPrint(
+                  '🌍 Current locale: ${settingsState.locale.languageCode}',
+                );
                 return AnimatedTheme(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeInOut,

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:arteria/services/secure_storage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:siri_wave/siri_wave.dart';
+import 'package:arteria/env/env.dart';
 
 class MicrophoneTranscribe extends StatefulWidget {
   const MicrophoneTranscribe({super.key});
@@ -23,7 +23,6 @@ class MicrophoneTranscribe extends StatefulWidget {
 
 class _MicrophoneTranscribeState extends State<MicrophoneTranscribe> {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  final SecureStorageService _secureStorage = SecureStorageService();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   String? _audioPath;
@@ -168,7 +167,7 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe> {
   }
 
   Future<void> _loadApiKeys() async {
-    final runpodKey = await _secureStorage.readRunpodApiKey();
+    final runpodKey = await Env.runpodApiKey;
     if (runpodKey == null || runpodKey.isEmpty) {
       setState(() {
         _displayText = '⚠️ Error: RunPod API key not configured';
@@ -261,8 +260,8 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe> {
   }
 
   Future<void> _transcribeAudio() async {
-    final runpodKey = await _secureStorage.readRunpodApiKey();
-    if (runpodKey == null || runpodKey.isEmpty) {
+    final runpodKey = Env.runpodApiKey;
+    if (runpodKey.isEmpty) {
       setState(() => _displayText = 'Error: RunPod key missing');
       return;
     }
@@ -435,8 +434,8 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe> {
   }
 
   Future<void> _parseBloodPressure(String text) async {
-    final openaiKey = await _secureStorage.readOpenAIApiKey();
-    if (openaiKey == null || openaiKey.isEmpty) {
+    final openaiKey = Env.openaiApiKey;
+    if (openaiKey.isEmpty) {
       _parsedBP = _manualParse(text);
       await _analyzeWithLLM();
       return;

@@ -1,3 +1,4 @@
+import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,7 +25,7 @@ class BPReadingCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     // Determine status color and emoji
-    final statusInfo = _getStatusInfo();
+    final statusInfo = _getStatusInfo(context);
 
     return Container(
       width: double.infinity,
@@ -44,11 +45,11 @@ class BPReadingCard extends StatelessWidget {
           ),
         ],
       ),
-      child: isFirstTime ? _buildFirstTimeContent(theme) : _buildReadingContent(theme, statusInfo, isDark),
+      child: isFirstTime ? _buildFirstTimeContent(context, theme) : _buildReadingContent(context, theme, statusInfo, isDark),
     );
   }
 
-  Widget _buildFirstTimeContent(ThemeData theme) {
+  Widget _buildFirstTimeContent(BuildContext context, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,7 +58,7 @@ class BPReadingCard extends StatelessWidget {
             const Icon(Icons.celebration, color: Color(0xFFFF6F61), size: 28),
             const SizedBox(width: 12),
             Text(
-              "You're all set!",
+              AppLocalizations.of(context)!.youreAllSet,
               style: GoogleFonts.montserrat(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
@@ -68,7 +69,7 @@ class BPReadingCard extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          "Record your first blood pressure reading to begin tracking your health journey with AI-powered insights.",
+          AppLocalizations.of(context)!.firstTimeDescription,
           style: GoogleFonts.openSans(
             fontSize: 15,
             height: 1.5,
@@ -79,10 +80,10 @@ class BPReadingCard extends StatelessWidget {
     );
   }
 
-  Widget _buildReadingContent(ThemeData theme, Map<String, dynamic> statusInfo, bool isDark) {
+  Widget _buildReadingContent(BuildContext context, ThemeData theme, Map<String, dynamic> statusInfo, bool isDark) {
     final dateText = readingDate != null
-        ? _formatDate(readingDate!)
-        : 'No date recorded';
+        ? _formatDate(context, readingDate!)
+        : AppLocalizations.of(context)!.noDateRecorded;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,7 +99,7 @@ class BPReadingCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Latest Reading',
+                  AppLocalizations.of(context)!.latestReading,
                   style: GoogleFonts.montserrat(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -130,8 +131,9 @@ class BPReadingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildBPValue(
+              context: context,
               value: systolic?.toString() ?? '--',
-              label: 'Systolic',
+              label: AppLocalizations.of(context)!.systolic,
               theme: theme,
             ),
             Padding(
@@ -146,8 +148,9 @@ class BPReadingCard extends StatelessWidget {
               ),
             ),
             _buildBPValue(
+              context: context,
               value: diastolic?.toString() ?? '--',
-              label: 'Diastolic',
+              label: AppLocalizations.of(context)!.diastolic,
               theme: theme,
             ),
           ],
@@ -178,6 +181,7 @@ class BPReadingCard extends StatelessWidget {
   }
 
   Widget _buildBPValue({
+    required BuildContext context,
     required String value,
     required String label,
     required ThemeData theme,
@@ -211,51 +215,51 @@ class BPReadingCard extends StatelessWidget {
     );
   }
 
-  Map<String, dynamic> _getStatusInfo() {
+  Map<String, dynamic> _getStatusInfo(BuildContext context) {
     final sys = systolic ?? 0;
     final dia = diastolic ?? 0;
 
     if (sys >= 180 || dia >= 120) {
       return {
         'emoji': '🚨',
-        'label': 'Critical',
+        'label': AppLocalizations.of(context)!.critical,
         'borderColor': const Color(0xFFD32F2F),
       };
     } else if (sys >= 140 || dia >= 90) {
       return {
         'emoji': '🟠',
-        'label': 'High',
+        'label': AppLocalizations.of(context)!.high,
         'borderColor': const Color(0xFFFF6F00),
       };
     } else if (sys >= 130 || dia >= 80) {
       return {
         'emoji': '🟡',
-        'label': 'Elevated',
+        'label': AppLocalizations.of(context)!.elevated,
         'borderColor': const Color(0xFFFFA726),
       };
     } else {
       return {
         'emoji': '🟢',
-        'label': 'Normal',
+        'label': AppLocalizations.of(context)!.normal,
         'borderColor': const Color(0xFF4CAF50),
       };
     }
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
 
     if (difference.inMinutes < 1) {
-      return 'Just now';
+      return AppLocalizations.of(context)!.justNow;
     } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
+      return AppLocalizations.of(context)!.minutesAgo(difference.inMinutes);
     } else if (difference.inDays < 1) {
-      return '${difference.inHours}h ago';
+      return AppLocalizations.of(context)!.hoursAgo(difference.inHours);
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return AppLocalizations.of(context)!.yesterday;
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+      return AppLocalizations.of(context)!.daysAgo(difference.inDays);
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

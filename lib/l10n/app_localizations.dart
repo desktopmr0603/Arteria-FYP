@@ -481,6 +481,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tomorrow at 8:00 AM'**
   String get tomorrowAt8AM;
+
+  /// BP card title for latest reading
+  ///
+  /// In en, this message translates to:
+  /// **'Latest Reading'**
+  String get latestReading;
+
+  /// BP status label for elevated blood pressure
+  ///
+  /// In en, this message translates to:
+  /// **'Elevated'**
+  String get elevated;
+
+  /// BP status label for high blood pressure
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get high;
+
+  /// BP status label for critical blood pressure
+  ///
+  /// In en, this message translates to:
+  /// **'Critical'**
+  String get critical;
+
+  /// BP status label for normal blood pressure
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get normal;
+
+  /// Next steps card title
+  ///
+  /// In en, this message translates to:
+  /// **'Next Steps'**
+  String get nextSteps;
+
+  /// Message when no next steps are available
+  ///
+  /// In en, this message translates to:
+  /// **'No pending actions'**
+  String get noPendingActions;
+
+  /// Systolic blood pressure label
+  ///
+  /// In en, this message translates to:
+  /// **'Systolic'**
+  String get systolic;
+
+  /// Diastolic blood pressure label
+  ///
+  /// In en, this message translates to:
+  /// **'Diastolic'**
+  String get diastolic;
+
+  /// Time format for very recent readings
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get justNow;
+
+  /// Time format for readings from minutes ago
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String minutesAgo(int minutes);
+
+  /// Time format for readings from hours ago
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String hoursAgo(int hours);
+
+  /// Time format for readings from days ago
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String daysAgo(int days);
+
+  /// Time format for yesterday's readings
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
+
+  /// First time user welcome title
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all set!'**
+  String get youreAllSet;
+
+  /// First time user description text
+  ///
+  /// In en, this message translates to:
+  /// **'Record your first blood pressure reading to begin tracking your health journey with AI-powered insights.'**
+  String get firstTimeDescription;
+
+  /// Message when reading has no date
+  ///
+  /// In en, this message translates to:
+  /// **'No date recorded'**
+  String get noDateRecorded;
+
+  /// Title for the FAQ screen
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ & Help Center'**
+  String get faqTitle;
+
+  /// FAQ Question about Voice and AI
+  ///
+  /// In en, this message translates to:
+  /// **'How does the app use voice commands and AI?'**
+  String get faqVoiceAIQuestion;
+
+  /// FAQ Answer about Voice and AI
+  ///
+  /// In en, this message translates to:
+  /// **'When you speak your health data (e.g., \"My BP is 130 over 80, and I took my Lisinopril\"), the app\'s Speech-to-Text (STT) engine securely transcribes the information. This transcribed data, including readings, medications, and lifestyle notes, is fed to the specialized Mistral 7B Instruct v0.3 LLM. The LLM performs clinical reasoning to:\n\n• Identify subtle patterns and trends in your data.\n• Suggest potential correlations between your actions (diet, exercise, stress) and your blood pressure readings.\n• Provide reasoned, actionable advice directly tailored to your unique profile and recorded history.'**
+  String get faqVoiceAIAnswer;
+
+  /// FAQ Question about Logging Info
+  ///
+  /// In en, this message translates to:
+  /// **'What types of information can I log using my voice?'**
+  String get faqLoggingInfoQuestion;
+
+  /// FAQ Answer about Logging Info
+  ///
+  /// In en, this message translates to:
+  /// **'Arteria supports logging all critical health metrics related to your cardiovascular profile:\n\n• Blood Pressure Readings: Systolic, Diastolic, and Pulse (Heart Rate).\n• Medication Adherence: Name, dosage, and time taken.\n• Lifestyle Factors: Diet, exercise, sleep quality, stress levels, and specific symptoms.'**
+  String get faqLoggingInfoAnswer;
+
+  /// FAQ Question about Alerts
+  ///
+  /// In en, this message translates to:
+  /// **'What are the alert and reminder features?'**
+  String get faqAlertsQuestion;
+
+  /// FAQ Answer about Alerts
+  ///
+  /// In en, this message translates to:
+  /// **'Arteria provides essential proactive tools for adherence and consistency:\n\n• BP Measurement Reminders: Configurable alerts to prompt you to take your readings at consistent times (e.g., morning and evening), providing the most valuable data set for trend analysis.\n• Medication Reminders: Timely, reliable alerts to ensure you never miss a dose, a critical factor in effective hypertension management.'**
+  String get faqAlertsAnswer;
+
+  /// FAQ Question about Doctor Replacement
+  ///
+  /// In en, this message translates to:
+  /// **'Can Arteria replace my doctor or pharmacist?'**
+  String get faqDoctorReplacementQuestion;
+
+  /// FAQ Answer about Doctor Replacement
+  ///
+  /// In en, this message translates to:
+  /// **'Absolutely not. Arteria is a monitoring and informational support tool only. The advice and insights generated by the LLM are based on established clinical knowledge and your self-reported data, but they are not a substitute for professional medical diagnosis, advice, or treatment. Always consult your physician or healthcare provider regarding any health concerns, changes to your medication, or before acting on any information provided by the app.'**
+  String get faqDoctorReplacementAnswer;
+
+  /// FAQ Question about Sharing Data
+  ///
+  /// In en, this message translates to:
+  /// **'How can I share the data from Arteria with my healthcare team?'**
+  String get faqShareDataQuestion;
+
+  /// FAQ Answer about Sharing Data
+  ///
+  /// In en, this message translates to:
+  /// **'Arteria offers robust reporting features. You can generate comprehensive, structured reports (e.g., PDF or CSV files) that summarize your:\n\n• Average BP over custom timeframes.\n• Detailed history of readings with corresponding tags and notes.\n• Medication adherence log.\n\nThis allows for efficient review and discussion during your medical appointments.'**
+  String get faqShareDataAnswer;
+
+  /// FAQ Question about Security
+  ///
+  /// In en, this message translates to:
+  /// **'How is my personal health information secured in Arteria?'**
+  String get faqSecurityQuestion;
+
+  /// FAQ Answer about Security
+  ///
+  /// In en, this message translates to:
+  /// **'We take data security and user privacy extremely seriously, following best practices for mobile health applications:\n\n• Encryption In Transit: All data transmitted between the app and our secure servers uses Transport Layer Security (TLS 1.2/1.3) for end-to-end encryption.\n• Encryption At Rest: Your sensitive data is stored on secure, encrypted backend infrastructure.\n• Data Minimization: We only collect and store the necessary data required for the app\'s core functions (tracking, analysis, advice generation).\n• Compliance: Our systems are designed with architecture and safeguards to meet relevant data protection standards (e.g., HIPAA, GDPR, or equivalent global standards).'**
+  String get faqSecurityAnswer;
+
+  /// FAQ Question about Voice Recording
+  ///
+  /// In en, this message translates to:
+  /// **'Is the voice recording saved?'**
+  String get faqVoiceRecordingQuestion;
+
+  /// FAQ Answer about Voice Recording
+  ///
+  /// In en, this message translates to:
+  /// **'The raw voice audio is primarily used for immediate transcription via the STT engine and is not permanently stored. The resulting text transcription and the structured health data derived from it are securely logged and retained to power the longitudinal tracking and LLM reasoning features.'**
+  String get faqVoiceRecordingAnswer;
+
+  /// FAQ Question about Data Training
+  ///
+  /// In en, this message translates to:
+  /// **'Is my data used to train the LLM?'**
+  String get faqDataTrainingQuestion;
+
+  /// FAQ Answer about Data Training
+  ///
+  /// In en, this message translates to:
+  /// **'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.'**
+  String get faqDataTrainingAnswer;
 }
 
 class _AppLocalizationsDelegate
