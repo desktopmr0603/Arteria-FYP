@@ -26,7 +26,7 @@ class MicrophoneTranscribeBloc
   static const String _whisperEndpoint =
       'https://api.runpod.ai/v2/qpo2u2i4x2rutp/runsync';
   static const String _apiBaseUrl = 'https://arteriamain.share.zrok.io';
-  static String get _fastApiEndpoint => '$_apiBaseUrl/analyze';
+  static String get _fastApiEndpoint => '$_apiBaseUrl/analyze/smart'; // 2025: LangGraph + RAG
   static String get _speakEndpoint => '$_apiBaseUrl/speak';
 
   String _selectedLanguage = 'en';
