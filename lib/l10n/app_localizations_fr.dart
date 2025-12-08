@@ -332,4 +332,79 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get faqDataTrainingAnswer =>
       'Nous pouvons utiliser des données utilisateur anonymisées et agrégées pour améliorer continuellement la précision et la pertinence des capacités de raisonnement du modèle Mistral 7B. Vos informations personnelles d\'identification ne sont jamais utilisées à des fins de formation sans consentement explicite et éclairé.';
+
+  @override
+  String get bloodPressure => 'Tension Artérielle';
+
+  @override
+  String get recording => 'Enregistrement';
+
+  @override
+  String get tapToRecord => 'Appuyez pour enregistrer';
+
+  @override
+  String get tapToStop => 'Appuyez pour arrêter';
+
+  @override
+  String get tapMicrophoneToRecord =>
+      'Appuyez sur le microphone pour enregistrer votre tension artérielle';
+
+  @override
+  String get recordingSpeakClearly =>
+      'Enregistrement… Énoncez clairement votre tension artérielle.';
+
+  @override
+  String get transcribingVoice => 'Transcription de votre voix…';
+
+  @override
+  String get analyzingBP => 'Analyse de votre tension artérielle...';
+
+  @override
+  String get returningHome => 'Retour à l\'écran d\'accueil...';
+
+  @override
+  String get microphonePermissionDenied => 'Permission du microphone refusée';
+
+  @override
+  String get addReminder => 'Ajouter un rappel';
+
+  @override
+  String get editReminder => 'Modifier le rappel';
+
+  @override
+  String get saveReminder => 'Enregistrer le rappel';
+
+  @override
+  String get updateReminder => 'Mettre à jour le rappel';
+
+  @override
+  String get noRemindersYet => 'Aucun rappel pour l\'instant';
+
+  @override
+  String get noRemindersDescription =>
+      'Configurez des rappels pour suivre régulièrement votre tension artérielle et maintenir de bonnes habitudes de santé.';
+
+  @override
+  String get reminderDeleted => 'Rappel supprimé';
+
+  @override
+  String get undo => 'Annuler';
+
+  @override
+  String get retry => 'Réessayer';
+
+  @override
+  String get repeat => 'Répéter';
+
+  @override
+  String get daily => 'Quotidien';
+
+  @override
+  String get weekdays => 'Jours de semaine';
+
+  @override
+  String get weekends => 'Week-ends';
+
+  @override
+  String get custom => 'Personnalisé';
 }

@@ -326,4 +326,79 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faqDataTrainingAnswer =>
       'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.';
+
+  @override
+  String get bloodPressure => 'Blood Pressure';
+
+  @override
+  String get recording => 'Recording';
+
+  @override
+  String get tapToRecord => 'Tap to record';
+
+  @override
+  String get tapToStop => 'Tap to stop';
+
+  @override
+  String get tapMicrophoneToRecord =>
+      'Tap the microphone to record your blood pressure';
+
+  @override
+  String get recordingSpeakClearly =>
+      'Recording… Speak your blood pressure clearly.';
+
+  @override
+  String get transcribingVoice => 'Transcribing your voice…';
+
+  @override
+  String get analyzingBP => 'Analyzing your blood pressure...';
+
+  @override
+  String get returningHome => 'Returning to homescreen...';
+
+  @override
+  String get microphonePermissionDenied => 'Microphone permission denied';
+
+  @override
+  String get addReminder => 'Add Reminder';
+
+  @override
+  String get editReminder => 'Edit Reminder';
+
+  @override
+  String get saveReminder => 'Save Reminder';
+
+  @override
+  String get updateReminder => 'Update Reminder';
+
+  @override
+  String get noRemindersYet => 'No reminders yet';
+
+  @override
+  String get noRemindersDescription =>
+      'Set up reminders to track your blood pressure regularly and maintain healthy habits.';
+
+  @override
+  String get reminderDeleted => 'Reminder deleted';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get repeat => 'Repeat';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekdays => 'Weekdays';
+
+  @override
+  String get weekends => 'Weekends';
+
+  @override
+  String get custom => 'Custom';
 }

@@ -107,6 +107,8 @@ class _LoginPageState extends State<LoginPage> {
                           _emailCtrl.text,
                         );
 
+                        if (!context.mounted) return;
+
                         if (message ==
                             "Password reset email sent! Check your inbox.") {
                           Navigator.pop(context);
@@ -189,25 +191,60 @@ class _LoginPageState extends State<LoginPage> {
       data: loginTheme,
       child: BlocListener<AuthCubits, AuthStates>(
         listener: (context, state) {
+          // Dismiss loading dialog if showing
+          if (state is! AuthLoading) {
+            // Pop the loading dialog if it was showing
+            if (Navigator.of(context, rootNavigator: true).canPop()) {
+              // Check if current route is a dialog (loading indicator)
+              final route = ModalRoute.of(context);
+              if (route != null && route.isCurrent == false) {
+                Navigator.of(context, rootNavigator: true).pop();
+              }
+            }
+          }
+
           if (state is AuthLoading) {
             showDialog(
               context: context,
               barrierDismissible: false,
               builder: (_) => const Center(child: CircularProgressIndicator()),
             );
-          } else {
-            if (ModalRoute.of(context)?.isCurrent == true) {
-              Navigator.pop(context); // Dismiss any loading dialog
-            }
-            if (state is Authenticated) {
-              Navigator.pushReplacementNamed(context, '/');
-            } else if (state is AuthenticatedNeedsProfileSetup) {
-              Navigator.pushReplacementNamed(context, '/profile-setup');
-            } else if (state is AuthError) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
-            }
+          } else if (state is Authenticated) {
+            Navigator.pushReplacementNamed(context, '/');
+          } else if (state is AuthenticatedNeedsProfileSetup) {
+            Navigator.pushReplacementNamed(context, '/profile-setup');
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: const Color(0xFFE63946),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          } else if (state is AuthCredentialError) {
+            // Handle specific credential errors (incorrect email/password)
+            String errorMessage = state.generalError ??
+                state.emailError ??
+                state.passwordError ??
+                'Login failed. Please check your credentials.';
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                backgroundColor: const Color(0xFFE63946),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                duration: const Duration(seconds: 4),
+              ),
+            );
           }
         },
         child: Scaffold(

@@ -513,5 +513,125 @@
   "faqDataTrainingAnswer": "We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model's reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.",
   "@faqDataTrainingAnswer": {
     "description": "FAQ Answer about Data Training"
+  },
+
+  "bloodPressure": "Blood Pressure",
+  "@bloodPressure": {
+    "description": "Blood Pressure title"
+  },
+
+  "recording": "Recording",
+  "@recording": {
+    "description": "Recording indicator text"
+  },
+
+  "tapToRecord": "Tap to record",
+  "@tapToRecord": {
+    "description": "Instruction to tap microphone"
+  },
+
+  "tapToStop": "Tap to stop",
+  "@tapToStop": {
+    "description": "Instruction to stop recording"
+  },
+
+  "tapMicrophoneToRecord": "Tap the microphone to record your blood pressure",
+  "@tapMicrophoneToRecord": {
+    "description": "Initial instruction on microphone screen"
+  },
+
+  "recordingSpeakClearly": "Recording… Speak your blood pressure clearly.",
+  "@recordingSpeakClearly": {
+    "description": "Recording state instruction"
+  },
+
+  "transcribingVoice": "Transcribing your voice…",
+  "@transcribingVoice": {
+    "description": "Transcription state text"
+  },
+
+  "analyzingBP": "Analyzing your blood pressure...",
+  "@analyzingBP": {
+    "description": "Analysis state text"
+  },
+
+  "returningHome": "Returning to homescreen...",
+  "@returningHome": {
+    "description": "Saving state text"
+  },
+
+  "microphonePermissionDenied": "Microphone permission denied",
+  "@microphonePermissionDenied": {
+    "description": "Error when microphone permission is denied"
+  },
+
+  "addReminder": "Add Reminder",
+  "@addReminder": {
+    "description": "Add reminder button and dialog title"
+  },
+
+  "editReminder": "Edit Reminder",
+  "@editReminder": {
+    "description": "Edit reminder dialog title"
+  },
+
+  "saveReminder": "Save Reminder",
+  "@saveReminder": {
+    "description": "Save reminder button text"
+  },
+
+  "updateReminder": "Update Reminder",
+  "@updateReminder": {
+    "description": "Update reminder button text"
+  },
+
+  "noRemindersYet": "No reminders yet",
+  "@noRemindersYet": {
+    "description": "Empty state title when no reminders"
+  },
+
+  "noRemindersDescription": "Set up reminders to track your blood pressure regularly and maintain healthy habits.",
+  "@noRemindersDescription": {
+    "description": "Empty state description for reminders"
+  },
+
+  "reminderDeleted": "Reminder deleted",
+  "@reminderDeleted": {
+    "description": "Snackbar message when reminder is deleted"
+  },
+
+  "undo": "Undo",
+  "@undo": {
+    "description": "Undo action button text"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+
+  "repeat": "Repeat",
+  "@repeat": {
+    "description": "Repeat label for reminder frequency"
+  },
+
+  "daily": "Daily",
+  "@daily": {
+    "description": "Daily repeat option"
+  },
+
+  "weekdays": "Weekdays",
+  "@weekdays": {
+    "description": "Weekdays repeat option"
+  },
+
+  "weekends": "Weekends",
+  "@weekends": {
+    "description": "Weekends repeat option"
+  },
+
+  "custom": "Custom",
+  "@custom": {
+    "description": "Custom repeat option"
   }
 }

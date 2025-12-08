@@ -685,6 +685,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.'**
   String get faqDataTrainingAnswer;
+
+  /// Blood Pressure title
+  ///
+  /// In en, this message translates to:
+  /// **'Blood Pressure'**
+  String get bloodPressure;
+
+  /// Recording indicator text
+  ///
+  /// In en, this message translates to:
+  /// **'Recording'**
+  String get recording;
+
+  /// Instruction to tap microphone
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to record'**
+  String get tapToRecord;
+
+  /// Instruction to stop recording
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to stop'**
+  String get tapToStop;
+
+  /// Initial instruction on microphone screen
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the microphone to record your blood pressure'**
+  String get tapMicrophoneToRecord;
+
+  /// Recording state instruction
+  ///
+  /// In en, this message translates to:
+  /// **'Recording… Speak your blood pressure clearly.'**
+  String get recordingSpeakClearly;
+
+  /// Transcription state text
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribing your voice…'**
+  String get transcribingVoice;
+
+  /// Analysis state text
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your blood pressure...'**
+  String get analyzingBP;
+
+  /// Saving state text
+  ///
+  /// In en, this message translates to:
+  /// **'Returning to homescreen...'**
+  String get returningHome;
+
+  /// Error when microphone permission is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission denied'**
+  String get microphonePermissionDenied;
+
+  /// Add reminder button and dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Add Reminder'**
+  String get addReminder;
+
+  /// Edit reminder dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Reminder'**
+  String get editReminder;
+
+  /// Save reminder button text
+  ///
+  /// In en, this message translates to:
+  /// **'Save Reminder'**
+  String get saveReminder;
+
+  /// Update reminder button text
+  ///
+  /// In en, this message translates to:
+  /// **'Update Reminder'**
+  String get updateReminder;
+
+  /// Empty state title when no reminders
+  ///
+  /// In en, this message translates to:
+  /// **'No reminders yet'**
+  String get noRemindersYet;
+
+  /// Empty state description for reminders
+  ///
+  /// In en, this message translates to:
+  /// **'Set up reminders to track your blood pressure regularly and maintain healthy habits.'**
+  String get noRemindersDescription;
+
+  /// Snackbar message when reminder is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder deleted'**
+  String get reminderDeleted;
+
+  /// Undo action button text
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
+
+  /// Retry button text
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// Repeat label for reminder frequency
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get repeat;
+
+  /// Daily repeat option
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get daily;
+
+  /// Weekdays repeat option
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get weekdays;
+
+  /// Weekends repeat option
+  ///
+  /// In en, this message translates to:
+  /// **'Weekends'**
+  String get weekends;
+
+  /// Custom repeat option
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get custom;
 }
 
 class _AppLocalizationsDelegate

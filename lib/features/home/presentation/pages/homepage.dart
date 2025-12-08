@@ -1,7 +1,11 @@
 import 'package:arteria/features/home/presentation/components/bp_reading_card.dart';
 import 'package:arteria/features/home/presentation/components/next_steps_card.dart';
-import 'package:arteria/features/home/presentation/microphone_transcribe.dart';
-import 'package:arteria/features/home/presentation/settings_screen.dart';
+import 'package:arteria/features/home/presentation/pages/Insights/insights_screen.dart';
+import 'package:arteria/features/home/presentation/pages/microphone_transcribe.dart';
+import 'package:arteria/features/home/presentation/pages/settings/settings_screen.dart';
+import 'package:arteria/features/reminders/reminder_bloc.dart';
+import 'package:arteria/features/reminders/reminder_state.dart';
+import 'package:arteria/features/reminders/ui/reminder_settings_screen.dart';
 import 'package:arteria/features/user data/user_bloc.dart';
 import 'package:arteria/features/user data/user_event.dart';
 import 'package:arteria/features/user data/user_state.dart';
@@ -10,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class Homepage extends StatefulWidget {
@@ -42,7 +47,15 @@ class _HomepageState extends State<Homepage> {
 
     final List<Widget> pages = [
       HomepageContent(latestReading: _latestReading, dateFormat: _dateFormat),
-      const InsightsPage(),
+      BlocBuilder<UserBloc, UserState>(
+        builder: (context, state) {
+          final userId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
+          final userAge = state is UserLoaded 
+              ? (state.latestReading?['age'] as int?) 
+              : null;
+          return InsightsScreen(userId: userId, userAge: userAge);
+        },
+      ),
       const HistoryPage(),
       const SettingsScreen(),
     ];
@@ -239,7 +252,7 @@ class HomepageContent extends StatelessWidget {
           statusText,
           style: GoogleFonts.openSans(
             fontSize: 15,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -335,17 +348,46 @@ class HomepageContent extends StatelessWidget {
   }
 
   List<NextStepItem> _getNextSteps(BuildContext context, UserLoaded state) {
-    // TODO: Generate dynamic reminders based on user schedule and medication
     final nextSteps = <NextStepItem>[];
 
-    // Example: Add reading reminder
-    nextSteps.add(
-      NextStepItem(
-        title: AppLocalizations.of(context)!.takeNextReading,
-        time: AppLocalizations.of(context)!.tomorrowAt8AM,
-        color: const Color(0xFF1976D2),
-      ),
-    );
+    // Get next reminder time from ReminderBloc
+    final reminderState = context.watch<ReminderBloc>().state;
+    if (reminderState is RemindersLoaded && reminderState.nextReminderTime != null) {
+      final nextTime = reminderState.nextReminderTime!;
+      final now = DateTime.now();
+      final isToday = nextTime.day == now.day && 
+                      nextTime.month == now.month && 
+                      nextTime.year == now.year;
+      final isTomorrow = nextTime.day == now.add(const Duration(days: 1)).day &&
+                         nextTime.month == now.add(const Duration(days: 1)).month;
+      
+      final timeStr = DateFormat('h:mm a').format(nextTime);
+      String dayStr;
+      if (isToday) {
+        dayStr = 'Today';
+      } else if (isTomorrow) {
+        dayStr = 'Tomorrow';
+      } else {
+        dayStr = DateFormat('EEEE').format(nextTime);
+      }
+
+      nextSteps.add(
+        NextStepItem(
+          title: AppLocalizations.of(context)!.takeNextReading,
+          time: '$dayStr at $timeStr',
+          color: const Color(0xFF1976D2),
+        ),
+      );
+    } else {
+      // Default placeholder when no reminders are set
+      nextSteps.add(
+        NextStepItem(
+          title: AppLocalizations.of(context)!.takeNextReading,
+          time: 'Tap to set reminder',
+          color: const Color(0xFF1976D2),
+        ),
+      );
+    }
 
     return nextSteps;
   }
@@ -385,7 +427,12 @@ class HomepageContent extends StatelessWidget {
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () {
-              _openReminderSettings(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ReminderSettingsScreen(),
+                ),
+              );
             },
             icon: const Icon(Icons.notifications_outlined, size: 22),
             label: Text(
@@ -406,82 +453,6 @@ class HomepageContent extends StatelessWidget {
     );
   }
 
-  Widget _buildReminderButton(BuildContext context, ThemeData theme) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          _openReminderSettings(context);
-        },
-        icon: const Icon(Icons.notifications_outlined, size: 20),
-        label: Text(
-          AppLocalizations.of(context)!.setUpReminders,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: theme.colorScheme.primary,
-          side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openReminderSettings(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.notifications_active, color: Color(0xFF1976D2)),
-            const SizedBox(width: 12),
-            Text(
-              AppLocalizations.of(context)!.reminderSettings,
-              style: GoogleFonts.montserrat(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.reminderSettingsDescription,
-              style: GoogleFonts.openSans(fontSize: 15),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              AppLocalizations.of(context)!.featureComingSoon,
-              style: GoogleFonts.openSans(
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              AppLocalizations.of(context)!.gotIt,
-              style: GoogleFonts.montserrat(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1976D2),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildSkeletonCard() => Container(
     decoration: BoxDecoration(
@@ -497,29 +468,6 @@ class HomepageContent extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
     ),
   );
-}
-
-class InsightsPage extends StatelessWidget {
-  const InsightsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.insights, size: 64, color: Colors.blueGrey),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.aiInsightsComingSoon,
-            style: theme.textTheme.titleLarge?.copyWith(fontSize: 20),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class HistoryPage extends StatelessWidget {

@@ -231,7 +231,7 @@ class BPReadingCard extends StatelessWidget {
         'label': AppLocalizations.of(context)!.high,
         'borderColor': const Color(0xFFFF6F00),
       };
-    } else if (sys >= 130 || dia >= 80) {
+    } else if (sys >= 130 || dia > 80) {
       return {
         'emoji': '🟡',
         'label': AppLocalizations.of(context)!.elevated,

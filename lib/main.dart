@@ -7,18 +7,21 @@ import 'package:arteria/features/auth/presentation/pages/onboarding_screen.dart'
 import 'package:arteria/features/auth/presentation/pages/login_page.dart';
 import 'package:arteria/features/auth/presentation/pages/profile_setup_screen.dart';
 import 'package:arteria/features/auth/presentation/pages/signup_page.dart';
-import 'package:arteria/features/home/presentation/homepage.dart';
-import 'package:arteria/features/settings/settings_bloc.dart';
-import 'package:arteria/features/settings/settings_state.dart';
+import 'package:arteria/features/home/presentation/pages/homepage.dart';
+import 'package:arteria/features/home/presentation/pages/settings/settings_bloc.dart';
+import 'package:arteria/features/home/presentation/pages/settings/settings_state.dart';
+import 'package:arteria/features/reminders/reminder_bloc.dart';
+import 'package:arteria/features/reminders/reminder_event.dart';
+import 'package:arteria/features/reminders/reminder_service.dart';
 import 'package:arteria/features/user%20data/user_bloc.dart';
 import 'package:arteria/features/user%20data/user_event.dart';
 import 'package:arteria/Core/Theme/app_theme.dart';
 import 'package:arteria/firebase_options.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:arteria/env/env.dart';
@@ -26,6 +29,9 @@ import 'package:arteria/env/env.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize reminder notifications
+  await ReminderService().initialize();
 
   try {
     OpenAI.apiKey = Env.openaiApiKey;
@@ -58,6 +64,9 @@ class MyApp extends StatelessWidget {
                 create: (context) => UserBloc()..add(LoadUserData()),
               ),
               BlocProvider<SettingsBloc>(create: (context) => SettingsBloc()),
+              BlocProvider<ReminderBloc>(
+                create: (context) => ReminderBloc()..add(LoadReminders()),
+              ),
             ],
             child: BlocBuilder<SettingsBloc, SettingsState>(
               builder: (context, settingsState) {

@@ -1,8 +1,9 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
 import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
-import 'package:arteria/features/home/presentation/faq_screen.dart';
-import 'package:arteria/features/settings/settings_bloc.dart';
-import 'package:arteria/features/settings/settings_event.dart';
+import 'package:arteria/features/home/presentation/pages/faq_screen.dart';
+import 'package:arteria/features/home/presentation/pages/settings/settings_bloc.dart';
+import 'package:arteria/features/home/presentation/pages/settings/settings_event.dart';
+import 'package:arteria/features/reminders/ui/reminder_settings_screen.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -167,7 +168,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           context,
                         )!.reminderSettingsMenu,
                         icon: Icons.notifications_active_outlined,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ReminderSettingsScreen(),
+                          ),
+                        ),
                         darkMode: darkMode,
                       ),
                       const SizedBox(height: 10),
