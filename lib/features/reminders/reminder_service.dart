@@ -27,7 +27,9 @@ class ReminderService {
     tz_data.initializeTimeZones();
 
     // Android initialization settings
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
 
     // iOS initialization settings
     const iosSettings = DarwinInitializationSettings(
@@ -50,7 +52,8 @@ class ReminderService {
     if (Platform.isAndroid) {
       await _notifications
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestNotificationsPermission();
     }
 
@@ -60,31 +63,64 @@ class ReminderService {
 
   void _onNotificationTapped(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
-    // Navigation to app is handled automatically
   }
 
   /// Get reference to user's reminders collection
-  CollectionReference<Map<String, dynamic>> _remindersCollection(String userId) {
+  CollectionReference<Map<String, dynamic>> _remindersCollection(
+    String userId,
+  ) {
     return _firestore.collection('users').doc(userId).collection('reminders');
   }
 
   /// Get current user ID
   String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
+  /// **NEW: Stream reminders in real-time**
+  Stream<List<Reminder>> watchReminders() {
+    final userId = _currentUserId;
+    if (userId == null) {
+      debugPrint('⚠️ Cannot watch reminders: No user logged in');
+      return Stream.value([]);
+    }
+
+    debugPrint('👁️ Starting to watch reminders for user: $userId');
+
+    return _remindersCollection(userId)
+        .orderBy('hour')
+        .orderBy('minute')
+        .snapshots()
+        .map((snapshot) {
+          debugPrint(
+            '📡 Firestore snapshot received: ${snapshot.docs.length} reminders',
+          );
+          return snapshot.docs
+              .map((doc) => Reminder.fromFirestore(doc))
+              .toList();
+        })
+        .handleError((error) {
+          debugPrint('❌ Error watching reminders: $error');
+          return <Reminder>[];
+        });
+  }
+
   /// Load all reminders for current user
   Future<List<Reminder>> loadReminders() async {
     final userId = _currentUserId;
-    if (userId == null) return [];
+    if (userId == null) {
+      debugPrint('⚠️ Cannot load reminders: No user logged in');
+      return [];
+    }
 
     try {
-      final snapshot = await _remindersCollection(userId)
-          .orderBy('hour')
-          .orderBy('minute')
-          .get();
+      debugPrint('📥 Loading reminders for user: $userId');
+      final snapshot = await _remindersCollection(
+        userId,
+      ).orderBy('hour').orderBy('minute').get();
 
+      debugPrint('✓ Loaded ${snapshot.docs.length} reminders');
       return snapshot.docs.map((doc) => Reminder.fromFirestore(doc)).toList();
     } catch (e) {
-      debugPrint('Error loading reminders: $e');
+      debugPrint('❌ Error loading reminders: $e');
       return [];
     }
   }
@@ -103,11 +139,14 @@ class ReminderService {
     String? label,
   }) async {
     final userId = _currentUserId;
-    if (userId == null) return null;
+    if (userId == null) {
+      debugPrint('❌ Cannot add reminder: No user logged in');
+      return null;
+    }
 
     try {
       final reminder = Reminder(
-        id: '', // Will be set by Firestore
+        id: '',
         time: time,
         repeatType: repeatType,
         customDays: customDays,
@@ -116,16 +155,28 @@ class ReminderService {
         createdAt: DateTime.now(),
       );
 
-      final docRef = await _remindersCollection(userId).add(reminder.toFirestore());
+      debugPrint('📝 Adding reminder to Firestore...');
+      debugPrint('   User: $userId');
+      debugPrint(
+        '   Time: ${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+      );
+      debugPrint('   Repeat: ${repeatType.name}');
+
+      final docRef = await _remindersCollection(
+        userId,
+      ).add(reminder.toFirestore());
       final newReminder = reminder.copyWith(id: docRef.id);
 
-      // Schedule the notification
+      debugPrint('✅ Reminder saved successfully!');
+      debugPrint('   Document ID: ${docRef.id}');
+
       await _scheduleNotification(newReminder);
 
-      debugPrint('✓ Reminder added: ${newReminder.formattedTime}');
+      debugPrint('✓ Reminder fully added: ${newReminder.formattedTime}');
       return newReminder;
-    } catch (e) {
-      debugPrint('Error adding reminder: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ ERROR adding reminder: $e');
+      debugPrint('Stack trace: $stackTrace');
       return null;
     }
   }
@@ -136,6 +187,8 @@ class ReminderService {
     if (userId == null) return false;
 
     try {
+      debugPrint('📝 Updating reminder: ${reminder.id}');
+
       await _remindersCollection(userId).doc(reminder.id).update({
         'hour': reminder.time.hour,
         'minute': reminder.time.minute,
@@ -145,7 +198,6 @@ class ReminderService {
         'label': reminder.label,
       });
 
-      // Cancel existing notification and reschedule if enabled
       await _cancelNotification(reminder.id);
       if (reminder.isEnabled) {
         await _scheduleNotification(reminder);
@@ -154,7 +206,7 @@ class ReminderService {
       debugPrint('✓ Reminder updated: ${reminder.formattedTime}');
       return true;
     } catch (e) {
-      debugPrint('Error updating reminder: $e');
+      debugPrint('❌ Error updating reminder: $e');
       return false;
     }
   }
@@ -165,12 +217,15 @@ class ReminderService {
     if (userId == null) return false;
 
     try {
-      await _remindersCollection(userId).doc(reminderId).update({
-        'isEnabled': isEnabled,
-      });
+      debugPrint(
+        '🔄 Toggling reminder $reminderId to ${isEnabled ? "enabled" : "disabled"}',
+      );
+
+      await _remindersCollection(
+        userId,
+      ).doc(reminderId).update({'isEnabled': isEnabled});
 
       if (isEnabled) {
-        // Reload and reschedule
         final doc = await _remindersCollection(userId).doc(reminderId).get();
         if (doc.exists) {
           await _scheduleNotification(Reminder.fromFirestore(doc));
@@ -182,7 +237,7 @@ class ReminderService {
       debugPrint('✓ Reminder ${isEnabled ? 'enabled' : 'disabled'}');
       return true;
     } catch (e) {
-      debugPrint('Error toggling reminder: $e');
+      debugPrint('❌ Error toggling reminder: $e');
       return false;
     }
   }
@@ -193,13 +248,15 @@ class ReminderService {
     if (userId == null) return false;
 
     try {
+      debugPrint('🗑️ Deleting reminder: $reminderId');
+
       await _remindersCollection(userId).doc(reminderId).delete();
       await _cancelNotification(reminderId);
 
       debugPrint('✓ Reminder deleted');
       return true;
     } catch (e) {
-      debugPrint('Error deleting reminder: $e');
+      debugPrint('❌ Error deleting reminder: $e');
       return false;
     }
   }
@@ -209,7 +266,10 @@ class ReminderService {
     if (!_isInitialized) await initialize();
 
     final nextTrigger = reminder.getNextTriggerTime();
-    if (nextTrigger == null) return;
+    if (nextTrigger == null) {
+      debugPrint('⚠️ No valid trigger time for reminder');
+      return;
+    }
 
     final notificationId = reminder.id.hashCode.abs() % 2147483647;
 
@@ -233,40 +293,41 @@ class ReminderService {
       iOS: iosDetails,
     );
 
-    // Schedule recurring notification based on repeat type
-    if (reminder.repeatType == RepeatType.daily) {
-      // Use daily scheduling
-      await _notifications.zonedSchedule(
-        notificationId,
-        'Time to check your BP! 💓',
-        reminder.label ?? 'Record your blood pressure reading now',
-        _nextInstanceOfTime(reminder.time),
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: reminder.id,
-      );
-    } else {
-      // For weekdays/weekends/custom, schedule for next valid day
-      await _notifications.zonedSchedule(
-        notificationId,
-        'Time to check your BP! 💓',
-        reminder.label ?? 'Record your blood pressure reading now',
-        tz.TZDateTime.from(nextTrigger, tz.local),
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: reminder.id,
-      );
-    }
+    try {
+      if (reminder.repeatType == RepeatType.daily) {
+        await _notifications.zonedSchedule(
+          notificationId,
+          'Time to check your BP! 💓',
+          reminder.label ?? 'Record your blood pressure reading now',
+          _nextInstanceOfTime(reminder.time),
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: reminder.id,
+        );
+      } else {
+        await _notifications.zonedSchedule(
+          notificationId,
+          'Time to check your BP! 💓',
+          reminder.label ?? 'Record your blood pressure reading now',
+          tz.TZDateTime.from(nextTrigger, tz.local),
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: reminder.id,
+        );
+      }
 
-    debugPrint('✓ Notification scheduled for ${reminder.formattedTime}');
+      debugPrint('✓ Notification scheduled for ${reminder.formattedTime}');
+    } catch (e) {
+      debugPrint('❌ Error scheduling notification: $e');
+    }
   }
 
   /// Cancel a scheduled notification
   Future<void> _cancelNotification(String reminderId) async {
     final notificationId = reminderId.hashCode.abs() % 2147483647;
     await _notifications.cancel(notificationId);
-    debugPrint('✓ Notification cancelled');
+    debugPrint('✓ Notification cancelled for reminder: $reminderId');
   }
 
   /// Get next instance of a time today or tomorrow
@@ -288,15 +349,21 @@ class ReminderService {
     return scheduled;
   }
 
-  /// Reschedule all enabled reminders (call after app restart or time zone change)
+  /// Reschedule all enabled reminders
   Future<void> rescheduleAllReminders() async {
+    debugPrint('🔄 Rescheduling all enabled reminders...');
+
     final reminders = await loadReminders();
+    int rescheduled = 0;
+
     for (final reminder in reminders) {
       if (reminder.isEnabled) {
         await _scheduleNotification(reminder);
+        rescheduled++;
       }
     }
-    debugPrint('✓ Rescheduled ${reminders.where((r) => r.isEnabled).length} reminders');
+
+    debugPrint('✓ Rescheduled $rescheduled reminders');
   }
 
   /// Get the next upcoming reminder time
@@ -312,6 +379,10 @@ class ReminderService {
           nextTime = triggerTime;
         }
       }
+    }
+
+    if (nextTime != null) {
+      debugPrint('📅 Next reminder at: $nextTime');
     }
 
     return nextTime;

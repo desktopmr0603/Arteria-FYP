@@ -20,7 +20,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ReminderBloc>().add(LoadReminders());
+    // **KEY CHANGE: Start watching for real-time updates immediately**
+    debugPrint('🎬 ReminderSettingsScreen initialized, starting watch');
+    context.read<ReminderBloc>().add(WatchReminders());
   }
 
   @override
@@ -43,15 +45,14 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
           ),
         ),
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new,
-            color: theme.iconTheme.color,
-          ),
+          icon: Icon(Icons.arrow_back_ios_new, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: BlocBuilder<ReminderBloc, ReminderState>(
         builder: (context, state) {
+          debugPrint('📺 UI Building with state: ${state.runtimeType}');
+
           if (state is RemindersLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -71,7 +72,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<ReminderBloc>().add(LoadReminders());
+                      context.read<ReminderBloc>().add(WatchReminders());
                     },
                     child: Text(l10n.retry),
                   ),
@@ -80,7 +81,10 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
             );
           }
 
-          final reminders = state is RemindersLoaded ? state.reminders : <Reminder>[];
+          final reminders = state is RemindersLoaded
+              ? state.reminders
+              : <Reminder>[];
+          debugPrint('📋 Displaying ${reminders.length} reminders');
 
           return Column(
             children: [
@@ -91,7 +95,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                   l10n.reminderSettingsDescription,
                   style: GoogleFonts.openSans(
                     fontSize: 15,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -174,7 +180,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
               l10n.noRemindersDescription,
               style: GoogleFonts.openSans(
                 fontSize: 15,
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.7,
+                ),
               ),
               textAlign: TextAlign.center,
             ),
@@ -206,12 +214,14 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                 action: SnackBarAction(
                   label: l10n.undo,
                   onPressed: () {
-                    context.read<ReminderBloc>().add(AddReminder(
-                          time: reminder.time,
-                          repeatType: reminder.repeatType,
-                          customDays: reminder.customDays,
-                          label: reminder.label,
-                        ));
+                    context.read<ReminderBloc>().add(
+                      AddReminder(
+                        time: reminder.time,
+                        repeatType: reminder.repeatType,
+                        customDays: reminder.customDays,
+                        label: reminder.label,
+                      ),
+                    );
                   },
                 ),
               ),
@@ -287,10 +297,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
         trailing: Switch.adaptive(
           value: reminder.isEnabled,
           onChanged: (value) {
-            context.read<ReminderBloc>().add(ToggleReminder(
-                  reminderId: reminder.id,
-                  isEnabled: value,
-                ));
+            context.read<ReminderBloc>().add(
+              ToggleReminder(reminderId: reminder.id, isEnabled: value),
+            );
           },
           activeThumbColor: _primaryBlue,
         ),
@@ -309,10 +318,13 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
+          final l10n = AppLocalizations.of(context)!;
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -369,10 +381,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Icon(
-                          Icons.edit,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.edit, color: Colors.grey[400]),
                       ],
                     ),
                   ),
@@ -393,22 +402,23 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                   children: RepeatType.values
                       .where((r) => r != RepeatType.custom)
                       .map((type) {
-                    final isSelected = selectedRepeat == type;
-                    return ChoiceChip(
-                      label: Text(_getRepeatLabel(context, type)),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setModalState(() => selectedRepeat = type);
-                        }
-                      },
-                      selectedColor: _primaryBlue.withValues(alpha: 0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected ? _primaryBlue : null,
-                        fontWeight: isSelected ? FontWeight.w600 : null,
-                      ),
-                    );
-                  }).toList(),
+                        final isSelected = selectedRepeat == type;
+                        return ChoiceChip(
+                          label: Text(_getRepeatLabel(context, type)),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setModalState(() => selectedRepeat = type);
+                            }
+                          },
+                          selectedColor: _primaryBlue.withValues(alpha: 0.2),
+                          labelStyle: TextStyle(
+                            color: isSelected ? _primaryBlue : null,
+                            fontWeight: isSelected ? FontWeight.w600 : null,
+                          ),
+                        );
+                      })
+                      .toList(),
                 ),
                 const SizedBox(height: 24),
 
@@ -417,10 +427,13 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      context.read<ReminderBloc>().add(AddReminder(
-                            time: selectedTime,
-                            repeatType: selectedRepeat,
-                          ));
+                      debugPrint('💾 Saving new reminder from dialog');
+                      context.read<ReminderBloc>().add(
+                        AddReminder(
+                          time: selectedTime,
+                          repeatType: selectedRepeat,
+                        ),
+                      );
                       Navigator.pop(bottomSheetContext);
                     },
                     style: ElevatedButton.styleFrom(
@@ -459,10 +472,13 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
+          final l10n = AppLocalizations.of(context)!;
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -519,10 +535,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Icon(
-                          Icons.edit,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.edit, color: Colors.grey[400]),
                       ],
                     ),
                   ),
@@ -543,22 +556,23 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                   children: RepeatType.values
                       .where((r) => r != RepeatType.custom)
                       .map((type) {
-                    final isSelected = selectedRepeat == type;
-                    return ChoiceChip(
-                      label: Text(_getRepeatLabel(context, type)),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setModalState(() => selectedRepeat = type);
-                        }
-                      },
-                      selectedColor: _primaryBlue.withValues(alpha: 0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected ? _primaryBlue : null,
-                        fontWeight: isSelected ? FontWeight.w600 : null,
-                      ),
-                    );
-                  }).toList(),
+                        final isSelected = selectedRepeat == type;
+                        return ChoiceChip(
+                          label: Text(_getRepeatLabel(context, type)),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setModalState(() => selectedRepeat = type);
+                            }
+                          },
+                          selectedColor: _primaryBlue.withValues(alpha: 0.2),
+                          labelStyle: TextStyle(
+                            color: isSelected ? _primaryBlue : null,
+                            fontWeight: isSelected ? FontWeight.w600 : null,
+                          ),
+                        );
+                      })
+                      .toList(),
                 ),
                 const SizedBox(height: 24),
 
@@ -567,12 +581,15 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      context.read<ReminderBloc>().add(UpdateReminder(
-                            reminder.copyWith(
-                              time: selectedTime,
-                              repeatType: selectedRepeat,
-                            ),
-                          ));
+                      debugPrint('💾 Updating reminder ${reminder.id}');
+                      context.read<ReminderBloc>().add(
+                        UpdateReminder(
+                          reminder.copyWith(
+                            time: selectedTime,
+                            repeatType: selectedRepeat,
+                          ),
+                        ),
+                      );
                       Navigator.pop(bottomSheetContext);
                     },
                     style: ElevatedButton.styleFrom(

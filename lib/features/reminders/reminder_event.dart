@@ -10,8 +10,21 @@ abstract class ReminderEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Load all reminders
+/// Load all reminders (one-time fetch)
 class LoadReminders extends ReminderEvent {}
+
+/// Start watching reminders in real-time (NEW)
+class WatchReminders extends ReminderEvent {}
+
+/// Internal event when reminders are updated from Firestore stream (NEW)
+class RemindersUpdated extends ReminderEvent {
+  final List<Reminder> reminders;
+
+  const RemindersUpdated(this.reminders);
+
+  @override
+  List<Object?> get props => [reminders];
+}
 
 /// Add a new reminder
 class AddReminder extends ReminderEvent {
@@ -46,10 +59,7 @@ class ToggleReminder extends ReminderEvent {
   final String reminderId;
   final bool isEnabled;
 
-  const ToggleReminder({
-    required this.reminderId,
-    required this.isEnabled,
-  });
+  const ToggleReminder({required this.reminderId, required this.isEnabled});
 
   @override
   List<Object?> get props => [reminderId, isEnabled];
