@@ -298,6 +298,8 @@ class BPDataService {
   }
 
   /// Format BP data as context for AI
+  /// 
+  /// Set [mlRiskProbability] and [mlRiskLevel] when ML model predictions are available.
   String formatBPContext({
     required String userId,
     required Map<String, dynamic>? latestReading,
@@ -305,6 +307,8 @@ class BPDataService {
     int? userAge,
     String? gender,
     Map<String, dynamic>? medicalProfile,
+    double? mlRiskProbability,
+    String? mlRiskLevel,
   }) {
     final buffer = StringBuffer();
     buffer.writeln('User Context:');
@@ -335,6 +339,15 @@ class BPDataService {
       }
       buffer.writeln('- Classification: ${classification.categoryName}');
       buffer.writeln('- Status: ${classification.description}');
+      buffer.writeln();
+    }
+
+    // ML Model Prediction Section
+    if (mlRiskProbability != null) {
+      buffer.writeln('AI Risk Assessment (Machine Learning Model):');
+      buffer.writeln('- Hypertension Risk Probability: ${(mlRiskProbability * 100).toStringAsFixed(1)}%');
+      buffer.writeln('- Risk Level: ${mlRiskLevel ?? _classifyMLRisk(mlRiskProbability)}');
+      buffer.writeln('- Note: This prediction uses NHANES 2021-2023 trained model');
       buffer.writeln();
     }
 
@@ -426,6 +439,13 @@ class BPDataService {
     buffer.writeln('Important: Always remind the user that this is informational only and not a substitute for professional medical advice.');
 
     return buffer.toString();
+  }
+
+  /// Classify ML risk probability
+  String _classifyMLRisk(double probability) {
+    if (probability < 0.3) return 'Low';
+    if (probability < 0.6) return 'Moderate';
+    return 'High';
   }
 
   /// Get recommendations based on classification

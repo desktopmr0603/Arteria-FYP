@@ -26,10 +26,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -59,4 +56,16 @@ class DefaultFirebaseOptions {
     projectId: 'arteria-cc308',
     storageBucket: 'arteria-cc308.firebasestorage.app',
   );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBfPOQoE8kves9vY0aAn82-jPFhbwgAnh0',
+    appId: '1:1074635639605:ios:1a6337dbf6b89e3fef9a7c',
+    messagingSenderId: '1074635639605',
+    projectId: 'arteria-cc308',
+    storageBucket: 'arteria-cc308.firebasestorage.app',
+    androidClientId: '1074635639605-n3pi09i2vvqnsdlap4qnhftnmr38p2bg.apps.googleusercontent.com',
+    iosClientId: '1074635639605-bqrfl0btom00ak5vjbujbfut50r4c5f5.apps.googleusercontent.com',
+    iosBundleId: 'com.example.arteria',
+  );
+
 }
