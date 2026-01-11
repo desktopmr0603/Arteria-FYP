@@ -147,25 +147,26 @@ class BPDataService {
     }
   }
 
-  /// Classify BP reading based on AHA guidelines
+  /// Classify BP reading (120/80 = Normal)
   BPClassification classifyBP(int systolic, int diastolic, {int? age}) {
     BPCategory category;
     int severity;
     String description;
 
-    if (systolic < 120 && diastolic < 80) {
+    // Normal: systolic <= 120 AND diastolic <= 80 (includes 120/80)
+    if (systolic <= 120 && diastolic <= 80) {
       category = BPCategory.normal;
       severity = 0;
       description = 'Your blood pressure is in the normal range.';
-    } else if (systolic < 130 && diastolic < 80) {
+    }
+    // Elevated: systolic 121-129 AND diastolic <= 80
+    else if (systolic > 120 && systolic < 130 && diastolic <= 80) {
       category = BPCategory.elevated;
       severity = 1;
-      description = 'Your blood pressure is elevated. Lifestyle changes are recommended.';
-    } else if ((systolic >= 120 && systolic <= 129) && diastolic < 80) {
-      category = BPCategory.elevated;
-      severity = 1;
-      description = 'Your blood pressure is elevated. Lifestyle changes are recommended.';
-    } else if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) {
+      description = 'Your blood pressure is slightly above normal. Lifestyle changes are recommended.';
+    }
+    // Stage 1 Hypertension: systolic 130-139 OR diastolic 81-89
+    else if ((systolic >= 130 && systolic <= 139) || (diastolic > 80 && diastolic <= 89)) {
       category = BPCategory.hypertensionStage1;
       severity = 2;
       description = 'You have Stage 1 Hypertension. Consult your doctor about treatment options.';

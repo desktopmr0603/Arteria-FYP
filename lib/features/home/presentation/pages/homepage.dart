@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:arteria/features/home/presentation/components/bp_reading_card.dart';
 import 'package:arteria/features/home/presentation/components/next_steps_card.dart';
 import 'package:arteria/features/home/presentation/pages/Insights/insights_screen.dart';
+import 'package:arteria/features/home/presentation/pages/Insights/whatif_screen.dart';
 import 'package:arteria/features/home/presentation/pages/microphone_transcribe.dart';
 import 'package:arteria/features/home/presentation/pages/settings/settings_screen.dart';
 import 'package:arteria/features/reminders/reminder_bloc.dart';
@@ -11,6 +14,7 @@ import 'package:arteria/features/user data/user_event.dart';
 import 'package:arteria/features/user data/user_state.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -49,9 +53,10 @@ class _HomepageState extends State<Homepage> {
       HomepageContent(latestReading: _latestReading, dateFormat: _dateFormat),
       BlocBuilder<UserBloc, UserState>(
         builder: (context, state) {
-          final userId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
-          final userAge = state is UserLoaded 
-              ? (state.latestReading?['age'] as int?) 
+          final userId =
+              FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
+          final userAge = state is UserLoaded
+              ? (state.latestReading?['age'] as int?)
               : null;
           return InsightsScreen(userId: userId, userAge: userAge);
         },
@@ -77,6 +82,7 @@ class _HomepageState extends State<Homepage> {
         },
         child: Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
+          extendBody: true, // Allow body to extend behind nav bar
           appBar: AppBar(
             automaticallyImplyLeading: false, // Remove back button
             backgroundColor: theme.appBarTheme.backgroundColor,
@@ -98,41 +104,174 @@ class _HomepageState extends State<Homepage> {
                   ),
           ),
           body: pages[_currentIndex],
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: _onTabTapped,
-            backgroundColor: theme.bottomNavigationBarTheme.backgroundColor,
-            selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
-            unselectedItemColor:
-                theme.bottomNavigationBarTheme.unselectedItemColor,
-            showUnselectedLabels: true,
-            type: BottomNavigationBarType.fixed,
-            items: [
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.home_outlined),
-                activeIcon: const Icon(Icons.home),
-                label: AppLocalizations.of(context)!.home,
+          bottomNavigationBar: _buildFloatingNavBar(context, theme),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingNavBar(BuildContext context, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final items = [
+      _NavItem(
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
+        label: AppLocalizations.of(context)!.home,
+      ),
+      _NavItem(
+        icon: Icons.insights_outlined,
+        activeIcon: Icons.insights_rounded,
+        label: AppLocalizations.of(context)!.insights,
+      ),
+      _NavItem(
+        icon: Icons.timeline_outlined,
+        activeIcon: Icons.timeline_rounded,
+        label: AppLocalizations.of(context)!.history,
+      ),
+      _NavItem(
+        icon: Icons.more_horiz_outlined,
+        activeIcon: Icons.more_horiz,
+        label: AppLocalizations.of(context)!.more,
+      ),
+    ];
+
+    // Get the system navigation bar height to avoid obstruction
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? [
+                        const Color(0xFF1E1E2E).withValues(alpha: 0.9),
+                        const Color(0xFF2D2D44).withValues(alpha: 0.85),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.95),
+                        Colors.white.withValues(alpha: 0.85),
+                      ],
               ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.insights_outlined),
-                activeIcon: const Icon(Icons.insights),
-                label: AppLocalizations.of(context)!.insights,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.6),
+                width: 1,
               ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.history),
-                activeIcon: const Icon(Icons.history_toggle_off),
-                label: AppLocalizations.of(context)!.history,
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.more_horiz),
-                label: AppLocalizations.of(context)!.more,
-              ),
-            ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(items.length, (index) {
+                final isSelected = _currentIndex == index;
+                return _buildNavItem(
+                  context,
+                  items[index],
+                  isSelected,
+                  index,
+                  theme,
+                  isDark,
+                );
+              }),
+            ),
           ),
         ),
       ),
     );
   }
+
+  Widget _buildNavItem(
+    BuildContext context,
+    _NavItem item,
+    bool isSelected,
+    int index,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _onTabTapped(index);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                    ? _primaryBlue.withValues(alpha: 0.2)
+                    : _primaryBlue.withValues(alpha: 0.12))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              scale: isSelected ? 1.15 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              child: Icon(
+                isSelected ? item.activeIcon : item.icon,
+                size: 28,
+                color: isSelected
+                    ? _primaryBlue
+                    : (isDark ? Colors.white60 : Colors.grey.shade600),
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: isSelected ? 12 : 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? _primaryBlue
+                    : (isDark ? Colors.white60 : Colors.grey.shade600),
+              ),
+              child: Text(item.label),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
 }
 
 class HomepageContent extends StatelessWidget {
@@ -284,15 +423,25 @@ class HomepageContent extends StatelessWidget {
       return AppLocalizations.of(context)!.noRecentReadings;
     }
 
+    // Blood Pressure Classification (120/80 = Normal)
+    // Hypertensive Crisis: systolic >= 180 OR diastolic >= 120
     if (systolic >= 180 || diastolic >= 120) {
       return AppLocalizations.of(context)!.criticalBP;
-    } else if (systolic >= 140 || diastolic >= 90) {
-      return AppLocalizations.of(context)!.bpHighToday;
-    } else if (systolic >= 130 || diastolic >= 80) {
-      return AppLocalizations.of(context)!.bpSlightlyElevated;
-    } else {
-      return AppLocalizations.of(context)!.bpNormalToday;
     }
+    // Stage 2 Hypertension: systolic >= 140 OR diastolic >= 90
+    if (systolic >= 140 || diastolic >= 90) {
+      return AppLocalizations.of(context)!.bpHighToday;
+    }
+    // Stage 1 Hypertension: systolic 130-139 OR diastolic 81-89
+    if (systolic >= 130 || diastolic > 80) {
+      return AppLocalizations.of(context)!.bpSlightlyElevated;
+    }
+    // Elevated: systolic 121-129 AND diastolic <= 80
+    if (systolic > 120 && diastolic <= 80) {
+      return AppLocalizations.of(context)!.bpElevated;
+    }
+    // Normal: systolic <= 120 AND diastolic <= 80 (includes 120/80)
+    return AppLocalizations.of(context)!.bpNormalToday;
   }
 
   Widget _buildRecordButton(BuildContext context) {
@@ -341,10 +490,13 @@ class HomepageContent extends StatelessWidget {
 
   String _getCategory(int? systolic, int? diastolic) {
     if (systolic == null || diastolic == null) return 'normal';
+    // Blood Pressure Classification (120/80 = Normal)
     if (systolic >= 180 || diastolic >= 120) return 'critical';
     if (systolic >= 140 || diastolic >= 90) return 'high';
-    if (systolic >= 130 || diastolic >= 80) return 'elevated';
-    return 'normal';
+    if (systolic >= 130 || diastolic > 80)
+      return 'stage1'; // Stage 1 Hypertension
+    if (systolic > 120 && diastolic <= 80) return 'elevated'; // Elevated BP
+    return 'normal'; // Includes 120/80
   }
 
   List<NextStepItem> _getNextSteps(BuildContext context, UserLoaded state) {
@@ -352,15 +504,18 @@ class HomepageContent extends StatelessWidget {
 
     // Get next reminder time from ReminderBloc
     final reminderState = context.watch<ReminderBloc>().state;
-    if (reminderState is RemindersLoaded && reminderState.nextReminderTime != null) {
+    if (reminderState is RemindersLoaded &&
+        reminderState.nextReminderTime != null) {
       final nextTime = reminderState.nextReminderTime!;
       final now = DateTime.now();
-      final isToday = nextTime.day == now.day && 
-                      nextTime.month == now.month && 
-                      nextTime.year == now.year;
-      final isTomorrow = nextTime.day == now.add(const Duration(days: 1)).day &&
-                         nextTime.month == now.add(const Duration(days: 1)).month;
-      
+      final isToday =
+          nextTime.day == now.day &&
+          nextTime.month == now.month &&
+          nextTime.year == now.year;
+      final isTomorrow =
+          nextTime.day == now.add(const Duration(days: 1)).day &&
+          nextTime.month == now.add(const Duration(days: 1)).month;
+
       final timeStr = DateFormat('h:mm a').format(nextTime);
       String dayStr;
       if (isToday) {
@@ -398,17 +553,21 @@ class HomepageContent extends StatelessWidget {
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () {
-              // Navigate to History/Trends page
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context)!.trendsPageComingSoon,
+              // Navigate to What-If Simulator
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WhatIfScreen(
+                    userProfile: {
+                      'age': latestReading?['age'] ?? 40,
+                      'avg_systolic': latestReading?['systolic'] ?? 120,
+                      'avg_diastolic': latestReading?['diastolic'] ?? 80,
+                    },
                   ),
-                  duration: const Duration(seconds: 2),
                 ),
               );
             },
-            icon: const Icon(Icons.show_chart, size: 20),
+            icon: const Icon(Icons.auto_awesome, size: 20),
             label: Text(
               AppLocalizations.of(context)!.viewTrends,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
@@ -452,7 +611,6 @@ class HomepageContent extends StatelessWidget {
       ],
     );
   }
-
 
   Widget _buildSkeletonCard() => Container(
     decoration: BoxDecoration(

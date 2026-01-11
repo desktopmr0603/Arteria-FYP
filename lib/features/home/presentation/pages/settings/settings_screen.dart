@@ -1,5 +1,6 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
 import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
+import 'package:arteria/features/export/export_screen.dart';
 import 'package:arteria/features/home/presentation/pages/faq_screen.dart';
 import 'package:arteria/features/home/presentation/pages/settings/settings_bloc.dart';
 import 'package:arteria/features/home/presentation/pages/settings/settings_event.dart';
@@ -156,7 +157,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           context,
                         )!.measurementHistoryExport,
                         icon: Icons.history_outlined,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ExportScreen(),
+                          ),
+                        ),
                         darkMode: darkMode,
                       ),
                       const SizedBox(height: 10),

@@ -2,7 +2,6 @@ import 'package:arteria/features/auth/presentation/cubits/auth_cubits.dart';
 import 'package:arteria/features/auth/presentation/cubits/auth_states.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,9 +18,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  DateTime _selectedBirthday = DateTime.now().subtract(
-    const Duration(days: 365 * 18),
-  );
+  // Date of Birth Selection
+  int? _selectedYear;
+  int? _selectedMonth;
+  int? _selectedDay;
+  
   final _heightController = TextEditingController();
   final _weightController = TextEditingController();
   String? _selectedGender;
@@ -30,14 +31,55 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   String? _weightError;
   String? _genderError;
 
-  int _calculateAge(DateTime birthday) {
+  // Generate year list (from current year going back 120 years)
+  List<int> get _years {
+    final currentYear = DateTime.now().year;
+    return List.generate(120, (i) => currentYear - i);
+  }
+
+  // Month names for better readability
+  final List<String> _monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  // Generate days based on selected month and year
+  List<int> get _days {
+    if (_selectedMonth == null) return List.generate(31, (i) => i + 1);
+    int daysInMonth = 31;
+    if ([4, 6, 9, 11].contains(_selectedMonth)) {
+      daysInMonth = 30;
+    } else if (_selectedMonth == 2) {
+      if (_selectedYear != null && 
+          (_selectedYear! % 4 == 0 && (_selectedYear! % 100 != 0 || _selectedYear! % 400 == 0))) {
+        daysInMonth = 29;
+      } else {
+        daysInMonth = 28;
+      }
+    }
+    return List.generate(daysInMonth, (i) => i + 1);
+  }
+
+  // Calculate age from selected date
+  int? get _calculatedAge {
+    if (_selectedYear == null || _selectedMonth == null || _selectedDay == null) {
+      return null;
+    }
     final now = DateTime.now();
-    int age = now.year - birthday.year;
-    if (now.month < birthday.month ||
-        (now.month == birthday.month && now.day < birthday.day)) {
+    final birthDate = DateTime(_selectedYear!, _selectedMonth!, _selectedDay!);
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month || 
+        (now.month == birthDate.month && now.day < birthDate.day)) {
       age--;
     }
     return age;
+  }
+
+  DateTime? _calculateBirthdayFromSelection() {
+    if (_selectedYear == null || _selectedMonth == null || _selectedDay == null) {
+      return null;
+    }
+    return DateTime(_selectedYear!, _selectedMonth!, _selectedDay!);
   }
 
   bool _validateCurrentPage() {
@@ -50,12 +92,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     });
 
     if (_currentPage == 0) {
-      final age = _calculateAge(_selectedBirthday);
-      if (age < 1 || age > 120) {
-        _birthdayError = 'Please select a valid birthday (age 1-120)';
+      if (_selectedYear == null || _selectedMonth == null || _selectedDay == null) {
+        _birthdayError = 'Please select your complete date of birth';
         isValid = false;
-      } else if (_selectedBirthday.isAfter(DateTime.now())) {
-        _birthdayError = 'Birthday cannot be in the future';
+      } else if (_calculatedAge == null || _calculatedAge! < 1 || _calculatedAge! > 120) {
+        _birthdayError = 'Please select a valid date of birth';
         isValid = false;
       }
     } else if (_currentPage == 1) {
@@ -117,17 +158,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
 
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
-      final age = _calculateAge(_selectedBirthday);
+      final birthday = _calculateBirthdayFromSelection();
 
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'birthday': Timestamp.fromDate(_selectedBirthday),
-        'age': age,
+        'birthday': birthday != null ? Timestamp.fromDate(birthday) : null,
+        'age': _calculatedAge,
         'height': double.parse(_heightController.text),
         'weight': double.parse(_weightController.text),
         'gender': _selectedGender,
       });
 
       if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
       context.read<AuthCubits>().checkAuth();
     } catch (e) {
       if (!mounted) return;
@@ -195,6 +237,175 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
           ),
         ],
       ),
+    );
+  }
+
+  // Simple Date of Birth Selector - Elderly Friendly
+  Widget _buildAgeSelector() {
+    return Column(
+      children: [
+        // Simple instruction text
+        Text(
+          'Select your date of birth',
+          style: GoogleFonts.openSans(
+            fontSize: 16,
+            color: const Color(0xFF4B4B4B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Year Dropdown
+        _buildDropdownField(
+          label: 'Year',
+          value: _selectedYear,
+          items: _years,
+          displayText: (year) => year.toString(),
+          onChanged: (year) {
+            setState(() {
+              _selectedYear = year;
+              // Adjust day if needed for February
+              if (_selectedDay != null && !_days.contains(_selectedDay)) {
+                _selectedDay = _days.last;
+              }
+              _birthdayError = null;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Month Dropdown
+        _buildDropdownField(
+          label: 'Month',
+          value: _selectedMonth,
+          items: List.generate(12, (i) => i + 1),
+          displayText: (month) => _monthNames[month - 1],
+          onChanged: (month) {
+            setState(() {
+              _selectedMonth = month;
+              // Adjust day if needed
+              if (_selectedDay != null && !_days.contains(_selectedDay)) {
+                _selectedDay = _days.last;
+              }
+              _birthdayError = null;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Day Dropdown
+        _buildDropdownField(
+          label: 'Day',
+          value: _selectedDay,
+          items: _days,
+          displayText: (day) => day.toString(),
+          onChanged: (day) {
+            setState(() {
+              _selectedDay = day;
+              _birthdayError = null;
+            });
+          },
+        ),
+
+        if (_birthdayError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Text(
+              _birthdayError!,
+              style: GoogleFonts.openSans(
+                fontSize: 14,
+                color: Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Reusable dropdown field with large touch targets
+  Widget _buildDropdownField<T>({
+    required String label,
+    required T? value,
+    required List<T> items,
+    required String Function(T) displayText,
+    required void Function(T?) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.openSans(
+            fontSize: 14,
+            color: const Color(0xFF6B6B6B),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: value != null 
+                  ? const Color(0xFFE63946) 
+                  : Colors.grey.shade300,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: value,
+              hint: Text(
+                'Select $label',
+                style: GoogleFonts.openSans(
+                  fontSize: 18,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+              isExpanded: true,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: value != null 
+                    ? const Color(0xFFE63946) 
+                    : Colors.grey.shade400,
+                size: 28,
+              ),
+              style: GoogleFonts.openSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1A1A1A),
+              ),
+              dropdownColor: Colors.white,
+              menuMaxHeight: 300,
+              items: items.map((item) {
+                return DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(
+                    displayText(item),
+                    style: GoogleFonts.openSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1A1A1A),
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -415,38 +626,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                       controller: _pageController,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        // Birthday Page
+                        // Age Selection Page - Modern & Elderly Friendly
                         _buildPage(
-                          title: 'Your Birthday',
-                          content: Column(
-                            children: [
-                              SizedBox(
-                                height: 200,
-                                child: CupertinoDatePicker(
-                                  mode: CupertinoDatePickerMode.date,
-                                  initialDateTime: _selectedBirthday,
-                                  maximumDate: DateTime.now(),
-                                  minimumYear: 1900,
-                                  onDateTimeChanged: (value) {
-                                    setState(() => _selectedBirthday = value);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Selected: ${_selectedBirthday.day}/${_selectedBirthday.month}/${_selectedBirthday.year}',
-                                style: GoogleFonts.openSans(fontSize: 16),
-                              ),
-                              if (_birthdayError != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    _birthdayError!,
-                                    style: const TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                            ],
-                          ),
+                          title: 'Your Age',
+                          content: _buildAgeSelector(),
                         ),
 
                         // Height Page

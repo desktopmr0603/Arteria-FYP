@@ -172,10 +172,15 @@
   
   "bpSlightlyElevated": "Your BP is slightly elevated",
   "@bpSlightlyElevated": {
-    "description": "Elevated blood pressure message"
+    "description": "Stage 1 hypertension blood pressure message"
   },
   
-  "bpNormalToday": "Your BP is normal today ✓",
+  "bpElevated": "Your BP is slightly above normal",
+  "@bpElevated": {
+    "description": "Elevated blood pressure message (systolic 121-129)"
+  },
+  
+  "bpNormalToday": "Your BP is normal today",
   "@bpNormalToday": {
     "description": "Normal blood pressure message"
   },

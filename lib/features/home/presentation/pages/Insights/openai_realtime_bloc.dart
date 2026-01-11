@@ -32,6 +32,7 @@ class OpenAIRealtimeService {
   // WebSocket connection
   IOWebSocketChannel? _channel;
   bool _isConnected = false;
+  bool _isDisposed = false;
   String? _sessionId;
 
   // Configuration
@@ -84,7 +85,7 @@ class OpenAIRealtimeService {
         _handleMessage,
         onError: (error) {
           debugPrint('WebSocket error: $error');
-          _eventController.add(
+          _emitEvent(
             RealtimeEvent(
               type: RealtimeEventType.error,
               message: 'Connection error: $error',
@@ -94,7 +95,7 @@ class OpenAIRealtimeService {
         },
         onDone: () {
           debugPrint('WebSocket connection closed');
-          _eventController.add(
+          _emitEvent(
             RealtimeEvent(type: RealtimeEventType.disconnected),
           );
           _isConnected = false;
@@ -102,7 +103,7 @@ class OpenAIRealtimeService {
       );
 
       _isConnected = true;
-      _eventController.add(RealtimeEvent(type: RealtimeEventType.connected));
+      _emitEvent(RealtimeEvent(type: RealtimeEventType.connected));
 
       // Configure session with instructions
       await _configureSession(userContext: userContext);
@@ -110,7 +111,7 @@ class OpenAIRealtimeService {
       debugPrint('✓ Connected to OpenAI Realtime API');
     } catch (e) {
       debugPrint('Error connecting to OpenAI Realtime API: $e');
-      _eventController.add(
+      _emitEvent(
         RealtimeEvent(
           type: RealtimeEventType.error,
           message: 'Failed to connect: $e',
@@ -321,7 +322,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
 
       case 'session.updated':
         debugPrint('✓ Session updated');
-        _eventController.add(
+        _emitEvent(
           RealtimeEvent(
             type: RealtimeEventType.ready,
             message: 'Ready to speak',
@@ -336,7 +337,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
           try {
             final audioData = base64Decode(audioBase64);
             debugPrint('🎵 Audio delta received: ${audioData.length} bytes');
-            _eventController.add(
+            _emitEvent(
               RealtimeEvent(
                 type: RealtimeEventType.audioResponse,
                 data: audioData,
@@ -350,7 +351,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
 
       case 'response.audio.done':
         debugPrint('✓ Audio response complete');
-        _eventController.add(
+        _emitEvent(
           RealtimeEvent(type: RealtimeEventType.audioResponseDone),
         );
         break;
@@ -358,7 +359,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
       case 'response.audio_transcript.delta':
         final text = event['delta'] as String?;
         if (text != null && text.isNotEmpty) {
-          _eventController.add(
+          _emitEvent(
             RealtimeEvent(type: RealtimeEventType.textDelta, data: text),
           );
         }
@@ -373,7 +374,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
         final transcript = event['transcript'] as String?;
         if (transcript != null) {
           debugPrint('📝 User said: $transcript');
-          _eventController.add(
+          _emitEvent(
             RealtimeEvent(type: RealtimeEventType.transcript, data: transcript),
           );
         }
@@ -399,7 +400,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
         final errorMsg = errorData?['message'] ?? 'Unknown error';
         final errorCode = errorData?['code'] ?? 'unknown';
         debugPrint('✗ API Error [$errorCode]: $errorMsg');
-        _eventController.add(
+        _emitEvent(
           RealtimeEvent(
             type: RealtimeEventType.error,
             message: '[$errorCode] $errorMsg',
@@ -413,7 +414,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
 
       case 'input_audio_buffer.speech_stopped':
         debugPrint('🎤 Speech ended - waiting for response');
-        _eventController.add(
+        _emitEvent(
           RealtimeEvent(
             type: RealtimeEventType.processing,
             message: 'Processing...',
@@ -442,7 +443,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
           debugPrint('   Arguments: $arguments');
           try {
             final parsedArgs = jsonDecode(arguments) as Map<String, dynamic>;
-            _eventController.add(
+            _emitEvent(
               RealtimeEvent(
                 type: RealtimeEventType.functionCall,
                 data: {'name': name, 'arguments': parsedArgs},
@@ -564,9 +565,17 @@ IMPORTANT: Répondez TOUJOURS en français.''';
     debugPrint('✓ Disconnected from OpenAI Realtime API');
   }
 
+  /// Safely emit an event only if not disposed
+  void _emitEvent(RealtimeEvent event) {
+    if (!_isDisposed && !_eventController.isClosed) {
+      _eventController.add(event);
+    }
+  }
+
   /// Dispose resources
   void dispose() {
-    disconnect();
+    _isDisposed = true;
     _eventController.close();
+    disconnect();
   }
 }

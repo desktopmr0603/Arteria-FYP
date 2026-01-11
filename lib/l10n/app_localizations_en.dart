@@ -109,7 +109,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bpSlightlyElevated => 'Your BP is slightly elevated';
 
   @override
-  String get bpNormalToday => 'Your BP is normal today ✓';
+  String get bpElevated => 'Your BP is slightly above normal';
+
+  @override
+  String get bpNormalToday => 'Your BP is normal today';
 
   @override
   String get recordNewReading => 'Record New Reading';

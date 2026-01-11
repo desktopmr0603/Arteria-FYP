@@ -219,6 +219,7 @@ class BPReadingCard extends StatelessWidget {
     final sys = systolic ?? 0;
     final dia = diastolic ?? 0;
 
+    // Blood Pressure Classification (120/80 = Normal)
     if (sys >= 180 || dia >= 120) {
       return {
         'emoji': '🚨',
@@ -232,12 +233,21 @@ class BPReadingCard extends StatelessWidget {
         'borderColor': const Color(0xFFFF6F00),
       };
     } else if (sys >= 130 || dia > 80) {
+      // Stage 1 Hypertension
+      return {
+        'emoji': '🟡',
+        'label': AppLocalizations.of(context)!.elevated,
+        'borderColor': const Color(0xFFFFA726),
+      };
+    } else if (sys > 120 && dia <= 80) {
+      // Elevated (systolic 121-129)
       return {
         'emoji': '🟡',
         'label': AppLocalizations.of(context)!.elevated,
         'borderColor': const Color(0xFFFFA726),
       };
     } else {
+      // Normal (includes 120/80)
       return {
         'emoji': '🟢',
         'label': AppLocalizations.of(context)!.normal,

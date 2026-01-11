@@ -1,18 +1,21 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+
 import 'package:arteria/env/env.dart';
 import 'package:arteria/features/reminders/reminder_bloc.dart';
 import 'package:arteria/features/reminders/reminder_event.dart';
 import 'package:arteria/features/reminders/reminder_model.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:async';
-import 'dart:typed_data';
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:siri_wave/siri_wave.dart';
+import '../settings/settings_bloc.dart';
+import '../../components/talking_avatar_widget.dart';
 import 'openai_realtime_bloc.dart';
 import 'bp_data_bloc.dart';
-import '../settings/settings_bloc.dart';
 
 class InsightsScreen extends StatefulWidget {
   final String userId;
@@ -25,655 +28,397 @@ class InsightsScreen extends StatefulWidget {
 }
 
 class _InsightsScreenState extends State<InsightsScreen> {
-  // Voice interaction state
+  // ─────────────── State ───────────────
   bool _isListening = false;
-  bool _isProcessing = false;
   bool _isSpeaking = false;
+  bool _isConversationActive = false;
+  bool _isAvatarLoaded = false;
+
   String _statusText = 'Connecting...';
 
-  // Services
+  // ─────────────── Services ───────────────
   late OpenAIRealtimeService _realtimeService;
   final BPDataService _bpDataService = BPDataService();
 
-  // Audio
+  // ─────────────── Audio ───────────────
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
-  StreamSubscription<Uint8List>? _audioStreamSubscription;
-  StreamSubscription<RealtimeEvent>? _eventSubscription;
 
-  // Siri Wave controller
-  final IOS9SiriWaveformController _waveController = IOS9SiriWaveformController(
-    amplitude: 0.2,
-    speed: 0.15,
-  );
+  StreamSubscription<Uint8List>? _audioStreamSub;
+  StreamSubscription<RealtimeEvent>? _realtimeEventSub;
 
-  // Audio buffer for playback - simplified approach
   final List<Uint8List> _audioChunks = [];
-  bool _isAudioResponseActive = false;
   bool _hasRecordedAudio = false;
-  bool _isConversationActive =
-      false; // Track if we're in an active conversation
 
-  // Language setting
+  // ─────────────── Language ───────────────
   String _language = 'en';
 
+  // ─────────────── Lifecycle ───────────────
   @override
   void initState() {
     super.initState();
-    _initializeLanguageAndService();
-  }
-
-  void _initializeLanguageAndService() {
-    // Get language from settings, but we need to delay until context is available
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final settingsState = context.read<SettingsBloc>().state;
-        _language = settingsState.locale.languageCode;
-        debugPrint('🌍 Insights screen using language: $_language');
-        _initializeRealtimeService();
-      }
-    });
+    _initLanguageAndRealtime();
   }
 
   @override
   void dispose() {
     _audioRecorder.dispose();
     _audioPlayer.dispose();
-    _audioStreamSubscription?.cancel();
-    _eventSubscription?.cancel();
+    _audioStreamSub?.cancel();
+    _realtimeEventSub?.cancel();
     _realtimeService.dispose();
     super.dispose();
   }
 
-  Future<void> _initializeRealtimeService() async {
-    try {
-      final apiKey = Env.openaiApiKey;
-      if (apiKey == 'YOUR_OPENAI_API_KEY' || apiKey.isEmpty) {
-        _setStatus('Error: Please set your OpenAI API key');
-        debugPrint('❌ API key not configured!');
-        return;
-      }
-
-      _realtimeService = OpenAIRealtimeService(
-        apiKey: apiKey,
-        model: 'gpt-realtime-mini-2025-10-06',
-        voice: 'alloy',
-        language: _language,
-      );
-
-      _eventSubscription = _realtimeService.events.listen(_handleRealtimeEvent);
-
-      _setStatus('Loading your BP data...');
-      final userContext = await _buildUserContext();
-
-      _setStatus('Connecting to AI assistant...');
-      await _realtimeService.connect(userContext: userContext);
-    } catch (e) {
-      _setStatus('Connection failed. Please try again.');
-      debugPrint('❌ Error initializing: $e');
-    }
-  }
-
-  Future<String> _buildUserContext() async {
-    try {
-      final profile = await _bpDataService.getUserProfile(widget.userId);
-      final userAge = widget.userAge ?? profile?['age'] as int?;
-      final gender = profile?['gender'] as String?;
-      final latestReading = await _bpDataService.getLatestReading(
-        widget.userId,
-      );
-      final weeklyReadings = await _bpDataService.getHistory(
-        widget.userId,
-        days: 7,
-      );
-
-      // Build medical profile map
-      final medicalProfile = profile != null
-          ? {
-              'medications': profile['medications'],
-              'smoker': profile['smoker'],
-              'isPregnant': profile['isPregnant'],
-              'hasDiabetes': profile['hasDiabetes'],
-              'physicalActivity': profile['physicalActivity'],
-              'weight': profile['weight'],
-              'height': profile['height'],
-            }
-          : null;
-
-      final context = _bpDataService.formatBPContext(
-        userId: widget.userId,
-        latestReading: latestReading,
-        weeklyReadings: weeklyReadings.isNotEmpty ? weeklyReadings : null,
-        userAge: userAge,
-        gender: gender,
-        medicalProfile: medicalProfile,
-      );
-
-      debugPrint('📊 BP Context built with medical history');
-      return context;
-    } catch (e) {
-      debugPrint('Error building context: $e');
-      return 'User ID: ${widget.userId}\nNote: Unable to fetch BP data.';
-    }
-  }
-
-  void _handleRealtimeEvent(RealtimeEvent event) {
-    if (!mounted) return;
-
-    switch (event.type) {
-      case RealtimeEventType.connected:
-        _setStatus('Initializing...');
-        break;
-
-      case RealtimeEventType.ready:
-        _setStatus('Ready! Tap to speak');
-        setState(() => _isProcessing = false);
-        break;
-
-      case RealtimeEventType.audioResponse:
-        if (event.data is Uint8List) {
-          final audioData = event.data as Uint8List;
-          if (audioData.isNotEmpty) {
-            // Mark that we're receiving audio
-            if (!_isAudioResponseActive) {
-              debugPrint('🎵 Audio response started');
-              setState(() {
-                _isAudioResponseActive = true;
-                _isProcessing = false;
-                _isSpeaking = true;
-                _statusText = 'Speaking...';
-                _waveController.amplitude = 1.0;
-              });
-              // Clear old chunks
-              _audioChunks.clear();
-            }
-
-            // Buffer the chunk
-            _audioChunks.add(audioData);
-            debugPrint(
-              '📦 Buffered chunk: ${audioData.length} bytes (total chunks: ${_audioChunks.length})',
-            );
-          }
-        }
-        break;
-
-      case RealtimeEventType.audioResponseDone:
-        debugPrint('✓ Audio response complete - playing now');
-        // Now play all the buffered audio
-        _playAllBufferedAudio();
-        break;
-
-      case RealtimeEventType.textDelta:
-        debugPrint('AI: ${event.data}');
-        break;
-
-      case RealtimeEventType.transcript:
-        final transcript = event.data as String;
-        debugPrint('📝 User said: $transcript');
-        if (mounted) {
-          setState(() {
-            _statusText =
-                'You: "${transcript.length > 50 ? '${transcript.substring(0, 50)}...' : transcript}"';
-          });
-        }
-        break;
-
-      case RealtimeEventType.processing:
-        debugPrint('⏳ Processing...');
-        // Stop recording when server starts processing (VAD detected end of speech)
-        if (_isListening && _hasRecordedAudio) {
-          _stopRecordingForProcessing();
-        }
-        setState(() {
-          _isProcessing = true;
-          _statusText = 'Processing...';
-          _audioChunks.clear();
-          _isAudioResponseActive = false;
-        });
-        break;
-
-      case RealtimeEventType.error:
-        final errorMsg = event.message ?? 'Unknown error';
-        if (errorMsg.contains('buffer too small') && !_hasRecordedAudio) {
-          debugPrint('ℹ️ Ignoring buffer_too_small (no audio recorded)');
-          _resetToReady();
-          return;
-        }
-        _setStatus('Error: ${event.message}');
-        setState(() {
-          _isProcessing = false;
-          _isListening = false;
-          _waveController.amplitude = 0.2;
-        });
-        break;
-
-      case RealtimeEventType.functionCall:
-        // Handle AI function calls (e.g., set_reminder)
-        _handleFunctionCall(event.data);
-        break;
-
-      case RealtimeEventType.disconnected:
-        _setStatus('Disconnected. Tap to reconnect.');
-        setState(() {
-          _isProcessing = false;
-          _isListening = false;
-        });
-        break;
-    }
-  }
-
-  Future<void> _playAllBufferedAudio() async {
-    if (_audioChunks.isEmpty) {
-      debugPrint('⚠️ No audio chunks to play');
-      // Don't auto-restart on empty - something went wrong
-      _resetToReady(autoRestart: false);
-      return;
-    }
-
-    try {
-      // Combine all buffered chunks
-      final totalLength = _audioChunks.fold<int>(
-        0,
-        (sum, chunk) => sum + chunk.length,
-      );
-      final combinedAudio = Uint8List(totalLength);
-      var offset = 0;
-      for (final chunk in _audioChunks) {
-        combinedAudio.setRange(offset, offset + chunk.length, chunk);
-        offset += chunk.length;
-      }
-
-      debugPrint(
-        '🔊 Playing combined audio: ${combinedAudio.length} bytes from ${_audioChunks.length} chunks',
-      );
-
-      // Convert to WAV
-      final wavData = _convertPCM16ToWav(combinedAudio);
-
-      // Play
-      await _audioPlayer.stop(); // Stop any previous audio
-      await _audioPlayer.play(BytesSource(wavData));
-
-      // Wait for completion
-      await _audioPlayer.onPlayerComplete.first.timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          debugPrint('⚠️ Playback timeout');
-          return;
-        },
-      );
-
-      debugPrint('✓ Playback complete');
-
-      if (mounted) {
-        // Auto-restart listening after successful audio playback
-        _resetToReady(autoRestart: true);
-      }
-    } catch (e) {
-      debugPrint('❌ Playback error: $e');
-      if (mounted) {
-        _resetToReady(autoRestart: false);
-      }
-    }
-  }
-
-  /// Handle AI function calls (like set_reminder)
-  void _handleFunctionCall(dynamic data) {
-    if (data is! Map<String, dynamic>) return;
-
-    final name = data['name'] as String?;
-    final arguments = data['arguments'] as Map<String, dynamic>?;
-
-    debugPrint('🔧 Handling function call: $name');
-    debugPrint('   Arguments: $arguments');
-
-    if (name == 'set_reminder' && arguments != null) {
-      final hour = arguments['hour'] as int?;
-      final minute = arguments['minute'] as int?;
-      final repeatTypeStr = arguments['repeat_type'] as String?;
-
-      if (hour != null && minute != null) {
-        // Convert repeat_type string to RepeatType enum
-        RepeatType repeatType;
-        switch (repeatTypeStr) {
-          case 'weekdays':
-            repeatType = RepeatType.weekdays;
-            break;
-          case 'weekends':
-            repeatType = RepeatType.weekends;
-            break;
-          default:
-            repeatType = RepeatType.daily;
-        }
-
-        // Create the reminder via BLoC
-        context.read<ReminderBloc>().add(
-          AddReminder(
-            time: TimeOfDay(hour: hour, minute: minute),
-            repeatType: repeatType,
-          ),
-        );
-
-        debugPrint('✓ Reminder created: $hour:$minute ($repeatTypeStr)');
-
-        // Show a brief confirmation snackbar
-        if (mounted) {
-          final formattedTime = TimeOfDay(
-            hour: hour,
-            minute: minute,
-          ).format(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Reminder set for $formattedTime'),
-              duration: const Duration(seconds: 2),
-              backgroundColor: const Color(0xFF1976D2),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Uint8List _convertPCM16ToWav(Uint8List pcmData) {
-    const int sampleRate = 24000;
-    const int numChannels = 1;
-    const int bitsPerSample = 16;
-
-    final int dataSize = pcmData.length;
-    final int fileSize = 36 + dataSize;
-
-    final ByteData header = ByteData(44);
-
-    // RIFF header
-    header.setUint8(0, 0x52); // 'R'
-    header.setUint8(1, 0x49); // 'I'
-    header.setUint8(2, 0x46); // 'F'
-    header.setUint8(3, 0x46); // 'F'
-    header.setUint32(4, fileSize, Endian.little);
-
-    // WAVE header
-    header.setUint8(8, 0x57); // 'W'
-    header.setUint8(9, 0x41); // 'A'
-    header.setUint8(10, 0x56); // 'V'
-    header.setUint8(11, 0x45); // 'E'
-
-    // fmt subchunk
-    header.setUint8(12, 0x66); // 'f'
-    header.setUint8(13, 0x6D); // 'm'
-    header.setUint8(14, 0x74); // 't'
-    header.setUint8(15, 0x20); // ' '
-    header.setUint32(16, 16, Endian.little);
-    header.setUint16(20, 1, Endian.little); // PCM
-    header.setUint16(22, numChannels, Endian.little);
-    header.setUint32(24, sampleRate, Endian.little);
-    header.setUint32(
-      28,
-      sampleRate * numChannels * bitsPerSample ~/ 8,
-      Endian.little,
-    );
-    header.setUint16(32, numChannels * bitsPerSample ~/ 8, Endian.little);
-    header.setUint16(34, bitsPerSample, Endian.little);
-
-    // data subchunk
-    header.setUint8(36, 0x64); // 'd'
-    header.setUint8(37, 0x61); // 'a'
-    header.setUint8(38, 0x74); // 't'
-    header.setUint8(39, 0x61); // 'a'
-    header.setUint32(40, dataSize, Endian.little);
-
-    final wavData = Uint8List(44 + dataSize);
-    wavData.setRange(0, 44, header.buffer.asUint8List());
-    wavData.setRange(44, 44 + dataSize, pcmData);
-
-    return wavData;
-  }
-
-  void _resetToReady({bool autoRestart = false}) {
-    setState(() {
-      _isSpeaking = false;
-      _isProcessing = false;
-      _isAudioResponseActive = false;
-      _waveController.amplitude = 0.2;
-      _hasRecordedAudio = false;
+  // ─────────────── Initialization ───────────────
+  void _initLanguageAndRealtime() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settings = context.read<SettingsBloc>().state;
+      _language = settings.locale.languageCode;
+      _initializeRealtimeService();
     });
-    _audioChunks.clear();
+  }
 
-    // Auto-restart listening only if conversation is active AND we just played audio successfully
-    if (autoRestart && _isConversationActive && mounted) {
-      setState(() => _statusText = 'Listening...');
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted && _isConversationActive && !_isListening && !_isSpeaking) {
-          _startListening();
-        }
-      });
-    } else {
+  Future<void> _initializeRealtimeService() async {
+    _realtimeService = OpenAIRealtimeService(
+      apiKey: Env.openaiApiKey,
+      model: 'gpt-realtime-mini-2025-10-06',
+      voice: 'alloy',
+      language: _language,
+    );
+
+    _realtimeEventSub = _realtimeService.events.listen(_handleRealtimeEvent);
+
+    final contextText = await _buildUserContext();
+    await _realtimeService.connect(userContext: contextText);
+
+    if (mounted) {
       setState(() => _statusText = 'Tap to speak');
     }
   }
 
-  /// Stop recording without committing (server VAD already handled this)
-  Future<void> _stopRecordingForProcessing() async {
-    if (!_isListening) return;
+  // ─────────────── Realtime Events ───────────────
+  void _handleRealtimeEvent(RealtimeEvent event) {
+    if (!mounted) return;
 
-    try {
-      await _audioRecorder.stop();
-      await _audioStreamSubscription?.cancel();
-      setState(() {
-        _isListening = false;
-        _waveController.amplitude = 0.2;
-      });
-      debugPrint('✓ Recording stopped for processing');
-    } catch (e) {
-      debugPrint('Error stopping recording: $e');
+    switch (event.type) {
+      case RealtimeEventType.audioResponse:
+        final chunk = event.data as Uint8List;
+        _audioChunks.add(chunk);
+        _isSpeaking = true;
+        break;
+
+      case RealtimeEventType.audioResponseDone:
+        _playBufferedAudio();
+        break;
+
+      case RealtimeEventType.ready:
+        _resetUI(autoRestart: true);
+        break;
+
+      case RealtimeEventType.functionCall:
+        _handleFunctionCall(event.data);
+        break;
+
+      default:
+        break;
     }
-  }
 
-  void _setStatus(String status) {
     if (mounted) {
-      setState(() => _statusText = status);
+      setState(() {});
     }
   }
 
-  Future<void> _toggleListening() async {
-    if (_isListening) {
-      await _stopListening();
-    } else {
-      await _startListening();
-    }
-  }
+  // ─────────────── Audio Playback ───────────────
+  Future<void> _playBufferedAudio() async {
+    if (_audioChunks.isEmpty) return;
 
-  Future<void> _startListening() async {
-    // Cancel any active audio first
-    await _audioPlayer.stop();
+    final combined =
+        Uint8List.fromList(_audioChunks.expand((e) => e).toList());
     _audioChunks.clear();
-    _isAudioResponseActive = false;
 
-    // Mark conversation as active
-    _isConversationActive = true;
+    await _audioPlayer.play(BytesSource(_pcm16ToWav(combined)));
+    await _audioPlayer.onPlayerComplete.first;
 
-    if (!_realtimeService.isConnected) {
-      _setStatus('Reconnecting...');
-      await _initializeRealtimeService();
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (!_realtimeService.isConnected) {
-        _setStatus('Connection failed. Please try again.');
-        _isConversationActive = false;
-        return;
-      }
-    }
-
-    try {
-      if (await _audioRecorder.hasPermission()) {
-        final stream = await _audioRecorder.startStream(
-          const RecordConfig(
-            encoder: AudioEncoder.pcm16bits,
-            sampleRate: 24000,
-            numChannels: 1,
-          ),
-        );
-
-        setState(() {
-          _isListening = true;
-          _hasRecordedAudio = false;
-          _waveController.amplitude = 0.5;
-          _statusText = 'Listening...';
-        });
-
-        _audioStreamSubscription = stream.listen((data) {
-          _realtimeService.sendAudio(data);
-          _hasRecordedAudio = true;
-        });
-
-        _animateListeningWave();
-      } else {
-        _setStatus('Microphone permission denied');
-        _isConversationActive = false;
-      }
-    } catch (e) {
-      _setStatus('Error: $e');
-      _isConversationActive = false;
-      debugPrint('Recording error: $e');
-    }
+    _resetUI(autoRestart: true);
   }
 
-  void _animateListeningWave() {
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!_isListening) {
-        timer.cancel();
-        return;
-      }
-      if (mounted) {
-        setState(() {
-          _waveController.amplitude =
-              0.3 + (DateTime.now().millisecond % 500) / 1000;
-        });
-      }
+  Uint8List _pcm16ToWav(Uint8List pcm) {
+    const sampleRate = 24000;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * bitsPerSample ~/ 8;
+    const blockAlign = numChannels * bitsPerSample ~/ 8;
+    
+    final dataSize = pcm.length;
+    final fileSize = 36 + dataSize;
+    
+    final header = ByteData(44);
+    
+    // RIFF chunk descriptor
+    header.setUint8(0, 0x52); // 'R'
+    header.setUint8(1, 0x49); // 'I'
+    header.setUint8(2, 0x46); // 'F'
+    header.setUint8(3, 0x46); // 'F'
+    header.setUint32(4, fileSize, Endian.little); // File size - 8
+    header.setUint8(8, 0x57);  // 'W'
+    header.setUint8(9, 0x41);  // 'A'
+    header.setUint8(10, 0x56); // 'V'
+    header.setUint8(11, 0x45); // 'E'
+    
+    // fmt sub-chunk
+    header.setUint8(12, 0x66); // 'f'
+    header.setUint8(13, 0x6D); // 'm'
+    header.setUint8(14, 0x74); // 't'
+    header.setUint8(15, 0x20); // ' '
+    header.setUint32(16, 16, Endian.little); // Subchunk1 size (16 for PCM)
+    header.setUint16(20, 1, Endian.little);  // Audio format (1 = PCM)
+    header.setUint16(22, numChannels, Endian.little); // Number of channels
+    header.setUint32(24, sampleRate, Endian.little);  // Sample rate
+    header.setUint32(28, byteRate, Endian.little);    // Byte rate
+    header.setUint16(32, blockAlign, Endian.little);  // Block align
+    header.setUint16(34, bitsPerSample, Endian.little); // Bits per sample
+    
+    // data sub-chunk
+    header.setUint8(36, 0x64); // 'd'
+    header.setUint8(37, 0x61); // 'a'
+    header.setUint8(38, 0x74); // 't'
+    header.setUint8(39, 0x61); // 'a'
+    header.setUint32(40, dataSize, Endian.little); // Data size
+    
+    final out = Uint8List(44 + pcm.length);
+    out.setRange(0, 44, header.buffer.asUint8List());
+    out.setRange(44, out.length, pcm);
+    return out;
+  }
+
+  // ─────────────── Recording ───────────────
+  Future<void> _startListening() async {
+    if (!await _audioRecorder.hasPermission()) return;
+
+    _isConversationActive = true;
+    _isListening = true;
+    _hasRecordedAudio = false;
+    _statusText = 'Listening...';
+
+    final stream = await _audioRecorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: 24000,
+        numChannels: 1,
+      ),
+    );
+
+    _audioStreamSub = stream.listen((data) {
+      _hasRecordedAudio = true;
+      _realtimeService.sendAudio(data);
     });
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _stopListening() async {
-    // End the conversation when user explicitly stops
-    _isConversationActive = false;
+    await _audioRecorder.stop();
+    await _audioStreamSub?.cancel();
 
-    try {
-      await _audioRecorder.stop();
-      await _audioStreamSubscription?.cancel();
+    _isListening = false;
+    _statusText = 'Processing...';
 
-      setState(() {
-        _isListening = false;
-        _isProcessing = true;
-        _waveController.amplitude = 0.2;
-        _statusText = 'Processing...';
-      });
+    if (_hasRecordedAudio) {
+      await _realtimeService.commitAudio();
+    }
 
-      if (_hasRecordedAudio) {
-        await _realtimeService.commitAudio();
-        debugPrint('✓ Audio committed');
-      } else {
-        debugPrint('ℹ️ No audio recorded');
-        _resetToReady();
-      }
-    } catch (e) {
-      _setStatus('Error: $e');
-      setState(() {
-        _isListening = false;
-        _isProcessing = false;
-        _waveController.amplitude = 0.2;
-      });
+    if (mounted) {
+      setState(() {});
     }
   }
 
+  // ─────────────── Helpers ───────────────
+  void _resetUI({bool autoRestart = false}) {
+    _isSpeaking = false;
+    _statusText = 'Tap to speak';
+
+    if (autoRestart && _isConversationActive) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _startListening();
+      });
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<String> _buildUserContext() async {
+    final latest = await _bpDataService.getLatestReading(widget.userId);
+    return 'Latest BP reading: $latest';
+  }
+
+  void _handleFunctionCall(dynamic data) {
+    if (data is! Map<String, dynamic>) return;
+    if (data['name'] != 'set_reminder') return;
+
+    final args = data['arguments'];
+    context.read<ReminderBloc>().add(
+          AddReminder(
+            time: TimeOfDay(hour: args['hour'], minute: args['minute']),
+            repeatType: RepeatType.daily,
+          ),
+        );
+  }
+
+  // ─────────────── UI ───────────────
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0A0E21) : Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-
-            // Status text
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                _statusText,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-            const SizedBox(height: 60),
-
-            // Siri Wave Animation
-            Expanded(
-              child: Center(
-                child: GestureDetector(
-                  onTap: _toggleListening,
-                  child: SizedBox(
-                    height: 180,
-                    child: SiriWaveform.ios9(
-                      controller: _waveController,
-                      options: IOS9SiriWaveformOptions(
-                        height: 180,
-                        width: MediaQuery.of(context).size.width,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // Microphone button
-            GestureDetector(
-              onTap: _toggleListening,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: _isListening
-                        ? [Colors.red.shade400, Colors.red.shade600]
-                        : [Colors.blue.shade400, Colors.blue.shade600],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_isListening ? Colors.red : Colors.blue)
-                          .withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [
+                    const Color(0xFF1A1A2E),
+                    const Color(0xFF16213E),
+                    const Color(0xFF0F3460),
+                  ]
+                : [
+                    const Color(0xFFE8F5E9),
+                    const Color(0xFFB2DFDB),
+                    const Color(0xFF80CBC4),
                   ],
-                ),
-                child: Icon(
-                  _isListening ? Icons.mic : Icons.mic_none,
-                  color: Colors.white,
-                  size: 36,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 32),
+
+              // Status Text with styled container
+              _buildStatusChip(),
+
+              const SizedBox(height: 24),
+
+              // 3D Avatar
+              Expanded(
+                child: Center(
+                  child: TalkingAvatarWidget(
+                    isSpeaking: _isSpeaking,
+                    onLoaded: () => setState(() => _isAvatarLoaded = true),
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    height: MediaQuery.of(context).size.height * 0.5,
+                  ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Microphone Button
+              _buildMicButton(),
+
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    IconData icon;
+    Color color;
+
+    if (_statusText.contains('Listening')) {
+      icon = Icons.hearing;
+      color = Colors.green;
+    } else if (_statusText.contains('Processing')) {
+      icon = Icons.sync;
+      color = Colors.orange;
+    } else if (_statusText.contains('Connecting')) {
+      icon = Icons.cloud_sync;
+      color = Colors.blue;
+    } else {
+      icon = Icons.touch_app;
+      color = Theme.of(context).primaryColor;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.1)
+            : Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: color.withOpacity(0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Text(
+            _statusText,
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
+  Widget _buildMicButton() {
 
-            Text(
-              _isListening ? 'Tap to stop' : 'Tap to speak',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? Colors.white60 : Colors.black54,
-              ),
+    return GestureDetector(
+      onTap: _isListening ? _stopListening : _startListening,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: _isListening ? 80 : 72,
+        height: _isListening ? 80 : 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _isListening
+                ? [Colors.red.shade400, Colors.red.shade700]
+                : [
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withBlue(200),
+                  ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isListening
+                  ? Colors.red.withOpacity(0.4)
+                  : Theme.of(context).primaryColor.withOpacity(0.4),
+              blurRadius: _isListening ? 25 : 15,
+              spreadRadius: _isListening ? 3 : 1,
             ),
-
-            const SizedBox(height: 40),
           ],
+        ),
+        child: Icon(
+          _isListening ? Icons.stop : Icons.mic,
+          color: Colors.white,
+          size: 32,
         ),
       ),
     );

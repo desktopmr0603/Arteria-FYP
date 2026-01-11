@@ -253,12 +253,39 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
   }
 
   int _estimateSystolicChange(double riskReduction) {
-    // Rough estimate: significant risk reduction correlates with BP drop
+    // For users with significant risk, estimate based on risk reduction
     if (riskReduction > 0.2) return -15;
     if (riskReduction > 0.15) return -10;
     if (riskReduction > 0.1) return -8;
     if (riskReduction > 0.05) return -5;
-    if (riskReduction > 0) return -3;
+    if (riskReduction > 0.02) return -3;
+    if (riskReduction > 0) return -2;
+    
+    // For already-healthy users (low baseline risk), 
+    // lifestyle changes still provide maintenance benefit
+    // Use selected scenario's expected change if available
+    if (state.selectedScenarioId != null) {
+      final scenario = state.availableScenarios.firstWhere(
+        (s) => s.id == state.selectedScenarioId,
+        orElse: () => state.availableScenarios.first,
+      );
+      // Scale down for healthy users (they get ~50% of max benefit)
+      return (scenario.expectedBpChange * 0.5).round();
+    }
+    
+    // Check if user made any slider modifications
+    final hasModifications = state.modifications.entries.any((e) {
+      final config = state.sliderConfigs.firstWhere(
+        (c) => c.feature == e.key,
+        orElse: () => state.sliderConfigs.first,
+      );
+      return e.value != config.defaultValue;
+    });
+    
+    if (hasModifications) {
+      return -2; // Minimal maintenance benefit for healthy users
+    }
+    
     return 0;
   }
 

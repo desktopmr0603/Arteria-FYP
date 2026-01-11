@@ -449,7 +449,7 @@ class _ScenarioCardsSection extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 110,
+          height: 120,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -498,7 +498,7 @@ class _ScenarioCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         width: 140,
         decoration: BoxDecoration(
           gradient: isSelected
@@ -530,25 +530,28 @@ class _ScenarioCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(scenario.icon, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 8),
-            Text(
-              scenario.name,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark ? Colors.white : Colors.black87),
+            Text(scenario.icon, style: const TextStyle(fontSize: 22)),
+            const SizedBox(height: 4),
+            Flexible(
+              child: Text(
+                scenario.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             Text(
               '${scenario.expectedBpChange.toInt()} mmHg',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: isSelected
                     ? Colors.white70

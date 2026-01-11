@@ -284,16 +284,22 @@ abstract class AppLocalizations {
   /// **'Your BP is high today'**
   String get bpHighToday;
 
-  /// Elevated blood pressure message
+  /// Stage 1 hypertension blood pressure message
   ///
   /// In en, this message translates to:
   /// **'Your BP is slightly elevated'**
   String get bpSlightlyElevated;
 
+  /// Elevated blood pressure message (systolic 121-129)
+  ///
+  /// In en, this message translates to:
+  /// **'Your BP is slightly above normal'**
+  String get bpElevated;
+
   /// Normal blood pressure message
   ///
   /// In en, this message translates to:
-  /// **'Your BP is normal today ✓'**
+  /// **'Your BP is normal today'**
   String get bpNormalToday;
 
   /// Button to record new BP reading

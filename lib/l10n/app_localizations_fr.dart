@@ -110,6 +110,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bpSlightlyElevated => 'Votre TA est légèrement élevée';
 
   @override
+  String get bpElevated => 'Votre TA est légèrement au-dessus de la normale';
+
+  @override
   String get bpNormalToday => 'Votre TA est normale aujourd\'hui ✓';
 
   @override
