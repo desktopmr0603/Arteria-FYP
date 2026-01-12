@@ -35,6 +35,16 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
   final Flutter3DController _controller = Flutter3DController();
   bool _isLoaded = false;
   List<String>? _availableAnimations;
+  
+  // DEBUG MODE: Set to true to show camera adjustment controls
+  // Once you find the right values, set to false and update the defaults below
+  static const bool _debugMode = false;
+  
+  // Camera values - LOCKED IN based on user testing
+  double _orbitTheta = 0;    // Horizontal rotation (0 = front)
+  double _orbitPhi = 90;     // Vertical angle (90 = level view)
+  double _orbitRadius = 2.0; // Distance from model
+  double _targetY = 1.3;     // Vertical target point
 
   @override
   void initState() {
@@ -56,23 +66,60 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
       _availableAnimations = await _controller.getAvailableAnimations();
       debugPrint('🎬 Available animations: $_availableAnimations');
 
-      // Log available textures for debugging
-      // Note: GLB files with embedded textures should auto-apply them
+      // Log and attempt to apply available textures
+      // Some GLB files require explicit texture activation
       final textures = await _controller.getAvailableTextures();
       debugPrint('🖼️ Available textures: $textures');
 
-      // DO NOT auto-play any animation on load
-      // The avatar should remain static until isSpeaking becomes true
-      // This prevents the talking animation from playing during loading
-      debugPrint('⏸️ Model loaded - waiting for isSpeaking to start animation');
-
-      // Check current speaking state in case it was set before load completed
-      if (widget.isSpeaking) {
-        _playTalkingAnimation();
+      // Try to apply the first available texture if any exist
+      // This can help with models where textures aren't auto-applied
+      if (textures.isNotEmpty) {
+        try {
+          debugPrint('🎨 Attempting to apply texture: ${textures.first}');
+          _controller.setTexture(textureName: textures.first);
+          debugPrint('✅ Texture applied successfully');
+        } catch (texError) {
+          debugPrint('⚠️ Could not apply texture: $texError');
+        }
+      } else {
+        debugPrint(
+          'ℹ️ No explicit textures found - model may use embedded materials',
+        );
       }
+
+      // Play animation briefly then pause to get a good initial pose
+      // This creates a "freeze frame" 1 second into the animation
+      if (_availableAnimations != null && _availableAnimations!.isNotEmpty) {
+        final anim = _availableAnimations!.first;
+        debugPrint('🎭 Playing animation briefly for initial pose: $anim');
+        _controller.playAnimation(animationName: anim);
+
+        // Wait 1 second to let the animation reach a good frame, then pause
+        await Future.delayed(const Duration(milliseconds: 1000));
+
+        // Only pause if we're not supposed to be speaking
+        if (!widget.isSpeaking) {
+          _controller.pauseAnimation();
+          debugPrint('⏸️ Animation paused at 1s mark for initial pose');
+        } else {
+          debugPrint('🗣️ Continuing animation - avatar is speaking');
+        }
+      }
+
+      // Apply initial camera position using state variables
+      _applyCamera();
+
+      debugPrint('✅ Model ready');
     } catch (e) {
       debugPrint('❌ Error fetching animations/textures: $e');
     }
+  }
+  
+  /// Apply camera settings and log values to console
+  void _applyCamera() {
+    _controller.setCameraOrbit(_orbitTheta, _orbitPhi, _orbitRadius);
+    _controller.setCameraTarget(0, _targetY, 0);
+    debugPrint('📷 CAMERA VALUES: orbit($_orbitTheta, $_orbitPhi, $_orbitRadius), targetY=$_targetY');
   }
 
   @override
@@ -188,6 +235,8 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
               // 3D Avatar
               Flutter3DViewer(
                 controller: _controller,
+                // Using doctor_model.glb - has correct orientation
+                // If textures don't appear, model may need re-export with embedded textures
                 src: 'assets/models/model.glb',
                 progressBarColor: Theme.of(context).primaryColor,
               ),
@@ -260,6 +309,85 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                ),
+              
+              // DEBUG PANEL: Camera adjustment controls
+              // Remove this entire block once you find the right values
+              if (_debugMode && _isLoaded)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'CAMERA DEBUG - Copy values to console',
+                          style: TextStyle(color: Colors.white, fontSize: 10),
+                        ),
+                        // Phi slider (vertical angle)
+                        Row(
+                          children: [
+                            Text('φ:', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            Expanded(
+                              child: Slider(
+                                value: _orbitPhi,
+                                min: 0,
+                                max: 180,
+                                onChanged: (v) {
+                                  setState(() => _orbitPhi = v);
+                                  _applyCamera();
+                                },
+                              ),
+                            ),
+                            Text('${_orbitPhi.toInt()}°', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                        // Radius slider (zoom)
+                        Row(
+                          children: [
+                            Text('r:', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            Expanded(
+                              child: Slider(
+                                value: _orbitRadius,
+                                min: 0.5,
+                                max: 5.0,
+                                onChanged: (v) {
+                                  setState(() => _orbitRadius = v);
+                                  _applyCamera();
+                                },
+                              ),
+                            ),
+                            Text(_orbitRadius.toStringAsFixed(1), style: TextStyle(color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                        // Target Y slider (vertical position)
+                        Row(
+                          children: [
+                            Text('Y:', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            Expanded(
+                              child: Slider(
+                                value: _targetY,
+                                min: -2.0,
+                                max: 3.0,
+                                onChanged: (v) {
+                                  setState(() => _targetY = v);
+                                  _applyCamera();
+                                },
+                              ),
+                            ),
+                            Text(_targetY.toStringAsFixed(1), style: TextStyle(color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -103,7 +103,8 @@ flutter:
   assets:
     - assets/google.png
     - assets/illustrations/bloodpressure.png
-    - assets/models/model.glb 
+    - assets/models/model.glb
+    - assets/models/doctor_model.glb
     - assets/models/bp_predictor.tflite
     - assets/models/model_metadata.json
     - .env
