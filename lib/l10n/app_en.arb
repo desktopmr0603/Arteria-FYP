@@ -190,6 +190,11 @@
     "description": "Button to record new BP reading"
   },
   
+  "takeFirstReading": "Take Your First Reading",
+  "@takeFirstReading": {
+    "description": "Button for new users to take their first BP reading"
+  },
+  
   "viewTrends": "View Trends",
   "@viewTrends": {
     "description": "Button to view BP trends"
@@ -448,24 +453,6 @@
     "description": "Title for the FAQ screen"
   },
 
-  "faqVoiceAIQuestion": "How does the app use voice commands and AI?",
-  "@faqVoiceAIQuestion": {
-    "description": "FAQ Question about Voice and AI"
-  },
-  "faqVoiceAIAnswer": "When you speak your health data (e.g., \"My BP is 130 over 80, and I took my Lisinopril\"), the app's Speech-to-Text (STT) engine securely transcribes the information. This transcribed data, including readings, medications, and lifestyle notes, is fed to the specialized Mistral 7B Instruct v0.3 LLM. The LLM performs clinical reasoning to:\n\n• Identify subtle patterns and trends in your data.\n• Suggest potential correlations between your actions (diet, exercise, stress) and your blood pressure readings.\n• Provide reasoned, actionable advice directly tailored to your unique profile and recorded history.",
-  "@faqVoiceAIAnswer": {
-    "description": "FAQ Answer about Voice and AI"
-  },
-
-  "faqLoggingInfoQuestion": "What types of information can I log using my voice?",
-  "@faqLoggingInfoQuestion": {
-    "description": "FAQ Question about Logging Info"
-  },
-  "faqLoggingInfoAnswer": "Arteria supports logging all critical health metrics related to your cardiovascular profile:\n\n• Blood Pressure Readings: Systolic, Diastolic, and Pulse (Heart Rate).\n• Medication Adherence: Name, dosage, and time taken.\n• Lifestyle Factors: Diet, exercise, sleep quality, stress levels, and specific symptoms.",
-  "@faqLoggingInfoAnswer": {
-    "description": "FAQ Answer about Logging Info"
-  },
-
   "faqAlertsQuestion": "What are the alert and reminder features?",
   "@faqAlertsQuestion": {
     "description": "FAQ Question about Alerts"
@@ -500,15 +487,6 @@
   "faqSecurityAnswer": "We take data security and user privacy extremely seriously, following best practices for mobile health applications:\n\n• Encryption In Transit: All data transmitted between the app and our secure servers uses Transport Layer Security (TLS 1.2/1.3) for end-to-end encryption.\n• Encryption At Rest: Your sensitive data is stored on secure, encrypted backend infrastructure.\n• Data Minimization: We only collect and store the necessary data required for the app's core functions (tracking, analysis, advice generation).\n• Compliance: Our systems are designed with architecture and safeguards to meet relevant data protection standards (e.g., HIPAA, GDPR, or equivalent global standards).",
   "@faqSecurityAnswer": {
     "description": "FAQ Answer about Security"
-  },
-
-  "faqVoiceRecordingQuestion": "Is the voice recording saved?",
-  "@faqVoiceRecordingQuestion": {
-    "description": "FAQ Question about Voice Recording"
-  },
-  "faqVoiceRecordingAnswer": "The raw voice audio is primarily used for immediate transcription via the STT engine and is not permanently stored. The resulting text transcription and the structured health data derived from it are securely logged and retained to power the longitudinal tracking and LLM reasoning features.",
-  "@faqVoiceRecordingAnswer": {
-    "description": "FAQ Answer about Voice Recording"
   },
 
   "faqDataTrainingQuestion": "Is my data used to train the LLM?",
@@ -638,5 +616,184 @@
   "custom": "Custom",
   "@custom": {
     "description": "Custom repeat option"
-  }
+  },
+
+  "quickStatsBloodPressure": "BLOOD PRESSURE",
+  "quickStatsSystolic": "SYSTOLIC",
+  "quickStatsDiastolic": "DIASTOLIC",
+  "quickStatsLastRecorded": "LAST RECORDED",
+  "quickStatsNoReadingsYet": "No readings yet",
+  "statusHypertensiveCrisis": "Hypertensive Crisis",
+  "statusStage2Hypertension": "Stage 2 Hypertension",
+  "statusStage1Hypertension": "Stage 1 Hypertension",
+  "statusElevated": "Elevated",
+  "statusPending": "Pending",
+  "statusNormal": "Normal",
+  "minAgo": "{minutes} min ago",
+  "@minAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "hAgo": "{hours}h ago",
+  "@hAgo": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+
+  "medicationTodaysMedications": "Today's Medications",
+  "medicationNoMedicationsAdded": "No medications added",
+  "medicationTapToAdd": "Tap + to add your first medication",
+  "medicationTaken": "Taken",
+  "medicationDueAt": "Due at {time}",
+  "@medicationDueAt": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "medicationAsNeeded": "As needed",
+  "medicationNext": "Next: {time}",
+  "@medicationNext": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "medicationCompletedForToday": "Completed for today",
+  "medicationAddMedication": "Add Medication",
+  "medicationName": "Medication Name",
+  "medicationDosage": "Dosage",
+  "medicationFrequency": "Frequency",
+  "medicationTimes": "Times (comma separated)",
+  "medicationSave": "Save Medication",
+  "medicationMoreMedications": "+ {count} more medications",
+  "@medicationMoreMedications": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "frequencyOnceDaily": "Once daily",
+  "frequencyTwiceDaily": "Twice daily",
+  "frequencyThreeTimesDaily": "Three times daily",
+  "frequencyWeekly": "Weekly",
+  "frequencyAsNeeded": "As needed",
+
+  "emergencyHypertensiveCrisis": "Hypertensive Crisis",
+  "emergencyHighBloodPressure": "High Blood Pressure",
+  "emergencySeekImmediate": "Seek immediate medical care",
+  "emergencyContactProvider": "Contact your healthcare provider",
+  "emergencyCall911": "Call 911",
+  "emergencyCallContact": "Call Contact",
+  "emergencyAddContact": "Add Emergency Contact",
+  "emergencyAddContactTitle": "Add Emergency Contact",
+  "emergencyContactNotified": "This person will be notified in case of emergency",
+  "emergencyContactName": "Contact Name",
+  "emergencyPhoneNumber": "Phone Number",
+  "emergencyRelationship": "Relationship",
+  "emergencySaveContact": "Save Contact",
+
+  "familyCircle": "Family Circle",
+  "familyConnected": "{count} connected",
+  "@familyConnected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "familyInvite": "Invite",
+  "familyNoMembers": "No family members connected",
+  "familyInviteDescription": "Invite family to share your health data",
+  "familyPermissionViewOnly": "View Only",
+  "familyPermissionViewExport": "View & Export",
+  "familyPermissionFullAccess": "Full Access",
+  "familyInviteFamilyMember": "Invite Family Member",
+  "familyShareHealthData": "Share your health data with family members",
+  "familyEmailOptional": "Email (optional)",
+  "familyPhoneOptional": "Phone (optional)",
+  "familyPermissionLevel": "Permission Level",
+  "familySendInvite": "Send Invite",
+  "familyOrGenerateCode": "Or generate an invite code",
+  "familyGenerateInviteCode": "Generate Invite Code",
+  "familyInviteCode": "Invite Code",
+  "familyCopy": "Copy",
+  "familyCodeCopied": "Code copied to clipboard",
+  "familyShareCodeDescription": "Share this code with family members",
+  "familyCanViewReadings": "Can view your readings",
+  "familyCanViewShare": "Can view and share reports",
+  "familyFullAccessData": "Full access to your data",
+  "familyInviteSent": "Invite sent to {email}",
+  "@familyInviteSent": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "familyEnterEmailOrPhone": "Please enter email or phone",
+
+  "healthTipsTitle": "Health Tips",
+  "healthTipMeasureTime": "Measure at the Same Time",
+  "healthTipMeasureTimeDesc": "Take your blood pressure at the same time each day for consistent readings.",
+  "healthTipRestBefore": "Rest Before Measuring",
+  "healthTipRestBeforeDesc": "Sit quietly for 5 minutes before taking your reading for accurate results.",
+  "healthTipWatchDiet": "Watch Your Diet",
+  "healthTipWatchDietDesc": "Reduce sodium intake and eat more fruits, vegetables, and whole grains.",
+  "healthTipStayActive": "Stay Active",
+  "healthTipStayActiveDesc": "Aim for 30 minutes of moderate exercise most days of the week.",
+  "healthTipManageStress": "Manage Stress",
+  "healthTipManageStressDesc": "Practice relaxation techniques like deep breathing or meditation.",
+  "healthTipLimitAlcohol": "Limit Alcohol",
+  "healthTipLimitAlcoholDesc": "Moderate alcohol consumption can help maintain healthy blood pressure.",
+  "healthTipDontSkipMeds": "Don't Skip Medications",
+  "healthTipDontSkipMedsDesc": "Take your medications as prescribed, even when you feel well.",
+
+  "weeklyThisWeek": "This Week",
+  "weeklyReadings": "{count} readings",
+  "@weeklyReadings": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "trendsBloodPressure": "Blood Pressure",
+  "trendsHistory": "History",
+  "trendsTrendAnalysis": "Trend Analysis",
+  "trendsOverview": "Overview",
+  "trendsReadings": "Readings",
+  "trendsSysAvg": "SYS Avg",
+  "trendsDiaAvg": "DIA Avg",
+  "trendsNoDataAvailable": "No data available",
+  "trendsRecentReadings": "Recent Readings",
+  "trendsBpGuide": "BP Classification Guide",
+  "trendsBpNormal": "Normal",
+  "trendsBpElevated": "Elevated",
+  "trendsBpHighStage1": "High Stage 1",
+  "trendsBpHighStage2": "High Stage 2",
+  "trendsBpCrisis": "Crisis",
+  "greetingMorning": "Good morning",
+  "greetingAfternoon": "Good afternoon",
+  "greetingEvening": "Good evening",
+  "healthDashboard": "HEALTH DASHBOARD",
+  "timeRangeLast7Days": "Last 7 Days",
+  "timeRangeLast30Days": "Last 30 Days",
+  "timeRangeLast90Days": "Last 90 Days",
+  "timeRangeThisYear": "This Year",
+  "timeRangeCustom": "Custom Range",
+  "userDefault": "User",
+  "dialogSummaryForDoctor": "Summary for Doctor",
+  "dialogTextReport": "Text Report",
+  "dialogClose": "Close",
+  "trendsAvgBp": "Average Blood Pressure",
+  "trendsReadingsOver": "{count} readings over {range}",
+  "@trendsReadingsOver": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "trendsNoDataYet": "No blood pressure data yet",
+  "trendsStartRecording": "Start recording your readings to see trends",
+  "trendsSystolic": "Systolic",
+  "trendsDiastolic": "Diastolic"
 }

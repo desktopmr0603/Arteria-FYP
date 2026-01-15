@@ -119,6 +119,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recordNewReading => 'Enregistrer une nouvelle lecture';
 
   @override
+  String get takeFirstReading => 'Prenez votre première lecture';
+
+  @override
   String get viewTrends => 'Voir les tendances';
 
   @override
@@ -273,22 +276,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get faqTitle => 'FAQ et Centre d\'aide';
 
   @override
-  String get faqVoiceAIQuestion =>
-      'Comment l\'application utilise-t-elle les commandes vocales et l\'IA ?';
-
-  @override
-  String get faqVoiceAIAnswer =>
-      'Lorsque vous énoncez vos données de santé (par exemple, \"Ma tension est de 130 sur 80, et j\'ai pris mon Lisinopril\"), le moteur de synthèse vocale (STT) de l\'application transcrit les informations en toute sécurité. Ces données transcrites, y compris les lectures, les médicaments et les notes sur le mode de vie, sont transmises au LLM spécialisé Mistral 7B Instruct v0.3. Le LLM effectue un raisonnement clinique pour :\n\n• Identifier des modèles et des tendances subtils dans vos données.\n• Suggérer des corrélations potentielles entre vos actions (alimentation, exercice, stress) et vos lectures de tension artérielle.\n• Fournir des conseils raisonnés et exploitables directement adaptés à votre profil unique et à votre historique enregistré.';
-
-  @override
-  String get faqLoggingInfoQuestion =>
-      'Quels types d\'informations puis-je enregistrer avec ma voix ?';
-
-  @override
-  String get faqLoggingInfoAnswer =>
-      'Arteria prend en charge l\'enregistrement de toutes les mesures de santé critiques liées à votre profil cardiovasculaire :\n\n• Lectures de tension artérielle : Systolique, Diastolique et Pouls (Fréquence cardiaque).\n• Adhérence aux médicaments : Nom, dosage et heure de prise.\n• Facteurs de mode de vie : Alimentation, exercice, qualité du sommeil, niveaux de stress et symptômes spécifiques.';
-
-  @override
   String get faqAlertsQuestion =>
       'Quelles sont les fonctionnalités d\'alerte et de rappel ?';
 
@@ -319,14 +306,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get faqSecurityAnswer =>
       'Nous prenons la sécurité des données et la confidentialité des utilisateurs très au sérieux, en suivant les meilleures pratiques pour les applications de santé mobile :\n\n• Chiffrement en transit : Toutes les données transmises entre l\'application et nos serveurs sécurisés utilisent Transport Layer Security (TLS 1.2/1.3) pour un chiffrement de bout en bout.\n• Chiffrement au repos : Vos données sensibles sont stockées sur une infrastructure backend sécurisée et chiffrée.\n• Minimisation des données : Nous ne collectons et ne stockons que les données nécessaires aux fonctions principales de l\'application (suivi, analyse, génération de conseils).\n• Conformité : Nos systèmes sont conçus avec une architecture et des garanties pour répondre aux normes de protection des données pertinentes (par exemple, HIPAA, GDPR ou normes mondiales équivalentes).';
-
-  @override
-  String get faqVoiceRecordingQuestion =>
-      'L\'enregistrement vocal est-il sauvegardé ?';
-
-  @override
-  String get faqVoiceRecordingAnswer =>
-      'L\'audio vocal brut est principalement utilisé pour la transcription immédiate via le moteur STT et n\'est pas stocké de manière permanente. La transcription textuelle résultante et les données de santé structurées qui en découlent sont enregistrées et conservées en toute sécurité pour alimenter les fonctionnalités de suivi longitudinal et de raisonnement du LLM.';
 
   @override
   String get faqDataTrainingQuestion =>
@@ -410,4 +389,401 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get custom => 'Personnalisé';
+
+  @override
+  String get quickStatsBloodPressure => 'TENSION ARTÉRIELLE';
+
+  @override
+  String get quickStatsSystolic => 'SYSTOLIQUE';
+
+  @override
+  String get quickStatsDiastolic => 'DIASTOLIQUE';
+
+  @override
+  String get quickStatsLastRecorded => 'DERNIÈRE MESURE';
+
+  @override
+  String get quickStatsNoReadingsYet => 'Aucune lecture';
+
+  @override
+  String get statusHypertensiveCrisis => 'Crise hypertensive';
+
+  @override
+  String get statusStage2Hypertension => 'Hypertension stade 2';
+
+  @override
+  String get statusStage1Hypertension => 'Hypertension stade 1';
+
+  @override
+  String get statusElevated => 'Élevée';
+
+  @override
+  String get statusPending => 'En attente';
+
+  @override
+  String get statusNormal => 'Normale';
+
+  @override
+  String minAgo(int minutes) {
+    return 'il y a $minutes min';
+  }
+
+  @override
+  String hAgo(int hours) {
+    return 'il y a ${hours}h';
+  }
+
+  @override
+  String get medicationTodaysMedications => 'Médicaments du jour';
+
+  @override
+  String get medicationNoMedicationsAdded => 'Aucun médicament ajouté';
+
+  @override
+  String get medicationTapToAdd =>
+      'Appuyez sur + pour ajouter votre premier médicament';
+
+  @override
+  String get medicationTaken => 'Pris';
+
+  @override
+  String medicationDueAt(String time) {
+    return 'À prendre à $time';
+  }
+
+  @override
+  String get medicationAsNeeded => 'Au besoin';
+
+  @override
+  String medicationNext(String time) {
+    return 'Prochain : $time';
+  }
+
+  @override
+  String get medicationCompletedForToday => 'Terminé pour aujourd\'hui';
+
+  @override
+  String get medicationAddMedication => 'Ajouter un médicament';
+
+  @override
+  String get medicationName => 'Nom du médicament';
+
+  @override
+  String get medicationDosage => 'Dosage';
+
+  @override
+  String get medicationFrequency => 'Fréquence';
+
+  @override
+  String get medicationTimes => 'Heures (séparées par des virgules)';
+
+  @override
+  String get medicationSave => 'Enregistrer le médicament';
+
+  @override
+  String medicationMoreMedications(int count) {
+    return '+ $count autres médicaments';
+  }
+
+  @override
+  String get frequencyOnceDaily => 'Une fois par jour';
+
+  @override
+  String get frequencyTwiceDaily => 'Deux fois par jour';
+
+  @override
+  String get frequencyThreeTimesDaily => 'Trois fois par jour';
+
+  @override
+  String get frequencyWeekly => 'Hebdomadaire';
+
+  @override
+  String get frequencyAsNeeded => 'Au besoin';
+
+  @override
+  String get emergencyHypertensiveCrisis => 'Crise hypertensive';
+
+  @override
+  String get emergencyHighBloodPressure => 'Tension artérielle élevée';
+
+  @override
+  String get emergencySeekImmediate => 'Consultez immédiatement un médecin';
+
+  @override
+  String get emergencyContactProvider => 'Contactez votre médecin';
+
+  @override
+  String get emergencyCall911 => 'Appeler le 15';
+
+  @override
+  String get emergencyCallContact => 'Appeler le contact';
+
+  @override
+  String get emergencyAddContact => 'Ajouter un contact d\'urgence';
+
+  @override
+  String get emergencyAddContactTitle => 'Ajouter un contact d\'urgence';
+
+  @override
+  String get emergencyContactNotified =>
+      'Cette personne sera notifiée en cas d\'urgence';
+
+  @override
+  String get emergencyContactName => 'Nom du contact';
+
+  @override
+  String get emergencyPhoneNumber => 'Numéro de téléphone';
+
+  @override
+  String get emergencyRelationship => 'Relation';
+
+  @override
+  String get emergencySaveContact => 'Enregistrer le contact';
+
+  @override
+  String get familyCircle => 'Cercle familial';
+
+  @override
+  String familyConnected(int count) {
+    return '$count connecté(s)';
+  }
+
+  @override
+  String get familyInvite => 'Inviter';
+
+  @override
+  String get familyNoMembers => 'Aucun membre de la famille connecté';
+
+  @override
+  String get familyInviteDescription =>
+      'Invitez la famille à partager vos données de santé';
+
+  @override
+  String get familyPermissionViewOnly => 'Lecture seule';
+
+  @override
+  String get familyPermissionViewExport => 'Lecture et exportation';
+
+  @override
+  String get familyPermissionFullAccess => 'Accès complet';
+
+  @override
+  String get familyInviteFamilyMember => 'Inviter un membre de la famille';
+
+  @override
+  String get familyShareHealthData =>
+      'Partagez vos données de santé avec les membres de votre famille';
+
+  @override
+  String get familyEmailOptional => 'Email (facultatif)';
+
+  @override
+  String get familyPhoneOptional => 'Téléphone (facultatif)';
+
+  @override
+  String get familyPermissionLevel => 'Niveau d\'autorisation';
+
+  @override
+  String get familySendInvite => 'Envoyer l\'invitation';
+
+  @override
+  String get familyOrGenerateCode => 'Ou générez un code d\'invitation';
+
+  @override
+  String get familyGenerateInviteCode => 'Générer un code d\'invitation';
+
+  @override
+  String get familyInviteCode => 'Code d\'invitation';
+
+  @override
+  String get familyCopy => 'Copier';
+
+  @override
+  String get familyCodeCopied => 'Code copié dans le presse-papiers';
+
+  @override
+  String get familyShareCodeDescription =>
+      'Partagez ce code avec les membres de votre famille';
+
+  @override
+  String get familyCanViewReadings => 'Peut voir vos lectures';
+
+  @override
+  String get familyCanViewShare => 'Peut voir et partager les rapports';
+
+  @override
+  String get familyFullAccessData => 'Accès complet à vos données';
+
+  @override
+  String familyInviteSent(String email) {
+    return 'Invitation envoyée à $email';
+  }
+
+  @override
+  String get familyEnterEmailOrPhone => 'Veuillez entrer un email ou téléphone';
+
+  @override
+  String get healthTipsTitle => 'Conseils santé';
+
+  @override
+  String get healthTipMeasureTime => 'Mesurez à la même heure';
+
+  @override
+  String get healthTipMeasureTimeDesc =>
+      'Prenez votre tension artérielle à la même heure chaque jour pour des lectures cohérentes.';
+
+  @override
+  String get healthTipRestBefore => 'Reposez-vous avant de mesurer';
+
+  @override
+  String get healthTipRestBeforeDesc =>
+      'Asseyez-vous tranquillement pendant 5 minutes avant de prendre votre lecture pour des résultats précis.';
+
+  @override
+  String get healthTipWatchDiet => 'Surveillez votre alimentation';
+
+  @override
+  String get healthTipWatchDietDesc =>
+      'Réduisez la consommation de sodium et mangez plus de fruits, légumes et céréales complètes.';
+
+  @override
+  String get healthTipStayActive => 'Restez actif';
+
+  @override
+  String get healthTipStayActiveDesc =>
+      'Visez 30 minutes d\'exercice modéré la plupart des jours de la semaine.';
+
+  @override
+  String get healthTipManageStress => 'Gérez le stress';
+
+  @override
+  String get healthTipManageStressDesc =>
+      'Pratiquez des techniques de relaxation comme la respiration profonde ou la méditation.';
+
+  @override
+  String get healthTipLimitAlcohol => 'Limitez l\'alcool';
+
+  @override
+  String get healthTipLimitAlcoholDesc =>
+      'Une consommation modérée d\'alcool peut aider à maintenir une tension artérielle saine.';
+
+  @override
+  String get healthTipDontSkipMeds => 'Ne sautez pas vos médicaments';
+
+  @override
+  String get healthTipDontSkipMedsDesc =>
+      'Prenez vos médicaments comme prescrit, même lorsque vous vous sentez bien.';
+
+  @override
+  String get weeklyThisWeek => 'Cette semaine';
+
+  @override
+  String weeklyReadings(int count) {
+    return '$count lectures';
+  }
+
+  @override
+  String get trendsBloodPressure => 'Tension artérielle';
+
+  @override
+  String get trendsHistory => 'Historique';
+
+  @override
+  String get trendsTrendAnalysis => 'Analyse des tendances';
+
+  @override
+  String get trendsOverview => 'Aperçu';
+
+  @override
+  String get trendsReadings => 'Lectures';
+
+  @override
+  String get trendsSysAvg => 'Moy. SYS';
+
+  @override
+  String get trendsDiaAvg => 'Moy. DIA';
+
+  @override
+  String get trendsNoDataAvailable => 'Aucune donnée disponible';
+
+  @override
+  String get trendsRecentReadings => 'Lectures récentes';
+
+  @override
+  String get trendsBpGuide => 'Guide de classification TA';
+
+  @override
+  String get trendsBpNormal => 'Normale';
+
+  @override
+  String get trendsBpElevated => 'Élevée';
+
+  @override
+  String get trendsBpHighStage1 => 'Élevée stade 1';
+
+  @override
+  String get trendsBpHighStage2 => 'Élevée stade 2';
+
+  @override
+  String get trendsBpCrisis => 'Crise';
+
+  @override
+  String get greetingMorning => 'Bonjour';
+
+  @override
+  String get greetingAfternoon => 'Bon après-midi';
+
+  @override
+  String get greetingEvening => 'Bonsoir';
+
+  @override
+  String get healthDashboard => 'TABLEAU DE BORD SANTÉ';
+
+  @override
+  String get timeRangeLast7Days => '7 derniers jours';
+
+  @override
+  String get timeRangeLast30Days => '30 derniers jours';
+
+  @override
+  String get timeRangeLast90Days => '90 derniers jours';
+
+  @override
+  String get timeRangeThisYear => 'Cette année';
+
+  @override
+  String get timeRangeCustom => 'Période personnalisée';
+
+  @override
+  String get userDefault => 'Utilisateur';
+
+  @override
+  String get dialogSummaryForDoctor => 'Résumé pour le médecin';
+
+  @override
+  String get dialogTextReport => 'Rapport textuel';
+
+  @override
+  String get dialogClose => 'Fermer';
+
+  @override
+  String get trendsAvgBp => 'Pression artérielle moyenne';
+
+  @override
+  String trendsReadingsOver(int count, String range) {
+    return '$count lectures sur $range';
+  }
+
+  @override
+  String get trendsNoDataYet => 'Aucune donnée de tension artérielle';
+
+  @override
+  String get trendsStartRecording =>
+      'Enregistrez vos mesures pour voir les tendances';
+
+  @override
+  String get trendsSystolic => 'Systolique';
+
+  @override
+  String get trendsDiastolic => 'Diastolique';
 }

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pdf/pdf.dart';
@@ -14,24 +15,24 @@ class ExportService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User not logged in');
     
-    print('ExportService: Starting PDF generation for user ${user.uid}');
+    debugPrint('ExportService: Starting PDF generation for user ${user.uid}');
     
     try {
       // Fetch user profile
-      print('ExportService: Fetching user profile...');
+      debugPrint('ExportService: Fetching user profile...');
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       final userData = userDoc.data() ?? {};
-      print('ExportService: User data fetched: ${userData.keys.toList()}');
+      debugPrint('ExportService: User data fetched: ${userData.keys.toList()}');
 
       // Fetch all BP readings
-      print('ExportService: Fetching BP readings...');
+      debugPrint('ExportService: Fetching BP readings...');
       final readingsSnapshot = await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('readings')
           .orderBy('date', descending: true)
           .get();
-      print('ExportService: Found ${readingsSnapshot.docs.length} readings');
+      debugPrint('ExportService: Found ${readingsSnapshot.docs.length} readings');
 
       final readings = readingsSnapshot.docs.map((doc) {
         final data = doc.data();
@@ -54,13 +55,13 @@ class ExportService {
         };
       }).toList();
 
-      print('ExportService: Building PDF document...');
+      debugPrint('ExportService: Building PDF document...');
       final pdfBytes = await _buildPdf(userData, readings);
-      print('ExportService: PDF generated successfully, size: ${pdfBytes.length} bytes');
+      debugPrint('ExportService: PDF generated successfully, size: ${pdfBytes.length} bytes');
       return pdfBytes;
     } catch (e, stackTrace) {
-      print('ExportService ERROR: $e');
-      print(stackTrace);
+      debugPrint('ExportService ERROR: $e');
+      debugPrint(stackTrace.toString());
       throw Exception('Failed to generate PDF: $e');
     }
   }

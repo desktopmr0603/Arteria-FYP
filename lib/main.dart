@@ -15,6 +15,7 @@ import 'package:arteria/features/reminders/reminder_event.dart';
 import 'package:arteria/features/reminders/reminder_service.dart';
 import 'package:arteria/features/user%20data/user_bloc.dart';
 import 'package:arteria/features/user%20data/user_event.dart';
+import 'package:arteria/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:arteria/Core/Theme/app_theme.dart';
 import 'package:arteria/firebase_options.dart';
 import 'package:dart_openai/dart_openai.dart';
@@ -67,6 +68,7 @@ class MyApp extends StatelessWidget {
               BlocProvider<ReminderBloc>(
                 create: (context) => ReminderBloc()..add(LoadReminders()),
               ),
+              BlocProvider<TrendsBloc>(create: (context) => TrendsBloc()),
             ],
             child: BlocBuilder<SettingsBloc, SettingsState>(
               builder: (context, settingsState) {

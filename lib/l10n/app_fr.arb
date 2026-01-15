@@ -89,6 +89,8 @@
   
   "recordNewReading": "Enregistrer une nouvelle lecture",
   
+  "takeFirstReading": "Prenez votre première lecture",
+  
   "viewTrends": "Voir les tendances",
   
   "reminders": "Rappels",
@@ -208,15 +210,7 @@
   "noDateRecorded": "Aucune date enregistrée",
 
   "faqTitle": "FAQ et Centre d'aide",
-  
-  "faqVoiceAIQuestion": "Comment l'application utilise-t-elle les commandes vocales et l'IA ?",
-  
-  "faqVoiceAIAnswer": "Lorsque vous énoncez vos données de santé (par exemple, \"Ma tension est de 130 sur 80, et j'ai pris mon Lisinopril\"), le moteur de synthèse vocale (STT) de l'application transcrit les informations en toute sécurité. Ces données transcrites, y compris les lectures, les médicaments et les notes sur le mode de vie, sont transmises au LLM spécialisé Mistral 7B Instruct v0.3. Le LLM effectue un raisonnement clinique pour :\n\n• Identifier des modèles et des tendances subtils dans vos données.\n• Suggérer des corrélations potentielles entre vos actions (alimentation, exercice, stress) et vos lectures de tension artérielle.\n• Fournir des conseils raisonnés et exploitables directement adaptés à votre profil unique et à votre historique enregistré.",
-  
-  "faqLoggingInfoQuestion": "Quels types d'informations puis-je enregistrer avec ma voix ?",
-  
-  "faqLoggingInfoAnswer": "Arteria prend en charge l'enregistrement de toutes les mesures de santé critiques liées à votre profil cardiovasculaire :\n\n• Lectures de tension artérielle : Systolique, Diastolique et Pouls (Fréquence cardiaque).\n• Adhérence aux médicaments : Nom, dosage et heure de prise.\n• Facteurs de mode de vie : Alimentation, exercice, qualité du sommeil, niveaux de stress et symptômes spécifiques.",
-  
+   
   "faqAlertsQuestion": "Quelles sont les fonctionnalités d'alerte et de rappel ?",
   
   "faqAlertsAnswer": "Arteria fournit des outils proactifs essentiels pour l'adhérence et la cohérence :\n\n• Rappels de mesure de la TA : Alertes configurables pour vous inviter à prendre vos lectures à des heures régulières (par exemple, matin et soir), fournissant l'ensemble de données le plus précieux pour l'analyse des tendances.\n• Rappels de médicaments : Alertes opportunes et fiables pour vous assurer de ne jamais manquer une dose, un facteur critique dans la gestion efficace de l'hypertension.",
@@ -232,11 +226,7 @@
   "faqSecurityQuestion": "Comment mes informations de santé personnelles sont-elles sécurisées dans Arteria ?",
   
   "faqSecurityAnswer": "Nous prenons la sécurité des données et la confidentialité des utilisateurs très au sérieux, en suivant les meilleures pratiques pour les applications de santé mobile :\n\n• Chiffrement en transit : Toutes les données transmises entre l'application et nos serveurs sécurisés utilisent Transport Layer Security (TLS 1.2/1.3) pour un chiffrement de bout en bout.\n• Chiffrement au repos : Vos données sensibles sont stockées sur une infrastructure backend sécurisée et chiffrée.\n• Minimisation des données : Nous ne collectons et ne stockons que les données nécessaires aux fonctions principales de l'application (suivi, analyse, génération de conseils).\n• Conformité : Nos systèmes sont conçus avec une architecture et des garanties pour répondre aux normes de protection des données pertinentes (par exemple, HIPAA, GDPR ou normes mondiales équivalentes).",
-  
-  "faqVoiceRecordingQuestion": "L'enregistrement vocal est-il sauvegardé ?",
-  
-  "faqVoiceRecordingAnswer": "L'audio vocal brut est principalement utilisé pour la transcription immédiate via le moteur STT et n'est pas stocké de manière permanente. La transcription textuelle résultante et les données de santé structurées qui en découlent sont enregistrées et conservées en toute sécurité pour alimenter les fonctionnalités de suivi longitudinal et de raisonnement du LLM.",
-  
+   
   "faqDataTrainingQuestion": "Mes données sont-elles utilisées pour entraîner le LLM ?",
   
   "faqDataTrainingAnswer": "Nous pouvons utiliser des données utilisateur anonymisées et agrégées pour améliorer continuellement la précision et la pertinence des capacités de raisonnement du modèle Mistral 7B. Vos informations personnelles d'identification ne sont jamais utilisées à des fins de formation sans consentement explicite et éclairé.",
@@ -265,5 +255,174 @@
   "daily": "Quotidien",
   "weekdays": "Jours de semaine",
   "weekends": "Week-ends",
-  "custom": "Personnalisé"
+  "custom": "Personnalisé",
+
+  "quickStatsBloodPressure": "TENSION ARTÉRIELLE",
+  "quickStatsSystolic": "SYSTOLIQUE",
+  "quickStatsDiastolic": "DIASTOLIQUE",
+  "quickStatsLastRecorded": "DERNIÈRE MESURE",
+  "quickStatsNoReadingsYet": "Aucune lecture",
+  "statusHypertensiveCrisis": "Crise hypertensive",
+  "statusStage2Hypertension": "Hypertension stade 2",
+  "statusStage1Hypertension": "Hypertension stade 1",
+  "statusElevated": "Élevée",
+  "statusPending": "En attente",
+  "statusNormal": "Normale",
+  "minAgo": "il y a {minutes} min",
+  "@minAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "hAgo": "il y a {hours}h",
+  "@hAgo": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+
+  "medicationTodaysMedications": "Médicaments du jour",
+  "medicationNoMedicationsAdded": "Aucun médicament ajouté",
+  "medicationTapToAdd": "Appuyez sur + pour ajouter votre premier médicament",
+  "medicationTaken": "Pris",
+  "medicationDueAt": "À prendre à {time}",
+  "@medicationDueAt": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "medicationAsNeeded": "Au besoin",
+  "medicationNext": "Prochain : {time}",
+  "@medicationNext": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "medicationCompletedForToday": "Terminé pour aujourd'hui",
+  "medicationAddMedication": "Ajouter un médicament",
+  "medicationName": "Nom du médicament",
+  "medicationDosage": "Dosage",
+  "medicationFrequency": "Fréquence",
+  "medicationTimes": "Heures (séparées par des virgules)",
+  "medicationSave": "Enregistrer le médicament",
+  "medicationMoreMedications": "+ {count} autres médicaments",
+  "@medicationMoreMedications": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "frequencyOnceDaily": "Une fois par jour",
+  "frequencyTwiceDaily": "Deux fois par jour",
+  "frequencyThreeTimesDaily": "Trois fois par jour",
+  "frequencyWeekly": "Hebdomadaire",
+  "frequencyAsNeeded": "Au besoin",
+
+  "emergencyHypertensiveCrisis": "Crise hypertensive",
+  "emergencyHighBloodPressure": "Tension artérielle élevée",
+  "emergencySeekImmediate": "Consultez immédiatement un médecin",
+  "emergencyContactProvider": "Contactez votre médecin",
+  "emergencyCall911": "Appeler le 15",
+  "emergencyCallContact": "Appeler le contact",
+  "emergencyAddContact": "Ajouter un contact d'urgence",
+  "emergencyAddContactTitle": "Ajouter un contact d'urgence",
+  "emergencyContactNotified": "Cette personne sera notifiée en cas d'urgence",
+  "emergencyContactName": "Nom du contact",
+  "emergencyPhoneNumber": "Numéro de téléphone",
+  "emergencyRelationship": "Relation",
+  "emergencySaveContact": "Enregistrer le contact",
+
+  "familyCircle": "Cercle familial",
+  "familyConnected": "{count} connecté(s)",
+  "@familyConnected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "familyInvite": "Inviter",
+  "familyNoMembers": "Aucun membre de la famille connecté",
+  "familyInviteDescription": "Invitez la famille à partager vos données de santé",
+  "familyPermissionViewOnly": "Lecture seule",
+  "familyPermissionViewExport": "Lecture et exportation",
+  "familyPermissionFullAccess": "Accès complet",
+  "familyInviteFamilyMember": "Inviter un membre de la famille",
+  "familyShareHealthData": "Partagez vos données de santé avec les membres de votre famille",
+  "familyEmailOptional": "Email (facultatif)",
+  "familyPhoneOptional": "Téléphone (facultatif)",
+  "familyPermissionLevel": "Niveau d'autorisation",
+  "familySendInvite": "Envoyer l'invitation",
+  "familyOrGenerateCode": "Ou générez un code d'invitation",
+  "familyGenerateInviteCode": "Générer un code d'invitation",
+  "familyInviteCode": "Code d'invitation",
+  "familyCopy": "Copier",
+  "familyCodeCopied": "Code copié dans le presse-papiers",
+  "familyShareCodeDescription": "Partagez ce code avec les membres de votre famille",
+  "familyCanViewReadings": "Peut voir vos lectures",
+  "familyCanViewShare": "Peut voir et partager les rapports",
+  "familyFullAccessData": "Accès complet à vos données",
+  "familyInviteSent": "Invitation envoyée à {email}",
+  "@familyInviteSent": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "familyEnterEmailOrPhone": "Veuillez entrer un email ou téléphone",
+
+  "healthTipsTitle": "Conseils santé",
+  "healthTipMeasureTime": "Mesurez à la même heure",
+  "healthTipMeasureTimeDesc": "Prenez votre tension artérielle à la même heure chaque jour pour des lectures cohérentes.",
+  "healthTipRestBefore": "Reposez-vous avant de mesurer",
+  "healthTipRestBeforeDesc": "Asseyez-vous tranquillement pendant 5 minutes avant de prendre votre lecture pour des résultats précis.",
+  "healthTipWatchDiet": "Surveillez votre alimentation",
+  "healthTipWatchDietDesc": "Réduisez la consommation de sodium et mangez plus de fruits, légumes et céréales complètes.",
+  "healthTipStayActive": "Restez actif",
+  "healthTipStayActiveDesc": "Visez 30 minutes d'exercice modéré la plupart des jours de la semaine.",
+  "healthTipManageStress": "Gérez le stress",
+  "healthTipManageStressDesc": "Pratiquez des techniques de relaxation comme la respiration profonde ou la méditation.",
+  "healthTipLimitAlcohol": "Limitez l'alcool",
+  "healthTipLimitAlcoholDesc": "Une consommation modérée d'alcool peut aider à maintenir une tension artérielle saine.",
+  "healthTipDontSkipMeds": "Ne sautez pas vos médicaments",
+  "healthTipDontSkipMedsDesc": "Prenez vos médicaments comme prescrit, même lorsque vous vous sentez bien.",
+
+  "weeklyThisWeek": "Cette semaine",
+  "weeklyReadings": "{count} lectures",
+  "@weeklyReadings": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "trendsBloodPressure": "Tension artérielle",
+  "trendsHistory": "Historique",
+  "trendsTrendAnalysis": "Analyse des tendances",
+  "trendsOverview": "Aperçu",
+  "trendsReadings": "Lectures",
+  "trendsSysAvg": "Moy. SYS",
+  "trendsDiaAvg": "Moy. DIA",
+  "trendsNoDataAvailable": "Aucune donnée disponible",
+  "trendsRecentReadings": "Lectures récentes",
+  "trendsBpGuide": "Guide de classification TA",
+  "trendsBpNormal": "Normale",
+  "trendsBpElevated": "Élevée",
+  "trendsBpHighStage1": "Élevée stade 1",
+  "trendsBpHighStage2": "Élevée stade 2",
+  "trendsBpCrisis": "Crise",
+  "greetingMorning": "Bonjour",
+  "greetingAfternoon": "Bon après-midi",
+  "greetingEvening": "Bonsoir",
+  "healthDashboard": "TABLEAU DE BORD SANTÉ",
+  "timeRangeLast7Days": "7 derniers jours",
+  "timeRangeLast30Days": "30 derniers jours",
+  "timeRangeLast90Days": "90 derniers jours",
+  "timeRangeThisYear": "Cette année",
+  "timeRangeCustom": "Période personnalisée",
+  "userDefault": "Utilisateur",
+  "dialogSummaryForDoctor": "Résumé pour le médecin",
+  "dialogTextReport": "Rapport textuel",
+  "dialogClose": "Fermer",
+  "trendsAvgBp": "Pression artérielle moyenne",
+  "trendsReadingsOver": "{count} lectures sur {range}",
+  "trendsNoDataYet": "Aucune donnée de tension artérielle",
+  "trendsStartRecording": "Enregistrez vos mesures pour voir les tendances",
+  "trendsSystolic": "Systolique",
+  "trendsDiastolic": "Diastolique"
 }

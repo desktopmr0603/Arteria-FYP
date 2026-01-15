@@ -118,6 +118,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recordNewReading => 'Record New Reading';
 
   @override
+  String get takeFirstReading => 'Take Your First Reading';
+
+  @override
   String get viewTrends => 'View Trends';
 
   @override
@@ -270,22 +273,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faqTitle => 'FAQ & Help Center';
 
   @override
-  String get faqVoiceAIQuestion =>
-      'How does the app use voice commands and AI?';
-
-  @override
-  String get faqVoiceAIAnswer =>
-      'When you speak your health data (e.g., \"My BP is 130 over 80, and I took my Lisinopril\"), the app\'s Speech-to-Text (STT) engine securely transcribes the information. This transcribed data, including readings, medications, and lifestyle notes, is fed to the specialized Mistral 7B Instruct v0.3 LLM. The LLM performs clinical reasoning to:\n\n• Identify subtle patterns and trends in your data.\n• Suggest potential correlations between your actions (diet, exercise, stress) and your blood pressure readings.\n• Provide reasoned, actionable advice directly tailored to your unique profile and recorded history.';
-
-  @override
-  String get faqLoggingInfoQuestion =>
-      'What types of information can I log using my voice?';
-
-  @override
-  String get faqLoggingInfoAnswer =>
-      'Arteria supports logging all critical health metrics related to your cardiovascular profile:\n\n• Blood Pressure Readings: Systolic, Diastolic, and Pulse (Heart Rate).\n• Medication Adherence: Name, dosage, and time taken.\n• Lifestyle Factors: Diet, exercise, sleep quality, stress levels, and specific symptoms.';
-
-  @override
   String get faqAlertsQuestion => 'What are the alert and reminder features?';
 
   @override
@@ -315,13 +302,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faqSecurityAnswer =>
       'We take data security and user privacy extremely seriously, following best practices for mobile health applications:\n\n• Encryption In Transit: All data transmitted between the app and our secure servers uses Transport Layer Security (TLS 1.2/1.3) for end-to-end encryption.\n• Encryption At Rest: Your sensitive data is stored on secure, encrypted backend infrastructure.\n• Data Minimization: We only collect and store the necessary data required for the app\'s core functions (tracking, analysis, advice generation).\n• Compliance: Our systems are designed with architecture and safeguards to meet relevant data protection standards (e.g., HIPAA, GDPR, or equivalent global standards).';
-
-  @override
-  String get faqVoiceRecordingQuestion => 'Is the voice recording saved?';
-
-  @override
-  String get faqVoiceRecordingAnswer =>
-      'The raw voice audio is primarily used for immediate transcription via the STT engine and is not permanently stored. The resulting text transcription and the structured health data derived from it are securely logged and retained to power the longitudinal tracking and LLM reasoning features.';
 
   @override
   String get faqDataTrainingQuestion => 'Is my data used to train the LLM?';
@@ -404,4 +384,400 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get quickStatsBloodPressure => 'BLOOD PRESSURE';
+
+  @override
+  String get quickStatsSystolic => 'SYSTOLIC';
+
+  @override
+  String get quickStatsDiastolic => 'DIASTOLIC';
+
+  @override
+  String get quickStatsLastRecorded => 'LAST RECORDED';
+
+  @override
+  String get quickStatsNoReadingsYet => 'No readings yet';
+
+  @override
+  String get statusHypertensiveCrisis => 'Hypertensive Crisis';
+
+  @override
+  String get statusStage2Hypertension => 'Stage 2 Hypertension';
+
+  @override
+  String get statusStage1Hypertension => 'Stage 1 Hypertension';
+
+  @override
+  String get statusElevated => 'Elevated';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get statusNormal => 'Normal';
+
+  @override
+  String minAgo(int minutes) {
+    return '$minutes min ago';
+  }
+
+  @override
+  String hAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String get medicationTodaysMedications => 'Today\'s Medications';
+
+  @override
+  String get medicationNoMedicationsAdded => 'No medications added';
+
+  @override
+  String get medicationTapToAdd => 'Tap + to add your first medication';
+
+  @override
+  String get medicationTaken => 'Taken';
+
+  @override
+  String medicationDueAt(String time) {
+    return 'Due at $time';
+  }
+
+  @override
+  String get medicationAsNeeded => 'As needed';
+
+  @override
+  String medicationNext(String time) {
+    return 'Next: $time';
+  }
+
+  @override
+  String get medicationCompletedForToday => 'Completed for today';
+
+  @override
+  String get medicationAddMedication => 'Add Medication';
+
+  @override
+  String get medicationName => 'Medication Name';
+
+  @override
+  String get medicationDosage => 'Dosage';
+
+  @override
+  String get medicationFrequency => 'Frequency';
+
+  @override
+  String get medicationTimes => 'Times (comma separated)';
+
+  @override
+  String get medicationSave => 'Save Medication';
+
+  @override
+  String medicationMoreMedications(int count) {
+    return '+ $count more medications';
+  }
+
+  @override
+  String get frequencyOnceDaily => 'Once daily';
+
+  @override
+  String get frequencyTwiceDaily => 'Twice daily';
+
+  @override
+  String get frequencyThreeTimesDaily => 'Three times daily';
+
+  @override
+  String get frequencyWeekly => 'Weekly';
+
+  @override
+  String get frequencyAsNeeded => 'As needed';
+
+  @override
+  String get emergencyHypertensiveCrisis => 'Hypertensive Crisis';
+
+  @override
+  String get emergencyHighBloodPressure => 'High Blood Pressure';
+
+  @override
+  String get emergencySeekImmediate => 'Seek immediate medical care';
+
+  @override
+  String get emergencyContactProvider => 'Contact your healthcare provider';
+
+  @override
+  String get emergencyCall911 => 'Call 911';
+
+  @override
+  String get emergencyCallContact => 'Call Contact';
+
+  @override
+  String get emergencyAddContact => 'Add Emergency Contact';
+
+  @override
+  String get emergencyAddContactTitle => 'Add Emergency Contact';
+
+  @override
+  String get emergencyContactNotified =>
+      'This person will be notified in case of emergency';
+
+  @override
+  String get emergencyContactName => 'Contact Name';
+
+  @override
+  String get emergencyPhoneNumber => 'Phone Number';
+
+  @override
+  String get emergencyRelationship => 'Relationship';
+
+  @override
+  String get emergencySaveContact => 'Save Contact';
+
+  @override
+  String get familyCircle => 'Family Circle';
+
+  @override
+  String familyConnected(int count) {
+    return '$count connected';
+  }
+
+  @override
+  String get familyInvite => 'Invite';
+
+  @override
+  String get familyNoMembers => 'No family members connected';
+
+  @override
+  String get familyInviteDescription =>
+      'Invite family to share your health data';
+
+  @override
+  String get familyPermissionViewOnly => 'View Only';
+
+  @override
+  String get familyPermissionViewExport => 'View & Export';
+
+  @override
+  String get familyPermissionFullAccess => 'Full Access';
+
+  @override
+  String get familyInviteFamilyMember => 'Invite Family Member';
+
+  @override
+  String get familyShareHealthData =>
+      'Share your health data with family members';
+
+  @override
+  String get familyEmailOptional => 'Email (optional)';
+
+  @override
+  String get familyPhoneOptional => 'Phone (optional)';
+
+  @override
+  String get familyPermissionLevel => 'Permission Level';
+
+  @override
+  String get familySendInvite => 'Send Invite';
+
+  @override
+  String get familyOrGenerateCode => 'Or generate an invite code';
+
+  @override
+  String get familyGenerateInviteCode => 'Generate Invite Code';
+
+  @override
+  String get familyInviteCode => 'Invite Code';
+
+  @override
+  String get familyCopy => 'Copy';
+
+  @override
+  String get familyCodeCopied => 'Code copied to clipboard';
+
+  @override
+  String get familyShareCodeDescription =>
+      'Share this code with family members';
+
+  @override
+  String get familyCanViewReadings => 'Can view your readings';
+
+  @override
+  String get familyCanViewShare => 'Can view and share reports';
+
+  @override
+  String get familyFullAccessData => 'Full access to your data';
+
+  @override
+  String familyInviteSent(String email) {
+    return 'Invite sent to $email';
+  }
+
+  @override
+  String get familyEnterEmailOrPhone => 'Please enter email or phone';
+
+  @override
+  String get healthTipsTitle => 'Health Tips';
+
+  @override
+  String get healthTipMeasureTime => 'Measure at the Same Time';
+
+  @override
+  String get healthTipMeasureTimeDesc =>
+      'Take your blood pressure at the same time each day for consistent readings.';
+
+  @override
+  String get healthTipRestBefore => 'Rest Before Measuring';
+
+  @override
+  String get healthTipRestBeforeDesc =>
+      'Sit quietly for 5 minutes before taking your reading for accurate results.';
+
+  @override
+  String get healthTipWatchDiet => 'Watch Your Diet';
+
+  @override
+  String get healthTipWatchDietDesc =>
+      'Reduce sodium intake and eat more fruits, vegetables, and whole grains.';
+
+  @override
+  String get healthTipStayActive => 'Stay Active';
+
+  @override
+  String get healthTipStayActiveDesc =>
+      'Aim for 30 minutes of moderate exercise most days of the week.';
+
+  @override
+  String get healthTipManageStress => 'Manage Stress';
+
+  @override
+  String get healthTipManageStressDesc =>
+      'Practice relaxation techniques like deep breathing or meditation.';
+
+  @override
+  String get healthTipLimitAlcohol => 'Limit Alcohol';
+
+  @override
+  String get healthTipLimitAlcoholDesc =>
+      'Moderate alcohol consumption can help maintain healthy blood pressure.';
+
+  @override
+  String get healthTipDontSkipMeds => 'Don\'t Skip Medications';
+
+  @override
+  String get healthTipDontSkipMedsDesc =>
+      'Take your medications as prescribed, even when you feel well.';
+
+  @override
+  String get weeklyThisWeek => 'This Week';
+
+  @override
+  String weeklyReadings(int count) {
+    return '$count readings';
+  }
+
+  @override
+  String get trendsBloodPressure => 'Blood Pressure';
+
+  @override
+  String get trendsHistory => 'History';
+
+  @override
+  String get trendsTrendAnalysis => 'Trend Analysis';
+
+  @override
+  String get trendsOverview => 'Overview';
+
+  @override
+  String get trendsReadings => 'Readings';
+
+  @override
+  String get trendsSysAvg => 'SYS Avg';
+
+  @override
+  String get trendsDiaAvg => 'DIA Avg';
+
+  @override
+  String get trendsNoDataAvailable => 'No data available';
+
+  @override
+  String get trendsRecentReadings => 'Recent Readings';
+
+  @override
+  String get trendsBpGuide => 'BP Classification Guide';
+
+  @override
+  String get trendsBpNormal => 'Normal';
+
+  @override
+  String get trendsBpElevated => 'Elevated';
+
+  @override
+  String get trendsBpHighStage1 => 'High Stage 1';
+
+  @override
+  String get trendsBpHighStage2 => 'High Stage 2';
+
+  @override
+  String get trendsBpCrisis => 'Crisis';
+
+  @override
+  String get greetingMorning => 'Good morning';
+
+  @override
+  String get greetingAfternoon => 'Good afternoon';
+
+  @override
+  String get greetingEvening => 'Good evening';
+
+  @override
+  String get healthDashboard => 'HEALTH DASHBOARD';
+
+  @override
+  String get timeRangeLast7Days => 'Last 7 Days';
+
+  @override
+  String get timeRangeLast30Days => 'Last 30 Days';
+
+  @override
+  String get timeRangeLast90Days => 'Last 90 Days';
+
+  @override
+  String get timeRangeThisYear => 'This Year';
+
+  @override
+  String get timeRangeCustom => 'Custom Range';
+
+  @override
+  String get userDefault => 'User';
+
+  @override
+  String get dialogSummaryForDoctor => 'Summary for Doctor';
+
+  @override
+  String get dialogTextReport => 'Text Report';
+
+  @override
+  String get dialogClose => 'Close';
+
+  @override
+  String get trendsAvgBp => 'Average Blood Pressure';
+
+  @override
+  String trendsReadingsOver(int count, String range) {
+    return '$count readings over $range';
+  }
+
+  @override
+  String get trendsNoDataYet => 'No blood pressure data yet';
+
+  @override
+  String get trendsStartRecording =>
+      'Start recording your readings to see trends';
+
+  @override
+  String get trendsSystolic => 'Systolic';
+
+  @override
+  String get trendsDiastolic => 'Diastolic';
 }

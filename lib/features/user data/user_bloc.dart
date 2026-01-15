@@ -30,8 +30,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
       final firstName = userDoc.data()?['firstName'] ?? 'User';
 
-      // ✅ Fetch latest BP from sub-collection
-      final readingsQuery = await FirebaseFirestore.instance
+      // Fetch latest BP for the QuickStatsCard
+      final latestQuery = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('readings')
@@ -40,11 +40,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
           .get();
 
       Map<String, dynamic>? latestReading;
-
-      if (readingsQuery.docs.isNotEmpty) {
-        final r = readingsQuery.docs.first.data();
+      if (latestQuery.docs.isNotEmpty) {
+        final r = latestQuery.docs.first.data();
         final date = r['date'];
-
         latestReading = {
           'systolic': r['systolic'],
           'diastolic': r['diastolic'],
@@ -52,12 +50,34 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         };
       }
 
+      // Fetch readings from the last 7 days for the WeeklyOverviewCard
+      final now = DateTime.now();
+      final weekAgo = now.subtract(const Duration(days: 7));
+      final weeklyQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('readings')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
+          .orderBy('date', descending: true)
+          .get();
+
+      final List<Map<String, dynamic>> weeklyReadings = weeklyQuery.docs.map((doc) {
+        final data = doc.data();
+        final date = data['date'];
+        return {
+          'systolic': data['systolic'],
+          'diastolic': data['diastolic'],
+          'date': date is Timestamp ? date.toDate() : date,
+        };
+      }).toList();
+
       final bool isFirstTime = latestReading == null;
 
       emit(
         UserLoaded(
           firstName: firstName,
           latestReading: latestReading,
+          weeklyReadings: weeklyReadings,
           isFirstTimeUser: isFirstTime,
         ),
       );

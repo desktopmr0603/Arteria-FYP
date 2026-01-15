@@ -32,7 +32,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
   bool _isListening = false;
   bool _isSpeaking = false;
   bool _isConversationActive = false;
-  bool _isAvatarLoaded = false;
 
   String _statusText = 'Connecting...';
 
@@ -308,7 +307,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 child: Center(
                   child: TalkingAvatarWidget(
                     isSpeaking: _isSpeaking,
-                    onLoaded: () => setState(() => _isAvatarLoaded = true),
+                    onLoaded: () {},
                     width: MediaQuery.of(context).size.width * 0.85,
                     height: MediaQuery.of(context).size.height * 0.5,
                   ),
@@ -352,16 +351,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withOpacity(0.1)
-            : Colors.white.withOpacity(0.8),
+            ? Colors.white.withValues(alpha: 0.1)
+            : Colors.white.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: color.withOpacity(0.5),
+          color: color.withValues(alpha: 0.5),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             blurRadius: 12,
             spreadRadius: 1,
           ),
@@ -408,8 +407,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
           boxShadow: [
             BoxShadow(
               color: _isListening
-                  ? Colors.red.withOpacity(0.4)
-                  : Theme.of(context).primaryColor.withOpacity(0.4),
+                  ? Colors.red.withValues(alpha: 0.4)
+                  : Theme.of(context).primaryColor.withValues(alpha: 0.4),
               blurRadius: _isListening ? 25 : 15,
               spreadRadius: _isListening ? 3 : 1,
             ),

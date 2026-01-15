@@ -223,11 +223,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -357,7 +357,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -481,16 +481,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           gradient: isSelected
                               ? LinearGradient(
                                   colors: [
-                                    color.withOpacity(0.9),
-                                    color.withOpacity(0.7),
+                                    color.withValues(alpha: 0.9),
+                                    color.withValues(alpha: 0.7),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 )
                               : LinearGradient(
                                   colors: [
-                                    Colors.white.withOpacity(0.95),
-                                    Colors.white.withOpacity(0.85),
+                                    Colors.white.withValues(alpha: 0.95),
+                                    Colors.white.withValues(alpha: 0.85),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -502,8 +502,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(
-                                isSelected ? 0.2 : 0.1,
+                              color: Colors.black.withValues(
+                                alpha: isSelected ? 0.2 : 0.1,
                               ),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
@@ -518,7 +518,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                               size: 36,
                               color: isSelected
                                   ? Colors.white
-                                  : color.withOpacity(0.7),
+                                  : color.withValues(alpha: 0.7),
                             ),
                             const SizedBox(height: 12),
                             Text(

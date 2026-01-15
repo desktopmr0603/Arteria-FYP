@@ -1,5 +1,5 @@
 import 'package:arteria/features/export/export_service.dart';
-import 'package:arteria/l10n/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
@@ -55,122 +55,122 @@ class _ExportScreenState extends State<ExportScreen> {
                     : const Color(0xFFFFF5F5),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFFE63946).withOpacity(0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE63946).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.picture_as_pdf_rounded,
-                      color: Color(0xFFE63946),
-                      size: 28,
+                      color: const Color(0xFFE63946).withValues(alpha: 0.3),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'PDF Health Report',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textTheme.bodyLarge?.color,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE63946).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Preview, share, or download your complete blood pressure history',
-                          style: GoogleFonts.openSans(
-                            fontSize: 12,
-                            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // PDF Preview
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade900 : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    if (!isDark)
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: PdfPreview(
-                  build: (format) => _exportService.generateBPReportPdf(),
-                  canChangeOrientation: false,
-                  canChangePageFormat: false,
-                  canDebug: false,
-                  pdfFileName: 'arteria_bp_report.pdf',
-                  allowPrinting: true,
-                  allowSharing: true,
-                  loadingWidget: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(
+                        child: const Icon(
+                          Icons.picture_as_pdf_rounded,
                           color: Color(0xFFE63946),
+                          size: 28,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Generating your report...',
-                          style: GoogleFonts.openSans(
-                            color: theme.textTheme.bodyMedium?.color,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'PDF Health Report',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Preview, share, or download your complete blood pressure history',
+                              style: GoogleFonts.openSans(
+                                fontSize: 12,
+                                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // PDF Preview
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        if (!isDark)
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
                       ],
                     ),
-                  ),
-                  onError: (context, error) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline_rounded,
-                            size: 48,
-                            color: Colors.red.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Failed to generate report',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: theme.textTheme.bodyLarge?.color,
+                    clipBehavior: Clip.antiAlias,
+                    child: PdfPreview(
+                      build: (format) => _exportService.generateBPReportPdf(),
+                      canChangeOrientation: false,
+                      canChangePageFormat: false,
+                      canDebug: false,
+                      pdfFileName: 'arteria_bp_report.pdf',
+                      allowPrinting: true,
+                      allowSharing: true,
+                      loadingWidget: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(
+                              color: Color(0xFFE63946),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            error.toString(),
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.openSans(
-                              fontSize: 14,
-                              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Generating your report...',
+                              style: GoogleFonts.openSans(
+                                color: theme.textTheme.bodyMedium?.color,
+                              ),
                             ),
-                          ),
+                          ],
+                        ),
+                      ),
+                      onError: (context, error) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline_rounded,
+                                size: 48,
+                                color: Colors.red.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Failed to generate report',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                error.toString(),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.openSans(
+                                  fontSize: 14,
+                                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                ),
+                              ),
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: () => setState(() {}),
@@ -226,7 +226,7 @@ class _ExportScreenState extends State<ExportScreen> {
                   name: 'arteria_bp_report.pdf',
                 );
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error saving report: $e')),
                   );

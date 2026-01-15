@@ -9,9 +9,11 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   flutter_inappwebview_windows
   flutter_secure_storage_windows
+  flutter_sound
   permission_handler_windows
   printing
   record_windows
+  url_launcher_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

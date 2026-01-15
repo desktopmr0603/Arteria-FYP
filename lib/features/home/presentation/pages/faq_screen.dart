@@ -10,11 +10,6 @@ class FaqScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     final List<Map<String, String>> faqItems = [
-      {'question': l10n.faqVoiceAIQuestion, 'answer': l10n.faqVoiceAIAnswer},
-      {
-        'question': l10n.faqLoggingInfoQuestion,
-        'answer': l10n.faqLoggingInfoAnswer,
-      },
       {'question': l10n.faqAlertsQuestion, 'answer': l10n.faqAlertsAnswer},
       {
         'question': l10n.faqDoctorReplacementQuestion,
@@ -25,10 +20,6 @@ class FaqScreen extends StatelessWidget {
         'answer': l10n.faqShareDataAnswer,
       },
       {'question': l10n.faqSecurityQuestion, 'answer': l10n.faqSecurityAnswer},
-      {
-        'question': l10n.faqVoiceRecordingQuestion,
-        'answer': l10n.faqVoiceRecordingAnswer,
-      },
       {
         'question': l10n.faqDataTrainingQuestion,
         'answer': l10n.faqDataTrainingAnswer,

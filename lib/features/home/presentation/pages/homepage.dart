@@ -1,25 +1,23 @@
 import 'dart:ui';
-
-import 'package:arteria/features/home/presentation/components/bp_reading_card.dart';
-import 'package:arteria/features/home/presentation/components/next_steps_card.dart';
-import 'package:arteria/features/home/presentation/pages/Insights/insights_screen.dart';
-import 'package:arteria/features/home/presentation/pages/Insights/whatif_screen.dart';
-import 'package:arteria/features/home/presentation/pages/microphone_transcribe.dart';
-import 'package:arteria/features/home/presentation/pages/settings/settings_screen.dart';
-import 'package:arteria/features/reminders/reminder_bloc.dart';
-import 'package:arteria/features/reminders/reminder_state.dart';
-import 'package:arteria/features/reminders/ui/reminder_settings_screen.dart';
-import 'package:arteria/features/user data/user_bloc.dart';
-import 'package:arteria/features/user data/user_event.dart';
-import 'package:arteria/features/user data/user_state.dart';
-import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:arteria/features/home/presentation/components/quick_stats_card.dart';
+import 'package:arteria/features/home/presentation/components/medication_tracker_card.dart';
+import 'package:arteria/features/home/presentation/components/emergency_alert_card.dart';
+import 'package:arteria/features/home/presentation/components/family_circle_card.dart';
+import 'package:arteria/features/home/presentation/components/health_tips_card.dart';
+import 'package:arteria/features/home/presentation/components/weekly_overview_card.dart';
+import 'package:arteria/features/home/presentation/pages/microphone_transcribe.dart';
+import 'package:arteria/features/home/presentation/pages/settings/settings_screen.dart';
+import 'package:arteria/features/trends/presentation/pages/trends_screen.dart';
+import 'package:arteria/features/home/presentation/pages/Insights/insights_screen.dart';
+import 'package:arteria/features/user%20data/user_bloc.dart';
+import 'package:arteria/features/user%20data/user_event.dart';
+import 'package:arteria/features/user%20data/user_state.dart';
+import 'package:arteria/l10n/app_localizations.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -28,29 +26,54 @@ class Homepage extends StatefulWidget {
   State<Homepage> createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage> {
+class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   Map<String, dynamic>? _latestReading;
-  final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
-  static const Color _primaryBlue = Color(0xFF1976D2);
-
   int _currentIndex = 0;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
     context.read<UserBloc>().add(LoadUserData());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fadeController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
   }
 
   void _onTabTapped(int index) {
+    HapticFeedback.lightImpact();
     setState(() => _currentIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final List<Widget> pages = [
-      HomepageContent(latestReading: _latestReading, dateFormat: _dateFormat),
+      DashboardContent(
+        latestReading: _latestReading,
+        fadeController: _fadeController,
+        onRecordPressed: _openRecording,
+      ),
       BlocBuilder<UserBloc, UserState>(
         builder: (context, state) {
           final userId =
@@ -61,7 +84,7 @@ class _HomepageState extends State<Homepage> {
           return InsightsScreen(userId: userId, userAge: userAge);
         },
       ),
-      const HistoryPage(),
+      const TrendsScreen(),
       const SettingsScreen(),
     ];
 
@@ -70,42 +93,95 @@ class _HomepageState extends State<Homepage> {
       child: BlocListener<UserBloc, UserState>(
         listener: (context, state) {
           if (state is UserLoaded) {
+            _slideController.forward(from: 0);
             setState(() => _latestReading = state.latestReading);
           } else if (state is UserError && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFFEF4444),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             );
           }
         },
         child: Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          extendBody: true, // Allow body to extend behind nav bar
-          appBar: AppBar(
-            automaticallyImplyLeading: false, // Remove back button
-            backgroundColor: theme.appBarTheme.backgroundColor,
-            scrolledUnderElevation: 0.0,
-            elevation: 0,
-            centerTitle: true,
-            title: _currentIndex == 3
-                ? Text(
-                    AppLocalizations.of(context)!.settings,
-                    style: theme.appBarTheme.titleTextStyle,
-                  )
-                : const Text(
-                    'Arteria',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: _primaryBlue,
-                    ),
-                  ),
+          extendBody: true,
+          backgroundColor: isDark
+              ? const Color(0xFF0A0A0F)
+              : const Color(0xFFF8FAFB),
+          body: Stack(
+            children: [
+              _buildBackgroundDecorations(isDark),
+              pages[_currentIndex],
+            ],
           ),
-          body: pages[_currentIndex],
           bottomNavigationBar: _buildFloatingNavBar(context, theme),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBackgroundDecorations(bool isDark) {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 500,
+              height: 500,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF6366F1).withValues(alpha: 0.15),
+                    const Color(0xFF8B5CF6).withValues(alpha: 0.05),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 200,
+            left: -150,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFEC4899).withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            right: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -119,76 +195,53 @@ class _HomepageState extends State<Homepage> {
         label: AppLocalizations.of(context)!.home,
       ),
       _NavItem(
-        icon: Icons.insights_outlined,
-        activeIcon: Icons.insights_rounded,
+        icon: Icons.psychology_outlined,
+        activeIcon: Icons.psychology_rounded,
         label: AppLocalizations.of(context)!.insights,
       ),
       _NavItem(
-        icon: Icons.timeline_outlined,
-        activeIcon: Icons.timeline_rounded,
+        icon: Icons.history_rounded,
+        activeIcon: Icons.history_rounded,
         label: AppLocalizations.of(context)!.history,
       ),
       _NavItem(
-        icon: Icons.more_horiz_outlined,
-        activeIcon: Icons.more_horiz,
+        icon: Icons.settings_outlined,
+        activeIcon: Icons.settings_rounded,
         label: AppLocalizations.of(context)!.more,
       ),
     ];
 
-    // Get the system navigation bar height to avoid obstruction
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Container(
       margin: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
+      height: 72,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        color: isDark
+            ? const Color(0xFF1E1E2E).withValues(alpha: 0.8)
+            : Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.4)
-                : Colors.black.withValues(alpha: 0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-            spreadRadius: 0,
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [
-                        const Color(0xFF1E1E2E).withValues(alpha: 0.9),
-                        const Color(0xFF2D2D44).withValues(alpha: 0.85),
-                      ]
-                    : [
-                        Colors.white.withValues(alpha: 0.95),
-                        Colors.white.withValues(alpha: 0.85),
-                      ],
-              ),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.white.withValues(alpha: 0.6),
-                width: 1,
-              ),
-            ),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(items.length, (index) {
-                final isSelected = _currentIndex == index;
                 return _buildNavItem(
                   context,
                   items[index],
-                  isSelected,
+                  _currentIndex == index,
                   index,
                   theme,
                   isDark,
@@ -210,10 +263,7 @@ class _HomepageState extends State<Homepage> {
     bool isDark,
   ) {
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        _onTabTapped(index);
-      },
+      onTap: () => _onTabTapped(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
@@ -222,8 +272,8 @@ class _HomepageState extends State<Homepage> {
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
-                    ? _primaryBlue.withValues(alpha: 0.2)
-                    : _primaryBlue.withValues(alpha: 0.12))
+                    ? const Color(0xFF6366F1).withValues(alpha: 0.2)
+                    : const Color(0xFF6366F1).withValues(alpha: 0.1))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
@@ -237,9 +287,9 @@ class _HomepageState extends State<Homepage> {
               curve: Curves.easeOutBack,
               child: Icon(
                 isSelected ? item.activeIcon : item.icon,
-                size: 28,
+                size: 26,
                 color: isSelected
-                    ? _primaryBlue
+                    ? const Color(0xFF6366F1)
                     : (isDark ? Colors.white60 : Colors.grey.shade600),
               ),
             ),
@@ -247,10 +297,10 @@ class _HomepageState extends State<Homepage> {
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
-                fontSize: isSelected ? 12 : 11,
+                fontSize: isSelected ? 11 : 10,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
-                    ? _primaryBlue
+                    ? const Color(0xFF6366F1)
                     : (isDark ? Colors.white60 : Colors.grey.shade600),
               ),
               child: Text(item.label),
@@ -259,6 +309,44 @@ class _HomepageState extends State<Homepage> {
         ),
       ),
     );
+  }
+
+  void _openRecording() async {
+    final userBloc = context.read<UserBloc>();
+
+    final result = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const MicrophoneTranscribe(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: animation.drive(
+                Tween(
+                  begin: 0.8,
+                  end: 1.0,
+                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+              ),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result != null) {
+      userBloc.add(
+        SaveBPReading(
+          systolic: result["systolic"],
+          diastolic: result["diastolic"],
+        ),
+      );
+    }
   }
 }
 
@@ -274,17 +362,17 @@ class _NavItem {
   });
 }
 
-class HomepageContent extends StatelessWidget {
+class DashboardContent extends StatelessWidget {
   final Map<String, dynamic>? latestReading;
-  final DateFormat dateFormat;
+  final AnimationController fadeController;
+  final VoidCallback onRecordPressed;
 
-  const HomepageContent({
+  const DashboardContent({
     super.key,
     required this.latestReading,
-    required this.dateFormat,
+    required this.fadeController,
+    required this.onRecordPressed,
   });
-
-  static const Color _primaryBlue = Color(0xFF1976D2);
 
   @override
   Widget build(BuildContext context) {
@@ -293,360 +381,236 @@ class HomepageContent extends StatelessWidget {
 
     return BlocBuilder<UserBloc, UserState>(
       builder: (context, state) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting section
-              _buildGreeting(context, state, theme, isDark),
-              const SizedBox(height: 32),
+        final l10n = AppLocalizations.of(context)!;
+        final firstName = state is UserLoaded ? state.firstName : l10n.userDefault;
+        final latest = state is UserLoaded ? state.latestReading : null;
 
-              // Loading state
-              if (state is UserLoading) ...[
-                _buildSkeletonCard(),
-                const SizedBox(height: 24),
-                _buildSkeletonButton(isDark),
-              ]
-              // First time user
-              else if (state is UserLoaded && state.isFirstTimeUser) ...[
-                BPReadingCard(isFirstTime: true),
-                const SizedBox(height: 24),
-                _buildRecordButton(context),
-              ]
-              // Regular user with data
-              else if (state is UserLoaded) ...[
-                // Latest BP Reading Card
-                BPReadingCard(
-                  systolic: latestReading?['systolic'],
-                  diastolic: latestReading?['diastolic'],
-                  readingDate: _extractDate(latestReading?['date']),
-                  category: _getCategory(
-                    latestReading?['systolic'],
-                    latestReading?['diastolic'],
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _HeaderDelegate(
+                firstName: firstName,
+                isDark: isDark,
+                topPadding: MediaQuery.of(context).padding.top,
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 16),
+                  QuickStatsCard(latestReading: latest),
+                  const SizedBox(height: 12),
+                  _buildRecordButton(
+                    context,
+                    isDark,
+                    state is UserLoaded ? state.isFirstTimeUser : false,
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Next Steps Card
-                NextStepsCard(steps: _getNextSteps(context, state)),
-                const SizedBox(height: 32),
-
-                // Primary Action Button
-                _buildRecordButton(context),
-                const SizedBox(height: 16),
-
-                // Action Buttons Row
-                _buildActionButtons(context, theme),
-              ] else ...[
-                // Error or other states
-                _buildRecordButton(context),
-              ],
-            ],
-          ),
+                  const SizedBox(height: 16),
+                  const MedicationTrackerCard(),
+                  const SizedBox(height: 16),
+                  const EmergencyAlertCard(),
+                  const SizedBox(height: 16),
+                  WeeklyOverviewCard(
+                    readings: state is UserLoaded ? state.weeklyReadings : [],
+                  ),
+                  const SizedBox(height: 16),
+                  const FamilyCircleCard(),
+                  const SizedBox(height: 16),
+                  const HealthTipsCard(),
+                  const SizedBox(height: 100),
+                ]),
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildGreeting(
+  Widget _buildRecordButton(
     BuildContext context,
-    UserState state,
-    ThemeData theme,
     bool isDark,
+    bool isFirstReading,
   ) {
-    final firstName = state is UserLoaded
-        ? _capitalizeFirstLetter(state.firstName)
-        : '';
+    final l10n = AppLocalizations.of(context)!;
+    final buttonText = isFirstReading ? l10n.takeFirstReading : l10n.recordNewReading;
 
-    final greeting = state is UserLoaded
-        ? (state.isFirstTimeUser
-              ? AppLocalizations.of(context)!.welcomeFirstTime(firstName)
-              : AppLocalizations.of(
-                  context,
-                )!.greetingWithName(_getGreetingByTime(context), firstName))
-        : AppLocalizations.of(context)!.welcomeBack;
-
-    final statusText = state is UserLoaded && !state.isFirstTimeUser
-        ? _getBPStatusMessage(
-            context,
-            latestReading?['systolic'],
-            latestReading?['diastolic'],
-          )
-        : AppLocalizations.of(context)!.trackBPWithAI;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          greeting,
-          style: GoogleFonts.montserrat(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: theme.textTheme.titleLarge?.color,
+    return GestureDetector(
+      onTap: onRecordPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          statusText,
-          style: GoogleFonts.openSans(
-            fontSize: 15,
-            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _capitalizeFirstLetter(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
-  }
-
-  String _getGreetingByTime(BuildContext context) {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return AppLocalizations.of(context)!.goodMorning;
-    } else if (hour < 17) {
-      return AppLocalizations.of(context)!.goodAfternoon;
-    } else {
-      return AppLocalizations.of(context)!.goodEvening;
-    }
-  }
-
-  String _getBPStatusMessage(
-    BuildContext context,
-    int? systolic,
-    int? diastolic,
-  ) {
-    if (systolic == null || diastolic == null) {
-      return AppLocalizations.of(context)!.noRecentReadings;
-    }
-
-    // Blood Pressure Classification (120/80 = Normal)
-    // Hypertensive Crisis: systolic >= 180 OR diastolic >= 120
-    if (systolic >= 180 || diastolic >= 120) {
-      return AppLocalizations.of(context)!.criticalBP;
-    }
-    // Stage 2 Hypertension: systolic >= 140 OR diastolic >= 90
-    if (systolic >= 140 || diastolic >= 90) {
-      return AppLocalizations.of(context)!.bpHighToday;
-    }
-    // Stage 1 Hypertension: systolic 130-139 OR diastolic 81-89
-    if (systolic >= 130 || diastolic > 80) {
-      return AppLocalizations.of(context)!.bpSlightlyElevated;
-    }
-    // Elevated: systolic 121-129 AND diastolic <= 80
-    if (systolic > 120 && diastolic <= 80) {
-      return AppLocalizations.of(context)!.bpElevated;
-    }
-    // Normal: systolic <= 120 AND diastolic <= 80 (includes 120/80)
-    return AppLocalizations.of(context)!.bpNormalToday;
-  }
-
-  Widget _buildRecordButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          final result = await Navigator.push<Map<String, dynamic>?>(
-            context,
-            MaterialPageRoute(builder: (_) => const MicrophoneTranscribe()),
-          );
-          if (result != null && context.mounted) {
-            context.read<UserBloc>().add(
-              SaveBPReading(
-                systolic: result["systolic"],
-                diastolic: result["diastolic"],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.add_circle_outline_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              buttonText.toUpperCase(),
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                letterSpacing: 1.0,
               ),
-            );
-          }
-        },
-        icon: const Icon(Icons.mic),
-        label: Text(
-          AppLocalizations.of(context)!.recordNewReading,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-
-  DateTime? _extractDate(dynamic dateValue) {
-    if (dateValue is DateTime) {
-      return dateValue;
-    } else if (dateValue is Timestamp) {
-      return dateValue.toDate();
-    }
-    return null;
-  }
-
-  String _getCategory(int? systolic, int? diastolic) {
-    if (systolic == null || diastolic == null) return 'normal';
-    // Blood Pressure Classification (120/80 = Normal)
-    if (systolic >= 180 || diastolic >= 120) return 'critical';
-    if (systolic >= 140 || diastolic >= 90) return 'high';
-    if (systolic >= 130 || diastolic > 80)
-      return 'stage1'; // Stage 1 Hypertension
-    if (systolic > 120 && diastolic <= 80) return 'elevated'; // Elevated BP
-    return 'normal'; // Includes 120/80
-  }
-
-  List<NextStepItem> _getNextSteps(BuildContext context, UserLoaded state) {
-    final nextSteps = <NextStepItem>[];
-
-    // Get next reminder time from ReminderBloc
-    final reminderState = context.watch<ReminderBloc>().state;
-    if (reminderState is RemindersLoaded &&
-        reminderState.nextReminderTime != null) {
-      final nextTime = reminderState.nextReminderTime!;
-      final now = DateTime.now();
-      final isToday =
-          nextTime.day == now.day &&
-          nextTime.month == now.month &&
-          nextTime.year == now.year;
-      final isTomorrow =
-          nextTime.day == now.add(const Duration(days: 1)).day &&
-          nextTime.month == now.add(const Duration(days: 1)).month;
-
-      final timeStr = DateFormat('h:mm a').format(nextTime);
-      String dayStr;
-      if (isToday) {
-        dayStr = 'Today';
-      } else if (isTomorrow) {
-        dayStr = 'Tomorrow';
-      } else {
-        dayStr = DateFormat('EEEE').format(nextTime);
-      }
-
-      nextSteps.add(
-        NextStepItem(
-          title: AppLocalizations.of(context)!.takeNextReading,
-          time: '$dayStr at $timeStr',
-          color: const Color(0xFF1976D2),
-        ),
-      );
-    } else {
-      // Default placeholder when no reminders are set
-      nextSteps.add(
-        NextStepItem(
-          title: AppLocalizations.of(context)!.takeNextReading,
-          time: 'Tap to set reminder',
-          color: const Color(0xFF1976D2),
-        ),
-      );
-    }
-
-    return nextSteps;
-  }
-
-  Widget _buildActionButtons(BuildContext context, ThemeData theme) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () {
-              // Navigate to What-If Simulator
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WhatIfScreen(
-                    userProfile: {
-                      'age': latestReading?['age'] ?? 40,
-                      'avg_systolic': latestReading?['systolic'] ?? 120,
-                      'avg_diastolic': latestReading?['diastolic'] ?? 80,
-                    },
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.auto_awesome, size: 20),
-            label: Text(
-              AppLocalizations.of(context)!.viewTrends,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: theme.colorScheme.primary,
-              side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReminderSettingsScreen(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.notifications_outlined, size: 22),
-            label: Text(
-              AppLocalizations.of(context)!.reminders,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: theme.colorScheme.primary,
-              side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSkeletonCard() => Container(
-    decoration: BoxDecoration(
-      color: Colors.grey.shade300,
-      borderRadius: BorderRadius.circular(20),
-    ),
-  );
-
-  Widget _buildSkeletonButton(bool isDark) => Container(
-    height: 56,
-    decoration: BoxDecoration(
-      color: isDark ? Colors.grey[800] : const Color(0xFFE0E0E0),
-      borderRadius: BorderRadius.circular(16),
-    ),
-  );
 }
 
-class HistoryPage extends StatelessWidget {
-  const HistoryPage({super.key});
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final String firstName;
+  final bool isDark;
+  final double topPadding;
+
+  _HeaderDelegate({
+    required this.firstName,
+    required this.isDark,
+    required this.topPadding,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  double get minExtent => 64 + topPadding;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.history, size: 64, color: Colors.blueGrey),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.bpHistoryWillAppear,
-            style: theme.textTheme.titleLarge?.copyWith(fontSize: 20),
+  @override
+  double get maxExtent => 120 + topPadding;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final progress = shrinkOffset / (maxExtent - minExtent);
+    final clampedProgress = progress.clamp(0.0, 1.0);
+    final hour = DateTime.now().hour;
+    final l10n = AppLocalizations.of(context)!;
+    String greeting;
+    if (hour < 12) {
+      greeting = l10n.greetingMorning;
+    } else if (hour < 17) {
+      greeting = l10n.greetingAfternoon;
+    } else {
+      greeting = l10n.greetingEvening;
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Glassmorphism background - only visible when scrolling
+        if (shrinkOffset > 5)
+          ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: 10 * clampedProgress,
+                sigmaY: 10 * clampedProgress,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color:
+                      (isDark
+                              ? const Color(0xFF0A0A0F)
+                              : const Color(0xFFF8FAFB))
+                          .withValues(alpha: 0.8 * clampedProgress),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: (isDark ? Colors.white : Colors.black).withValues(
+                        alpha: 0.05 * clampedProgress,
+                      ),
+                      width: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
+
+        // Expanded State (Large Title)
+        Positioned(
+          left: 24,
+          bottom: 16 + (clampedProgress * 12),
+          child: Opacity(
+            opacity: (1 - (clampedProgress * 2.5)).clamp(0.0, 1.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.healthDashboard,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : const Color(0xFF94A3B8),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$greeting, $firstName',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    letterSpacing: -0.8,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Collapsed State (Small Title)
+        Positioned(
+          left: 24,
+          top: topPadding + 16,
+          child: Opacity(
+            opacity: ((clampedProgress - 0.6) * 2.5).clamp(0.0, 1.0),
+            child: Text(
+              '$greeting, $firstName',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                letterSpacing: -0.4,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) {
+    return oldDelegate.firstName != firstName ||
+        oldDelegate.isDark != isDark ||
+        oldDelegate.topPadding != topPadding;
   }
 }
