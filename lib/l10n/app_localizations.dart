@@ -1537,6 +1537,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Diastolic'**
   String get trendsDiastolic;
+
+  /// Title for the What-If confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'What-If Simulator'**
+  String get whatIfSimulator;
+
+  /// Description for the What-If confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Explore how lifestyle changes could impact your blood pressure. This is a simulation for educational purposes only.'**
+  String get whatIfSimulatorDescription;
+
+  /// Cancel button for the What-If confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Not Now'**
+  String get whatIfSimulatorCancel;
+
+  /// Confirm button for the What-If confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Open Simulator'**
+  String get whatIfSimulatorConfirm;
+
+  /// Success message when a medication is added via AI
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been added to your medications.'**
+  String medicationAddedMessage(String name);
+
+  /// No description provided for @medicationAddError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add medication. Please try again.'**
+  String get medicationAddError;
+
+  /// No description provided for @prescriptionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Prescription'**
+  String get prescriptionTitle;
+
+  /// No description provided for @viewOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'View on Dashboard'**
+  String get viewOnHome;
+
+  /// No description provided for @medicationDosageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dosage'**
+  String get medicationDosageLabel;
+
+  /// No description provided for @medicationFrequencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get medicationFrequencyLabel;
+
+  /// No description provided for @medicationInstructionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Instructions'**
+  String get medicationInstructionsLabel;
+
+  /// No description provided for @medicationAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is already in your list.'**
+  String medicationAlreadyExists(Object name);
 }
 
 class _AppLocalizationsDelegate

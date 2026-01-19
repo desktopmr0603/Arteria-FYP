@@ -108,7 +108,10 @@ class BPDataService {
   }
 
   /// Get BP history for specified number of days
-  Future<List<Map<String, dynamic>>> getHistory(String userId, {int days = 7}) async {
+  Future<List<Map<String, dynamic>>> getHistory(
+    String userId, {
+    int days = 7,
+  }) async {
     try {
       final startDate = DateTime.now().subtract(Duration(days: days));
 
@@ -163,22 +166,27 @@ class BPDataService {
     else if (systolic > 120 && systolic < 130 && diastolic <= 80) {
       category = BPCategory.elevated;
       severity = 1;
-      description = 'Your blood pressure is slightly above normal. Lifestyle changes are recommended.';
+      description =
+          'Your blood pressure is slightly above normal. Lifestyle changes are recommended.';
     }
     // Stage 1 Hypertension: systolic 130-139 OR diastolic 81-89
-    else if ((systolic >= 130 && systolic <= 139) || (diastolic > 80 && diastolic <= 89)) {
+    else if ((systolic >= 130 && systolic <= 139) ||
+        (diastolic > 80 && diastolic <= 89)) {
       category = BPCategory.hypertensionStage1;
       severity = 2;
-      description = 'You have Stage 1 Hypertension. Consult your doctor about treatment options.';
+      description =
+          'You have Stage 1 Hypertension. Consult your doctor about treatment options.';
     } else if (systolic >= 140 || diastolic >= 90) {
       if (systolic >= 180 || diastolic >= 120) {
         category = BPCategory.hypertensiveCrisis;
         severity = 4;
-        description = 'URGENT: You may be experiencing a hypertensive crisis. Seek immediate medical attention!';
+        description =
+            'URGENT: You may be experiencing a hypertensive crisis. Seek immediate medical attention!';
       } else {
         category = BPCategory.hypertensionStage2;
         severity = 3;
-        description = 'You have Stage 2 Hypertension. Medical treatment is typically required.';
+        description =
+            'You have Stage 2 Hypertension. Medical treatment is typically required.';
       }
     } else {
       category = BPCategory.normal;
@@ -189,9 +197,11 @@ class BPDataService {
     // Age-specific considerations
     if (age != null) {
       if (age >= 65) {
-        description += ' Note: Blood pressure targets may differ for older adults. Consult your doctor.';
+        description +=
+            ' Note: Blood pressure targets may differ for older adults. Consult your doctor.';
       } else if (age < 18) {
-        description += ' Note: Pediatric BP ranges differ from adults. Please consult a pediatrician.';
+        description +=
+            ' Note: Pediatric BP ranges differ from adults. Please consult a pediatrician.';
       }
     }
 
@@ -218,11 +228,17 @@ class BPDataService {
       };
     }
 
-    final systolicValues = readings.map((r) => r['systolic'] as int).toList();
-    final diastolicValues = readings.map((r) => r['diastolic'] as int).toList();
+    final systolicValues = readings
+        .map((r) => (r['systolic'] as num?)?.toInt() ?? 0)
+        .toList();
+    final diastolicValues = readings
+        .map((r) => (r['diastolic'] as num?)?.toInt() ?? 0)
+        .toList();
 
-    final avgSystolic = systolicValues.reduce((a, b) => a + b) / systolicValues.length;
-    final avgDiastolic = diastolicValues.reduce((a, b) => a + b) / diastolicValues.length;
+    final avgSystolic =
+        systolicValues.reduce((a, b) => a + b) / systolicValues.length;
+    final avgDiastolic =
+        diastolicValues.reduce((a, b) => a + b) / diastolicValues.length;
 
     return {
       'count': readings.length,
@@ -253,19 +269,31 @@ class BPDataService {
     }
 
     // Calculate averages
-    final systolicValues = readings.map((r) => r['systolic'] as int).toList();
-    final diastolicValues = readings.map((r) => r['diastolic'] as int).toList();
+    final systolicValues = readings
+        .map((r) => (r['systolic'] as num?)?.toInt() ?? 0)
+        .toList();
+    final diastolicValues = readings
+        .map((r) => (r['diastolic'] as num?)?.toInt() ?? 0)
+        .toList();
 
-    final avgSystolic = systolicValues.reduce((a, b) => a + b) / systolicValues.length;
-    final avgDiastolic = diastolicValues.reduce((a, b) => a + b) / diastolicValues.length;
+    final avgSystolic =
+        systolicValues.reduce((a, b) => a + b) / systolicValues.length;
+    final avgDiastolic =
+        diastolicValues.reduce((a, b) => a + b) / diastolicValues.length;
 
     // Compare recent vs older readings
     final recentCount = (readings.length / 2).ceil();
-    final recentSystolic = systolicValues.take(recentCount).reduce((a, b) => a + b) / recentCount;
-    final recentDiastolic = diastolicValues.take(recentCount).reduce((a, b) => a + b) / recentCount;
+    final recentSystolic =
+        systolicValues.take(recentCount).reduce((a, b) => a + b) / recentCount;
+    final recentDiastolic =
+        diastolicValues.take(recentCount).reduce((a, b) => a + b) / recentCount;
 
-    final olderSystolic = systolicValues.skip(recentCount).reduce((a, b) => a + b) / (readings.length - recentCount);
-    final olderDiastolic = diastolicValues.skip(recentCount).reduce((a, b) => a + b) / (readings.length - recentCount);
+    final olderSystolic =
+        systolicValues.skip(recentCount).reduce((a, b) => a + b) /
+        (readings.length - recentCount);
+    final olderDiastolic =
+        diastolicValues.skip(recentCount).reduce((a, b) => a + b) /
+        (readings.length - recentCount);
 
     final sysChange = recentSystolic - olderSystolic;
     final diaChange = recentDiastolic - olderDiastolic;
@@ -299,7 +327,7 @@ class BPDataService {
   }
 
   /// Format BP data as context for AI
-  /// 
+  ///
   /// Set [mlRiskProbability] and [mlRiskLevel] when ML model predictions are available.
   String formatBPContext({
     required String userId,
@@ -323,8 +351,8 @@ class BPDataService {
     buffer.writeln();
 
     if (latestReading != null) {
-      final systolic = latestReading['systolic'] as int;
-      final diastolic = latestReading['diastolic'] as int;
+      final systolic = (latestReading['systolic'] as num?)?.toInt() ?? 0;
+      final diastolic = (latestReading['diastolic'] as num?)?.toInt() ?? 0;
       final pulse = latestReading['pulse'] as int?;
       final timestamp = (latestReading['timestamp'] as Timestamp?)?.toDate();
 
@@ -346,9 +374,15 @@ class BPDataService {
     // ML Model Prediction Section
     if (mlRiskProbability != null) {
       buffer.writeln('AI Risk Assessment (Machine Learning Model):');
-      buffer.writeln('- Hypertension Risk Probability: ${(mlRiskProbability * 100).toStringAsFixed(1)}%');
-      buffer.writeln('- Risk Level: ${mlRiskLevel ?? _classifyMLRisk(mlRiskProbability)}');
-      buffer.writeln('- Note: This prediction uses NHANES 2021-2023 trained model');
+      buffer.writeln(
+        '- Hypertension Risk Probability: ${(mlRiskProbability * 100).toStringAsFixed(1)}%',
+      );
+      buffer.writeln(
+        '- Risk Level: ${mlRiskLevel ?? _classifyMLRisk(mlRiskProbability)}',
+      );
+      buffer.writeln(
+        '- Note: This prediction uses NHANES 2021-2023 trained model',
+      );
       buffer.writeln();
     }
 
@@ -372,13 +406,17 @@ class BPDataService {
       if (medications != null && medications.trim().isNotEmpty) {
         availableMedicalInfo.add('Medications: $medications');
       } else {
-        missingMedicalInfo.add('Current medications (especially BP medications)');
+        missingMedicalInfo.add(
+          'Current medications (especially BP medications)',
+        );
       }
 
       // Check smoking status
       final smoker = medicalProfile['smoker'] as bool?;
       if (smoker != null) {
-        availableMedicalInfo.add('Smoking status: ${smoker ? "Smoker" : "Non-smoker"}');
+        availableMedicalInfo.add(
+          'Smoking status: ${smoker ? "Smoker" : "Non-smoker"}',
+        );
       } else {
         missingMedicalInfo.add('Smoking or tobacco use status');
       }
@@ -387,7 +425,9 @@ class BPDataService {
       if (gender?.toLowerCase() == 'female') {
         final isPregnant = medicalProfile['isPregnant'] as bool?;
         if (isPregnant != null) {
-          availableMedicalInfo.add('Pregnancy status: ${isPregnant ? "Currently pregnant" : "Not pregnant"}');
+          availableMedicalInfo.add(
+            'Pregnancy status: ${isPregnant ? "Currently pregnant" : "Not pregnant"}',
+          );
         } else {
           missingMedicalInfo.add('Pregnancy status');
         }
@@ -415,7 +455,9 @@ class BPDataService {
       if (weight != null && height != null) {
         final heightM = height / 100;
         final bmi = weight / (heightM * heightM);
-        availableMedicalInfo.add('BMI: ${bmi.toStringAsFixed(1)} (Weight: ${weight}kg, Height: ${height}cm)');
+        availableMedicalInfo.add(
+          'BMI: ${bmi.toStringAsFixed(1)} (Weight: ${weight}kg, Height: ${height}cm)',
+        );
       }
     }
 
@@ -430,14 +472,18 @@ class BPDataService {
 
     // Output missing medical information
     if (missingMedicalInfo.isNotEmpty) {
-      buffer.writeln('Missing Medical Information (ask if user inquires about BP normality):');
+      buffer.writeln(
+        'Missing Medical Information (ask if user inquires about BP normality):',
+      );
       for (final info in missingMedicalInfo) {
         buffer.writeln('- $info');
       }
       buffer.writeln();
     }
 
-    buffer.writeln('Important: Always remind the user that this is informational only and not a substitute for professional medical advice.');
+    buffer.writeln(
+      'Important: Always remind the user that this is informational only and not a substitute for professional medical advice.',
+    );
 
     return buffer.toString();
   }

@@ -780,4 +780,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trendsDiastolic => 'Diastolic';
+
+  @override
+  String get whatIfSimulator => 'What-If Simulator';
+
+  @override
+  String get whatIfSimulatorDescription =>
+      'Explore how lifestyle changes could impact your blood pressure. This is a simulation for educational purposes only.';
+
+  @override
+  String get whatIfSimulatorCancel => 'Not Now';
+
+  @override
+  String get whatIfSimulatorConfirm => 'Open Simulator';
+
+  @override
+  String medicationAddedMessage(String name) {
+    return '$name has been added to your medications.';
+  }
+
+  @override
+  String get medicationAddError =>
+      'Failed to add medication. Please try again.';
+
+  @override
+  String get prescriptionTitle => 'New Prescription';
+
+  @override
+  String get viewOnHome => 'View on Dashboard';
+
+  @override
+  String get medicationDosageLabel => 'Dosage';
+
+  @override
+  String get medicationFrequencyLabel => 'Frequency';
+
+  @override
+  String get medicationInstructionsLabel => 'Instructions';
+
+  @override
+  String medicationAlreadyExists(Object name) {
+    return '$name is already in your list.';
+  }
 }

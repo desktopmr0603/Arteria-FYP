@@ -424,5 +424,17 @@
   "trendsNoDataYet": "Aucune donnée de tension artérielle",
   "trendsStartRecording": "Enregistrez vos mesures pour voir les tendances",
   "trendsSystolic": "Systolique",
-  "trendsDiastolic": "Diastolique"
+  "trendsDiastolic": "Diastolique",
+  "whatIfSimulator": "Simulateur de Scénarios",
+  "whatIfSimulatorDescription": "Explorez comment les changements de mode de vie pourraient affecter votre tension artérielle. Il s'agit d'une simulation à des fins éducatives uniquement.",
+  "whatIfSimulatorCancel": "Pas maintenant",
+  "whatIfSimulatorConfirm": "Ouvrir le simulateur",
+  "medicationAddedMessage": "{name} a été ajouté à vos médicaments.",
+  "medicationAddError": "Échec de l'ajout du médicament. Veuillez réessayer.",
+  "prescriptionTitle": "Nouvelle Prescription",
+  "viewOnHome": "Voir le tableau de bord",
+  "medicationDosageLabel": "Dosage",
+  "medicationFrequencyLabel": "Fréquence",
+  "medicationInstructionsLabel": "Instructions",
+  "medicationAlreadyExists": "{name} est déjà dans votre liste."
 }

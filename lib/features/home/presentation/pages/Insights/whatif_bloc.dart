@@ -214,10 +214,13 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       final modifiedProfile = Map<String, dynamic>.from(state.baselineProfile);
 
       for (final entry in state.modifications.entries) {
-        if (modifiedProfile.containsKey(entry.key)) {
-          // Apply as multiplier
-          modifiedProfile[entry.key] = 
-              (modifiedProfile[entry.key] as num) * entry.value;
+        // Apply modification (entry.value is a multiplier)
+        // If profile doesn't have the key, start with the feature's default value
+        final baseValue = modifiedProfile[entry.key] ?? 
+                         _predictorService.getDefaultValue(entry.key);
+        
+        if (baseValue is num) {
+          modifiedProfile[entry.key] = baseValue * entry.value;
         }
       }
 

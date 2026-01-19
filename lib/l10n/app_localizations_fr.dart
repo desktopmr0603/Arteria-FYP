@@ -786,4 +786,46 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get trendsDiastolic => 'Diastolique';
+
+  @override
+  String get whatIfSimulator => 'Simulateur de Scénarios';
+
+  @override
+  String get whatIfSimulatorDescription =>
+      'Explorez comment les changements de mode de vie pourraient affecter votre tension artérielle. Il s\'agit d\'une simulation à des fins éducatives uniquement.';
+
+  @override
+  String get whatIfSimulatorCancel => 'Pas maintenant';
+
+  @override
+  String get whatIfSimulatorConfirm => 'Ouvrir le simulateur';
+
+  @override
+  String medicationAddedMessage(String name) {
+    return '$name a été ajouté à vos médicaments.';
+  }
+
+  @override
+  String get medicationAddError =>
+      'Échec de l\'ajout du médicament. Veuillez réessayer.';
+
+  @override
+  String get prescriptionTitle => 'Nouvelle Prescription';
+
+  @override
+  String get viewOnHome => 'Voir le tableau de bord';
+
+  @override
+  String get medicationDosageLabel => 'Dosage';
+
+  @override
+  String get medicationFrequencyLabel => 'Fréquence';
+
+  @override
+  String get medicationInstructionsLabel => 'Instructions';
+
+  @override
+  String medicationAlreadyExists(Object name) {
+    return '$name est déjà dans votre liste.';
+  }
 }

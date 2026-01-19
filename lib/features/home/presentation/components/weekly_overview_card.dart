@@ -8,10 +8,7 @@ import 'package:arteria/l10n/app_localizations.dart';
 class WeeklyOverviewCard extends StatelessWidget {
   final List<Map<String, dynamic>> readings;
 
-  const WeeklyOverviewCard({
-    super.key,
-    required this.readings,
-  });
+  const WeeklyOverviewCard({super.key, required this.readings});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +18,7 @@ class WeeklyOverviewCard extends StatelessWidget {
     final now = DateTime.now();
     final dailySystolic = <String, List<int>>{};
     final dailyDiastolic = <String, List<int>>{};
-    
+
     for (final reading in readings) {
       final dateValue = reading['date'];
       DateTime readingDate;
@@ -32,7 +29,7 @@ class WeeklyOverviewCard extends StatelessWidget {
       } else {
         continue;
       }
-      
+
       final dayKey = DateFormat('EEE').format(readingDate);
       if (!dailySystolic.containsKey(dayKey)) {
         dailySystolic[dayKey] = [];
@@ -57,13 +54,13 @@ class WeeklyOverviewCard extends StatelessWidget {
     for (final day in last7Days) {
       final sValues = dailySystolic[day] ?? [];
       final dValues = dailyDiastolic[day] ?? [];
-      
+
       if (sValues.isNotEmpty) {
         final sAvg = sValues.reduce((a, b) => a + b) ~/ sValues.length;
-        final dAvg = dValues.isNotEmpty 
-            ? dValues.reduce((a, b) => a + b) ~/ dValues.length 
+        final dAvg = dValues.isNotEmpty
+            ? dValues.reduce((a, b) => a + b) ~/ dValues.length
             : 0;
-            
+
         formattedData.add({
           'day': day,
           'sysAvg': sAvg,
@@ -74,7 +71,6 @@ class WeeklyOverviewCard extends StatelessWidget {
         formattedData.add({'day': day, 'sysAvg': 0, 'diaAvg': 0, 'count': 0});
       }
     }
-
 
     return Container(
       decoration: BoxDecoration(
@@ -118,7 +114,9 @@ class WeeklyOverviewCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -133,19 +131,30 @@ class WeeklyOverviewCard extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1E293B),
                           ),
                         ),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        AppLocalizations.of(context)!.weeklyReadings(formattedData.fold<int>(0, (acc, d) => acc + (d['count'] as int))),
+                        AppLocalizations.of(context)!.weeklyReadings(
+                          formattedData.fold<int>(
+                            0,
+                            (acc, d) =>
+                                acc + ((d['count'] as num?)?.toInt() ?? 0),
+                          ),
+                        ),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -233,7 +242,9 @@ class WeeklyOverviewCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.5)
+                        : const Color(0xFF94A3B8),
                   ),
                 ),
               ],

@@ -30,8 +30,8 @@ class TrendDataModel extends Equatable {
     required String userId,
   }) {
     final timestamp = data['date'] as Timestamp?;
-    final systolic = data['systolic'] as int;
-    final diastolic = data['diastolic'] as int;
+    final systolic = (data['systolic'] as num?)?.toInt() ?? 0;
+    final diastolic = (data['diastolic'] as num?)?.toInt() ?? 0;
     final pulse = data['pulse'] as int?;
 
     return TrendDataModel(

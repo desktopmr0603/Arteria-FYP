@@ -62,7 +62,8 @@ class BPPredictorService {
     // Build feature vector in correct order
     final featureVector = <double>[];
     for (final fname in _featureNames) {
-      final value = (features[fname] ?? _getDefaultValue(fname)).toDouble();
+      final rawValue = features[fname] ?? getDefaultValue(fname);
+      final value = _parseFeatureValue(fname, rawValue);
       featureVector.add(value);
     }
 
@@ -82,6 +83,32 @@ class BPPredictorService {
 
     return output[0][0].clamp(0.0, 1.0);
   }
+
+  /// Safely parse feature value to double, handling strings and categorical mappings
+  double _parseFeatureValue(String featureName, dynamic value) {
+    if (value is num) return value.toDouble();
+    
+    if (value is String) {
+      final lowerValue = value.toLowerCase();
+      
+      // Categorical Mapping: Gender
+      if (featureName == 'gender') {
+        if (lowerValue.contains('female')) return 1.0;
+        if (lowerValue.contains('male')) return 0.0;
+        return 0.5; // Unknown/Other
+      }
+      
+      // Categorical Mapping: Boolean types (has_diabetes, etc)
+      if (lowerValue == 'true' || lowerValue == 'yes') return 1.0;
+      if (lowerValue == 'false' || lowerValue == 'no') return 0.0;
+      
+      // Attempt generic parse
+      return double.tryParse(value) ?? getDefaultValue(featureName);
+    }
+    
+    return getDefaultValue(featureName);
+  }
+
 
   /// Normalize features using stored mean/std
   /// If metadata lacks normalization params, use built-in population statistics
@@ -158,7 +185,7 @@ class BPPredictorService {
   }
 
   /// Get default value for missing features
-  double _getDefaultValue(String featureName) {
+  double getDefaultValue(String featureName) {
     final defaults = <String, double>{
       'age': 40,
       'gender': 0,

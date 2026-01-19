@@ -2,12 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 /// Types of reminder repeat patterns
-enum RepeatType {
-  daily,
-  weekdays,
-  weekends,
-  custom,
-}
+enum RepeatType { daily, weekdays, weekends, custom }
 
 /// Model representing a BP measurement reminder
 class Reminder {
@@ -35,8 +30,8 @@ class Reminder {
     return Reminder(
       id: doc.id,
       time: TimeOfDay(
-        hour: data['hour'] as int,
-        minute: data['minute'] as int,
+        hour: (data['hour'] as num?)?.toInt() ?? 8,
+        minute: (data['minute'] as num?)?.toInt() ?? 0,
       ),
       repeatType: RepeatType.values.firstWhere(
         (e) => e.name == data['repeatType'],

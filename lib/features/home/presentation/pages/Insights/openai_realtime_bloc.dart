@@ -95,9 +95,7 @@ class OpenAIRealtimeService {
         },
         onDone: () {
           debugPrint('WebSocket connection closed');
-          _emitEvent(
-            RealtimeEvent(type: RealtimeEventType.disconnected),
-          );
+          _emitEvent(RealtimeEvent(type: RealtimeEventType.disconnected));
           _isConnected = false;
         },
       );
@@ -128,7 +126,7 @@ class OpenAIRealtimeService {
       throw Exception('Not connected to OpenAI Realtime API');
     }
 
-    final instructions = language == 'fr' 
+    final instructions = language == 'fr'
         ? _buildFrenchInstructions(userContext)
         : _buildEnglishInstructions(userContext);
 
@@ -144,7 +142,10 @@ class OpenAIRealtimeService {
         'voice': voice,
         'input_audio_format': 'pcm16',
         'output_audio_format': 'pcm16',
-        'input_audio_transcription': {'model': 'whisper-1', 'language': language},
+        'input_audio_transcription': {
+          'model': 'whisper-1',
+          'language': language,
+        },
         'turn_detection': {
           'type': 'server_vad',
           'threshold': 0.6,
@@ -157,7 +158,8 @@ class OpenAIRealtimeService {
           {
             'type': 'function',
             'name': 'set_reminder',
-            'description': 'Set a reminder for the user to take their blood pressure reading',
+            'description':
+                'Set a reminder for the user to take their blood pressure reading',
             'parameters': {
               'type': 'object',
               'properties': {
@@ -178,6 +180,72 @@ class OpenAIRealtimeService {
               'required': ['hour', 'minute', 'repeat_type'],
             },
           },
+          {
+            'type': 'function',
+            'name': 'open_whatif_simulator',
+            'description':
+                'Opens the What-If lifestyle simulator where users can explore how lifestyle changes (exercise, diet, salt reduction) could affect their blood pressure. Use when user asks about scenarios, predictions, or what would happen if they made lifestyle changes.',
+            'parameters': {'type': 'object', 'properties': {}, 'required': []},
+          },
+          {
+            'type': 'function',
+            'name': 'record_bp_reading',
+            'description':
+                'Save a new blood pressure reading for the user. Use when they say something like "My BP is 120 over 80" or "Record my blood pressure as 130/85".',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'systolic': {
+                  'type': 'integer',
+                  'description':
+                      'The systolic blood pressure value (top number)',
+                },
+                'diastolic': {
+                  'type': 'integer',
+                  'description':
+                      'The diastolic blood pressure value (bottom number)',
+                },
+              },
+              'required': ['systolic', 'diastolic'],
+            },
+          },
+          {
+            'type': 'function',
+            'name': 'add_medication',
+            'description':
+                'Add a new medication to the user\'s medication list. Use when the user mentions they are taking a new medication, like "I take metformin" or "I am on lisinopril".',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'name': {
+                  'type': 'string',
+                  'description': 'The name of the medication',
+                },
+                'dosage': {
+                  'type': 'string',
+                  'description':
+                      'The dosage of the medication (e.g., "10mg", "1 tablet")',
+                },
+                'frequency': {
+                  'type': 'string',
+                  'description': 'How often to take the medication',
+                  'enum': [
+                    'onceDaily',
+                    'twiceDaily',
+                    'threeTimesDaily',
+                    'asNeeded',
+                    'weekly',
+                  ],
+                },
+                'instructions': {
+                  'type': 'string',
+                  'description':
+                      'Special instructions for the medication (e.g., "Take with food", "Avoid grapefruit")',
+                },
+              },
+              'required': ['name', 'dosage', 'frequency'],
+            },
+          },
         ],
         'tool_choice': 'auto',
       },
@@ -188,111 +256,106 @@ class OpenAIRealtimeService {
     debugPrint('   Modalities: text, audio');
     debugPrint('   Output format: pcm16');
     debugPrint('   Voice: $voice');
-    debugPrint('   Tools: set_reminder');
   }
 
   String _buildEnglishInstructions(String? userContext) {
-    return '''You are a helpful blood pressure monitoring assistant.
-
+    return '''You are a caring and professional medical assistant specializing in hypertension.
+        
 Your role is to:
-1. Answer questions about the user's blood pressure readings
-2. Provide health information based on their BP data
-3. Explain BP classifications and trends
-4. Give appropriate health recommendations
-5. Help users set up reminders to track their blood pressure regularly
+1. Answer questions about the user's blood pressure readings with medical empathy.
+2. Provide health information based on their BP data using official guidelines.
+3. Explain BP classifications and trends clearly.
+4. Give appropriate lifestyle recommendations (diet, exercise, stress management).
+5. Help users proactively manage their medications and reminders.
 
 ${userContext ?? ''}
 
 When discussing blood pressure:
-1. Analyze the data using BP classification guidelines
-2. Provide clear, helpful, and empathetic responses
-3. Mention when appropriate that your advice doesn't replace professional medical consultation
+1. Use a warm, professional, and supportive tone—like a reassuring doctor.
+2. Provide clear, helpful, and empathetic responses.
+3. Mention when appropriate that your advice helps track trends but doesn't replace professional medical consultation.
 
 IMPORTANT - Medical History Questions:
 When a user asks if their reading is "normal" or seeks assessment of their BP:
-1. First, check if there is a "Missing Medical Information" section in the user context above
-2. If missing information exists, ask ONE relevant question at a time from that list
-3. NEVER ask about information already listed in "Available Medical Information"
-4. Only ask about pregnancy if the user's gender is Female
-5. Phrase questions naturally and conversationally, like a caring doctor would ask:
-   - "Are you currently taking any medications for blood pressure or other conditions?"
-   - "Do you smoke or use any tobacco products?"
-   - "Are you currently pregnant or planning to become pregnant?" (females only)
-   - "Do you have diabetes or any other chronic health conditions?"
-   - "Could you tell me about your typical diet and exercise routine?"
-   - "How would you describe your stress levels lately?"
+1. First, check if there is a "Missing Medical Information" section in the user context above.
+2. If missing information exists, ask ONE relevant question at a time from that list.
+3. Phrase questions naturally and conversationally: "To give you better context, are you currently taking any medications for blood pressure?"
 
-6. After the user answers a question, acknowledge their response and provide relevant context about how that factor relates to blood pressure
-7. If multiple pieces of information are missing, ask questions one at a time, not all at once
-8. Use the answers to provide more personalized and accurate BP assessment
+IMPORTANT - Blood Pressure Recording:
+When a user provides their blood pressure reading, use the record_bp_reading function.
+After recording:
+1. "I've logged that for you. A reading of [X/Y] is categorized as [Category]."
+2. Provide a brief, supportive comment or ask a relevant medical history question.
+
+IMPORTANT - Adding Medications:
+When a user mentions they are taking a medication:
+1. DO NOT call add_medication until you have: Name, Dosage, and Frequency.
+2. If any info is missing, ask: "To add this correctly, what is the dosage and how often do you take it?"
+3. MANDATORY CONFIRMATION: Once you have all details, ask: "I'll add [Name] [Dosage], taking it [Frequency]. Is that correct?"
+4. ONLY call add_medication after the user confirms "Yes" or equivalent.
+5. If the user says they already take it or it's a duplicate, do not call the tool.
+6. After addition, offer a reminder as usual.
 
 IMPORTANT - Reminder Setup:
-If the user has no active reminders (check user context), after providing BP feedback, naturally ask:
-"Would you like me to set up a daily reminder to check your blood pressure?"
+If the user says yes to a reminder (for BP or Medication):
+1. Ask for a specific time: "What time works best for you? Perhaps 8:00 AM?"
+2. When confirmed, use the set_reminder function.
+3. Reassure the user: "Excellent. I'll make sure you get a notification at [Time] every day."
 
-If user says yes:
-1. Ask what time works best: "What time would work best for you? Morning or evening?"
-2. Based on their preference, suggest a specific time (e.g., "How about 8 AM each morning?")
-3. When they confirm, use the set_reminder function with:
-   - hour: the hour they chose (0-23)
-   - minute: the minute (usually 0)
-   - repeat_type: "daily" for every day, "weekdays" for work days, "weekends" for weekends
-4. Confirm the reminder was set: "I've set a daily reminder for 8 AM. You'll get a notification each day to check your blood pressure."
+IMPORTANT - What-If Lifestyle Simulator:
+When discussing lifestyle changes, naturally offer the simulator:
+"It's fascinating how small changes add up. Would you like to see a simulation of how [Topic] could lower your blood pressure over time?"
 
-Be conversational, warm, and supportive. Keep responses concise (2-3 sentences max) and natural. Avoid repetitive disclaimers unless discussing serious BP elevations.''';
+Be natural, empathetic, and concise. Avoid repetitive "as an AI" statements. Talk like a real collaborator in their health journey.''';
   }
 
   String _buildFrenchInstructions(String? userContext) {
-    return '''Vous êtes un assistant de surveillance de la tension artérielle serviable.
+    return '''Vous êtes un assistant médical attentionné et professionnel, spécialisé dans l'hypertension.
 
 Votre rôle est de :
-1. Répondre aux questions sur les lectures de tension artérielle de l'utilisateur
-2. Fournir des informations de santé basées sur leurs données de TA
-3. Expliquer les classifications et tendances de la TA
-4. Donner des recommandations de santé appropriées
-5. Aider les utilisateurs à configurer des rappels pour suivre régulièrement leur tension artérielle
+1. Répondre aux questions sur les lectures de tension artérielle avec empathie médicale.
+2. Fournir des informations de santé basées sur leurs données selon les directives officielles.
+3. Expliquer les classifications et tendances de façon claire.
+4. Donner des recommandations appropriées sur le mode de vie (alimentation, exercice, stress).
+5. Aider les utilisateurs à gérer activement leurs médicaments et rappels.
 
 ${userContext ?? ''}
 
-Lors de la discussion sur la tension artérielle :
-1. Analysez les données en utilisant les directives de classification de la TA
-2. Fournissez des réponses claires, utiles et empathiques
-3. Mentionnez quand c'est approprié que vos conseils ne remplacent pas une consultation médicale professionnelle
+Lors de la discussion :
+1. Utilisez un ton chaleureux, professionnel et encourageant—comme un médecin rassurant.
+2. Mentionnez que vos conseils aident à suivre les tendances mais ne remplacent pas une consultation médicale.
 
-IMPORTANT - Questions sur l'historique médical :
-Quand un utilisateur demande si sa lecture est "normale" ou cherche une évaluation de sa TA :
-1. Vérifiez d'abord s'il y a une section "Informations médicales manquantes" dans le contexte utilisateur ci-dessus
-2. Si des informations manquantes existent, posez UNE question pertinente à la fois de cette liste
-3. Ne posez JAMAIS de questions sur les informations déjà listées dans "Informations médicales disponibles"
-4. Ne posez de questions sur la grossesse que si le genre de l'utilisateur est Femme
-5. Formulez les questions naturellement et de manière conversationnelle, comme un médecin attentionné le ferait :
-   - "Prenez-vous actuellement des médicaments pour la tension artérielle ou d'autres conditions ?"
-   - "Fumez-vous ou utilisez-vous des produits du tabac ?"
-   - "Êtes-vous actuellement enceinte ou prévoyez-vous de le devenir ?" (femmes uniquement)
-   - "Avez-vous du diabète ou d'autres conditions de santé chroniques ?"
-   - "Pouvez-vous me parler de votre alimentation et routine d'exercice habituelles ?"
-   - "Comment décririez-vous vos niveaux de stress récemment ?"
+IMPORTANT - Historique Médical :
+Si des informations manquent dans le contexte :
+1. Posez UNE question pertinente à la fois.
+2. Formulez-la naturellement : "Pour mieux vous conseiller, prenez-vous actuellement des médicaments pour la tension ?"
 
-6. Après que l'utilisateur répond à une question, reconnaissez sa réponse et fournissez un contexte pertinent sur la façon dont ce facteur est lié à la tension artérielle
-7. Si plusieurs informations manquent, posez les questions une à la fois, pas toutes en même temps
-8. Utilisez les réponses pour fournir une évaluation de la TA plus personnalisée et précise
+IMPORTANT - Enregistrement de la Tension :
+Lorsqu'un utilisateur donne sa mesure, utilisez record_bp_reading.
+Après l'enregistrement :
+1. "C'est enregistré. Une lecture de [X/Y] est classée comme [Catégorie]."
+2. Ajoutez un commentaire de soutien ou posez une question sur l'historique.
 
-IMPORTANT - Configuration des rappels :
-Si l'utilisateur n'a pas de rappels actifs (vérifiez le contexte utilisateur), après avoir donné un retour sur la TA, demandez naturellement :
-"Voulez-vous que je configure un rappel quotidien pour vérifier votre tension artérielle ?"
+IMPORTANT - Ajout de Médicaments :
+1. NE JAMAIS appeler add_medication tant que vous n'avez pas : Nom, Dosage, et Fréquence.
+2. S'il manque des infos, demandez : "Pour l'ajouter correctement, quel est le dosage et à quelle fréquence le prenez-vous ?"
+3. CONFIRMATION OBLIGATOIRE : Une fois les détails obtenus, demandez : "Je vais ajouter [Nom] [Dosage], avec une fréquence [Fréquence]. Est-ce correct ?"
+4. Appelez add_medication SEULEMENT après confirmation de l'utilisateur.
+5. Si l'utilisateur dit qu'il le prend déjà ou que c'est un doublon, n'appelez pas l'outil.
+6. Après l'ajout, proposez un rappel comme d'habitude.
 
-Si l'utilisateur dit oui :
-1. Demandez quelle heure lui convient : "Quelle heure vous conviendrait le mieux ? Le matin ou le soir ?"
-2. Selon sa préférence, suggérez une heure précise (ex: "Que diriez-vous de 8h chaque matin ?")
-3. Quand il confirme, utilisez la fonction set_reminder avec :
-   - hour : l'heure choisie (0-23)
-   - minute : la minute (généralement 0)
-   - repeat_type : "daily" pour chaque jour, "weekdays" pour les jours de travail, "weekends" pour les week-ends
-4. Confirmez que le rappel a été configuré : "J'ai configuré un rappel quotidien pour 8h. Vous recevrez une notification chaque jour pour vérifier votre tension artérielle."
+IMPORTANT - Configuration des Rappels :
+Si l'utilisateur accepte un rappel :
+1. Demandez une heure précise : "Quelle heure vous convient le mieux ? Peut-être 8h00 ?"
+2. Utilisez ensuite la fonction set_reminder.
+3. Rassurez l'utilisateur : "Parfait. Je veillerai à ce que vous receviez une notification à [Heure] chaque jour."
 
-Soyez conversationnel, chaleureux et supportif. Gardez les réponses concises (2-3 phrases max) et naturelles. Évitez les avertissements répétitifs sauf en cas d'élévations sérieuses de la TA.
+IMPORTANT - Simulateur de Scénarios (What-If) :
+Proposez naturellement le simulateur :
+"C'est fascinant de voir comment de petits changements s'accumulent. Voulez-vous voir une simulation de l'impact de [Sujet] sur votre tension ?"
 
-IMPORTANT: Répondez TOUJOURS en français.''';
+Soyez naturel, empathique et concis. Parlez comme un véritable partenaire de leur parcours de santé.
+IMPORTANT : Répondez TOUJOURS en français.''';
   }
 
   /// Handle incoming WebSocket messages
@@ -351,9 +414,7 @@ IMPORTANT: Répondez TOUJOURS en français.''';
 
       case 'response.audio.done':
         debugPrint('✓ Audio response complete');
-        _emitEvent(
-          RealtimeEvent(type: RealtimeEventType.audioResponseDone),
-        );
+        _emitEvent(RealtimeEvent(type: RealtimeEventType.audioResponseDone));
         break;
 
       case 'response.audio_transcript.delta':

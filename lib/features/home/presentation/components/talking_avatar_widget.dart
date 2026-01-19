@@ -50,11 +50,17 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
   void initState() {
     super.initState();
     _controller.onModelLoaded.addListener(_onModelLoaded);
+    // Check if model is already loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onModelLoaded();
+    });
   }
 
   void _onModelLoaded() {
     if (_controller.onModelLoaded.value && !_isLoaded) {
-      _isLoaded = true;
+      setState(() {
+        _isLoaded = true;
+      });
       _fetchAnimations();
       widget.onLoaded?.call();
     }

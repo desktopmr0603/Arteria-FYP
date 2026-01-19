@@ -795,5 +795,38 @@
   "trendsNoDataYet": "No blood pressure data yet",
   "trendsStartRecording": "Start recording your readings to see trends",
   "trendsSystolic": "Systolic",
-  "trendsDiastolic": "Diastolic"
+  "trendsDiastolic": "Diastolic",
+  "whatIfSimulator": "What-If Simulator",
+  "@whatIfSimulator": {
+    "description": "Title for the What-If confirmation dialog"
+  },
+  "whatIfSimulatorDescription": "Explore how lifestyle changes could impact your blood pressure. This is a simulation for educational purposes only.",
+  "@whatIfSimulatorDescription": {
+    "description": "Description for the What-If confirmation dialog"
+  },
+  "whatIfSimulatorCancel": "Not Now",
+  "@whatIfSimulatorCancel": {
+    "description": "Cancel button for the What-If confirmation dialog"
+  },
+  "whatIfSimulatorConfirm": "Open Simulator",
+  "@whatIfSimulatorConfirm": {
+    "description": "Confirm button for the What-If confirmation dialog"
+  },
+  "medicationAddedMessage": "{name} has been added to your medications.",
+  "@medicationAddedMessage": {
+    "description": "Success message when a medication is added via AI",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Metformin"
+      }
+    }
+  },
+  "medicationAddError": "Failed to add medication. Please try again.",
+  "prescriptionTitle": "New Prescription",
+  "viewOnHome": "View on Dashboard",
+  "medicationDosageLabel": "Dosage",
+  "medicationFrequencyLabel": "Frequency",
+  "medicationInstructionsLabel": "Instructions",
+  "medicationAlreadyExists": "{name} is already in your list."
 }
