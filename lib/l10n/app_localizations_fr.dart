@@ -77,7 +77,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String welcomeFirstTime(String name) {
-    return 'Bienvenue, $name! 🎉';
+    return 'Bienvenue, $name!';
   }
 
   @override
@@ -200,6 +200,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get comingSoon => 'Bientôt disponible!';
 
   @override
+  String get resetPassword => 'Réinitialiser le mot de passe';
+
+  @override
+  String get resetPasswordMessage =>
+      'Un lien de réinitialisation de mot de passe sera envoyé à votre adresse e-mail.';
+
+  @override
+  String get passwordResetSent =>
+      'E-mail de réinitialisation du mot de passe envoyé !';
+
+  @override
+  String get deleteAccount => 'Supprimer le compte';
+
+  @override
+  String get deleteAccountConfirmationMessage =>
+      'Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action est irréversible.';
+
+  @override
+  String get accountDeleted => 'Compte supprimé avec succès.';
+
+  @override
   String get selectLanguage => 'Sélectionner la langue';
 
   @override
@@ -313,7 +334,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get faqDataTrainingAnswer =>
-      'Nous pouvons utiliser des données utilisateur anonymisées et agrégées pour améliorer continuellement la précision et la pertinence des capacités de raisonnement du modèle Mistral 7B. Vos informations personnelles d\'identification ne sont jamais utilisées à des fins de formation sans consentement explicite et éclairé.';
+      'Nous pouvons utiliser des données utilisateur anonymisées et agrégées pour améliorer continuellement la précision et la pertinence des capacités de raisonnement du modèle Qwen3 8b. Vos informations personnelles d\'identification ne sont jamais utilisées à des fins de formation sans consentement explicite et éclairé.';
 
   @override
   String get bloodPressure => 'Tension Artérielle';
@@ -513,7 +534,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get emergencyContactProvider => 'Contactez votre médecin';
 
   @override
-  String get emergencyCall911 => 'Appeler le 15';
+  String get emergencyCall911 => 'Appeler le 114';
 
   @override
   String get emergencyCallContact => 'Appeler le contact';
@@ -801,6 +822,210 @@ class AppLocalizationsFr extends AppLocalizations {
   String get whatIfSimulatorConfirm => 'Ouvrir le simulateur';
 
   @override
+  String get predictiveTimelineTitle => 'Chronologie Prédictive de Santé';
+
+  @override
+  String get predictiveTimelineSubtitle =>
+      'Projections de santé sur 30 jours basées sur l\'IA';
+
+  @override
+  String get predictiveTimelineAnalyzing => 'Analyse des modèles de santé...';
+
+  @override
+  String get predictiveTimelineDay => 'Jour';
+
+  @override
+  String get predictiveTimelineRisk => 'Risque';
+
+  @override
+  String get predictiveTimelineConfidence => 'Confiance';
+
+  @override
+  String get predictiveTimelineKeyInsights => 'Informations Clés';
+
+  @override
+  String get predictiveTimelineRiskProjection => 'Projection des Risques';
+
+  @override
+  String get predictiveTimelineOver30Days => 'sur 30 jours';
+
+  @override
+  String get predictiveTimelineConfidenceLevel => 'Niveau de Confiance';
+
+  @override
+  String get predictiveTimelineKeyFactors => 'Facteurs Clés';
+
+  @override
+  String get predictiveTimelineFactorBPTrend => 'Tendance TA';
+
+  @override
+  String get predictiveTimelineFactorLifestyle => 'Mode de vie';
+
+  @override
+  String get predictiveTimelineFactorStress => 'Stress';
+
+  @override
+  String get predictiveTimelineFactorMedication => 'Médication';
+
+  @override
+  String get riskTrendAnalysisTitle => 'Analyse des Tendances de Risque';
+
+  @override
+  String get riskTrendAnalysisSubtitle =>
+      'Analyse historique sur 90 jours avec impact des fonctionnalités';
+
+  @override
+  String get riskTrendAnalysisAnalyzing => 'Analyse des modèles de risque...';
+
+  @override
+  String get riskTrendAnalysisFeatureImpact =>
+      'Analyse de l\'Impact des Fonctionnalités';
+
+  @override
+  String get riskTrendAnalysisSummary => 'Résumé des Risques';
+
+  @override
+  String get riskTrendAnalysisCurrentRisk => 'Risque Actuel';
+
+  @override
+  String get riskTrendAnalysisWeeklyChange => 'Changement Hebd.';
+
+  @override
+  String get riskTrendAnalysisMonthlyChange => 'Changement Mensuel';
+
+  @override
+  String get riskTrendAnalysisLowRisk => 'Risque Faible';
+
+  @override
+  String get riskTrendAnalysisModerateRisk => 'Risque Modéré';
+
+  @override
+  String get riskTrendAnalysisElevatedRisk => 'Risque Élevé';
+
+  @override
+  String get riskTrendAnalysisHighRisk => 'Risque Haut';
+
+  @override
+  String get riskTrendAnalysisVeryHighRisk => 'Risque Très Haut';
+
+  @override
+  String get historicalPatternsTitle => 'Modèles Historiques';
+
+  @override
+  String get historicalPatternsSubtitle =>
+      'Modèles et anomalies détectés par l\'IA';
+
+  @override
+  String get historicalPatternsAnalyzing =>
+      'Analyse des modèles historiques...';
+
+  @override
+  String get historicalPatternsPositivePatterns => 'Modèles Positifs';
+
+  @override
+  String get historicalPatternsNeedsAttention => 'Nécessite Attention';
+
+  @override
+  String get historicalPatternsRecentAnomalies => 'Anomalies Récentes';
+
+  @override
+  String get historicalPatternsDetectedPatterns => 'Modèles Détectés';
+
+  @override
+  String get historicalPatternsDaily => 'Quotidien';
+
+  @override
+  String get historicalPatternsWeekly => 'Hebdomadaire';
+
+  @override
+  String get historicalPatternsVariable => 'Variable';
+
+  @override
+  String get historicalPatternsPositive => 'Positif';
+
+  @override
+  String get historicalPatternsModerate => 'Modéré';
+
+  @override
+  String get historicalPatternsHigh => 'Élevé';
+
+  @override
+  String get historicalPatternsOccurrences => 'occurrences';
+
+  @override
+  String get historicalPatternsResolved => 'Résolu';
+
+  @override
+  String get historicalPatternsToday => 'Aujourd\'hui';
+
+  @override
+  String get historicalPatternsYesterday => 'Hier';
+
+  @override
+  String historicalPatternsDaysAgo(int days) {
+    return 'Il y a $days jours';
+  }
+
+  @override
+  String get patternMorningSpikeTitle => 'Pic de TA Matinal';
+
+  @override
+  String patternMorningSpikeDescription(Object diff) {
+    return 'Vos lectures systoliques matinales sont environ $diff mmHg plus élevées que le reste de la journée.';
+  }
+
+  @override
+  String get patternMorningSpikeRecommendation =>
+      'Essayez de mesurer après 5 minutes assis. Si cela persiste, discutez du moment de la prise de médicaments, du sommeil et de la caféine avec votre médecin.';
+
+  @override
+  String get patternWeekendReliefTitle => 'Détente du Week-end';
+
+  @override
+  String patternWeekendReliefDescription(Object diff) {
+    return 'Vos lectures systoliques sont environ $diff mmHg plus basses les week-ends par rapport aux jours de semaine.';
+  }
+
+  @override
+  String get patternWeekendReliefRecommendation =>
+      'Ce que vous faites le week-end (sommeil, marche, moins de stress) semble aider — essayez d\'intégrer certaines de ces habitudes en semaine.';
+
+  @override
+  String get patternHighVariabilityTitle => 'Grande Variabilité';
+
+  @override
+  String patternHighVariabilityDescription(Object diff) {
+    return 'Vos lectures varient beaucoup (environ $diff mmHg d\'écart type).';
+  }
+
+  @override
+  String get patternHighVariabilityRecommendation =>
+      'Essayez de mesurer à des heures régulières chaque jour, évitez de mesurer juste après une activité/caféine, et notez vos observations (stress, sommeil, repas).';
+
+  @override
+  String anomalyDeviationHigh(Object value) {
+    return 'Lecture supérieure de $value mmHg à la normale.';
+  }
+
+  @override
+  String anomalyDeviationLow(Object value) {
+    return 'Lecture inférieure de $value mmHg à la normale.';
+  }
+
+  @override
+  String anomalySpikeIncrease(Object value) {
+    return 'Augmentation soudaine de $value mmHg.';
+  }
+
+  @override
+  String anomalySpikeDecrease(Object value) {
+    return 'Baisse soudaine de $value mmHg.';
+  }
+
+  @override
+  String get anomalyResolved => 'Résolu';
+
+  @override
   String medicationAddedMessage(String name) {
     return '$name a été ajouté à vos médicaments.';
   }
@@ -825,7 +1050,92 @@ class AppLocalizationsFr extends AppLocalizations {
   String get medicationInstructionsLabel => 'Instructions';
 
   @override
-  String medicationAlreadyExists(Object name) {
+  String medicationAlreadyExists(String name) {
     return '$name est déjà dans votre liste.';
   }
+
+  @override
+  String get logoutConfirmationMessage =>
+      'Êtes-vous sûr de vouloir vous déconnecter ?';
+
+  @override
+  String get loggingOut => 'Déconnexion...';
+
+  @override
+  String remindersSetCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rappels définis',
+      one: '1 rappel défini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statusConnecting => 'Connexion...';
+
+  @override
+  String get statusTapToSpeak => 'Appuyez pour parler';
+
+  @override
+  String get statusListening => 'Écoute en cours...';
+
+  @override
+  String get statusDetectingSilence => 'Détection du silence...';
+
+  @override
+  String get statusProcessing => 'Traitement...';
+
+  @override
+  String get statusTranscribing => 'Transcription...';
+
+  @override
+  String get statusThinking => 'Réflexion...';
+
+  @override
+  String get statusResponseReceived => 'Réponse reçue';
+
+  @override
+  String get statusSpeaking => 'En train de parler...';
+
+  @override
+  String get statusConnectionError => 'Erreur de connexion';
+
+  @override
+  String get statusErrorProcessingAudio => 'Erreur de traitement audio';
+
+  @override
+  String get statusClarificationNeeded => 'Clarification nécessaire';
+
+  @override
+  String get statusGeneratingReport => 'Génération du rapport...';
+
+  @override
+  String get statusErrorGeneratingReport => 'Erreur de génération du rapport';
+
+  @override
+  String get statusUnderstandingQuery =>
+      'Analyse de votre question de santé...';
+
+  @override
+  String get bpCategoryNormal => 'Normale';
+
+  @override
+  String get bpCategoryElevated => 'Élevée';
+
+  @override
+  String get bpCategoryStage1 => 'Hypertension Stade 1';
+
+  @override
+  String get bpCategoryStage2 => 'Hypertension Stade 2';
+
+  @override
+  String get bpCategoryCrisis => 'Crise Hypertensive';
+
+  @override
+  String get insightsPageTitle => 'Assistant Santé';
+
+  @override
+  String get insightsHeroPrompt => 'Comment vous sentez-vous aujourd\'hui ?';
 }

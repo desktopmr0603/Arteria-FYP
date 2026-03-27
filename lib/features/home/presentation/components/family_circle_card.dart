@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import 'package:arteria/l10n/app_localizations.dart';
+import 'package:arteria/features/home/presentation/components/premium_dashboard_card.dart';
 
 class FamilyCircleCard extends StatefulWidget {
   const FamilyCircleCard({super.key});
@@ -45,38 +46,9 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
           };
         }).toList();
 
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [const Color(0xFF1A1A24), const Color(0xFF12121A)]
-                  : [Colors.white, const Color(0xFFF8FAFB)],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : const Color(0xFFE2E8F0),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.3)
-                    : Colors.black.withValues(alpha: 0.06),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
+        return PremiumDashboardCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -139,9 +111,6 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                     const SizedBox(height: 12),
                     _buildInviteSection(isDark),
                   ],
-                ),
-              ),
-            ),
           ),
         );
       },
@@ -783,6 +752,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
     });
 
     if (_emailController.text.isNotEmpty) {
+      if (!context.mounted) return;
       // In a real app, you'd send an email here
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Invite sent to ${_emailController.text}')),

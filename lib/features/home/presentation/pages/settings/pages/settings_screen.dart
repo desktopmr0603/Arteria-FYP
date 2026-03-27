@@ -1,15 +1,17 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
 import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
+import 'package:arteria/features/auth/presentation/components/custom_confirmdialog.dart';
+import 'package:arteria/features/auth/presentation/components/custom_loading_dialog.dart';
 import 'package:arteria/features/export/export_screen.dart';
-import 'package:arteria/features/home/presentation/pages/faq_screen.dart';
-import 'package:arteria/features/home/presentation/pages/settings/settings_bloc.dart';
-import 'package:arteria/features/home/presentation/pages/settings/settings_event.dart';
+import 'package:arteria/features/FAQ/pages/faq_screen.dart';
+import 'package:arteria/features/home/presentation/pages/settings/bloc/settings_bloc.dart';
+import 'package:arteria/features/home/presentation/pages/settings/bloc/settings_event.dart';
 import 'package:arteria/features/reminders/ui/reminder_settings_screen.dart';
 import 'package:arteria/l10n/app_localizations.dart';
+import 'package:arteria/features/home/presentation/pages/settings/pages/privacy_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -41,15 +43,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return doc.data();
   }
 
-  Future<void> _logout(BuildContext context) async {
+  void _showLogoutConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => CustomConfirmDialog(
+        title: AppLocalizations.of(context)!.logOut,
+        content: AppLocalizations.of(context)!.logoutConfirmationMessage,
+        cancelText: AppLocalizations.of(context)!.cancel,
+        confirmText: AppLocalizations.of(context)!.logOut,
+      ),
+    ).then((confirmed) async {
+      if (confirmed == true) {
+        if (!mounted) return;
+        _showLogoutLoading(context);
+      }
+    });
+  }
+
+  void _showLogoutLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => CustomLoadingDialog(
+        message: AppLocalizations.of(context)!.loggingOut,
+      ),
+    );
+    _performLogout(context);
+  }
+
+  Future<void> _performLogout(BuildContext context) async {
     final repo = FirebaseAuthRepo();
     try {
       await repo.logout();
       if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     } catch (e) {
       if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Logout failed: $e'),
@@ -177,7 +209,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ReminderSettingsScreen(),
+                            builder: (context) =>
+                                const ReminderSettingsScreen(),
                           ),
                         ),
                         darkMode: darkMode,
@@ -189,7 +222,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         theme: theme,
                         title: AppLocalizations.of(context)!.securityPrivacy,
                         icon: Icons.lock_outline,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PrivacyScreen(),
+                            ),
+                          );
+                        },
                         darkMode: darkMode,
                       ),
 
@@ -252,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       Center(
                         child: TextButton.icon(
-                          onPressed: () => _logout(context),
+                          onPressed: () => _showLogoutConfirmation(context),
                           icon: const Icon(
                             Icons.logout,
                             color: Colors.redAccent,
@@ -297,7 +337,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         boxShadow: [
           if (!darkMode)
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -358,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             label,
             style: GoogleFonts.openSans(
               fontSize: 14,
-              color: textColor.withOpacity(0.7),
+              color: textColor.withValues(alpha: 0.7),
             ),
           ),
           Text(
@@ -424,7 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       trailing: Icon(
         Icons.chevron_right,
-        color: theme.iconTheme.color?.withOpacity(0.6),
+        color: theme.iconTheme.color?.withValues(alpha: 0.6),
       ),
       onTap: onTap,
     );

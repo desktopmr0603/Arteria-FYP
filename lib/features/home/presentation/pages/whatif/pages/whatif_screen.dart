@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
 
-import 'whatif_bloc.dart';
-import 'whatif_event.dart';
-import 'whatif_state.dart';
-import 'bp_predictor_service.dart';
+import '../bloc/whatif_bloc.dart';
+import '../bloc/whatif_event.dart';
+import '../bloc/whatif_state.dart';
+import '../../../../data/data_sources/bp_predictor_remote_data_source.dart';
 
 class WhatIfScreen extends StatelessWidget {
   final Map<String, dynamic> userProfile;
@@ -17,7 +17,7 @@ class WhatIfScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          WhatIfBloc(predictorService: BPPredictorService())
+          WhatIfBloc(predictorService: BPPredictorRemoteDataSource())
             ..add(InitializeWhatIf(userProfile: userProfile)),
       child: const _WhatIfScreenContent(),
     );
@@ -195,15 +195,17 @@ class _RiskComparisonCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : Colors.blueGrey).withOpacity(0.15),
+            color: (isDark ? Colors.black : Colors.blueGrey).withValues(
+              alpha: 0.15,
+            ),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
         ],
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.grey.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -220,7 +222,9 @@ class _RiskComparisonCard extends StatelessWidget {
               Container(
                 width: 1,
                 height: 80,
-                color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+                color: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.1,
+                ),
               ),
               _RiskGauge(
                 label: 'Projected',
@@ -344,7 +348,7 @@ class _RiskGaugePainter extends CustomPainter {
 
     // Background arc
     final bgPaint = Paint()
-      ..color = (isDark ? Colors.white : Colors.black).withOpacity(0.08)
+      ..color = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;
@@ -360,7 +364,7 @@ class _RiskGaugePainter extends CustomPainter {
     // Progress arc
     final progressPaint = Paint()
       ..shader = LinearGradient(
-        colors: [color.withOpacity(0.6), color],
+        colors: [color.withValues(alpha: 0.6), color],
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8
@@ -399,12 +403,14 @@ class _ImprovementBadge extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF4CAF50).withOpacity(0.2),
-            const Color(0xFF00BCD4).withOpacity(0.2),
+            const Color(0xFF4CAF50).withValues(alpha: 0.2),
+            const Color(0xFF00BCD4).withValues(alpha: 0.2),
           ],
         ),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+        border: Border.all(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -520,7 +526,7 @@ class _ScenarioCard extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.4),
+                    color: const Color(0xFF667EEA).withValues(alpha: 0.4),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -670,7 +676,7 @@ class _LifestyleSlider extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: _sliderColor.withOpacity(0.15),
+                  color: _sliderColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -688,9 +694,9 @@ class _LifestyleSlider extends StatelessWidget {
           SliderTheme(
             data: SliderThemeData(
               activeTrackColor: _sliderColor,
-              inactiveTrackColor: _sliderColor.withOpacity(0.2),
+              inactiveTrackColor: _sliderColor.withValues(alpha: 0.2),
               thumbColor: _sliderColor,
-              overlayColor: _sliderColor.withOpacity(0.2),
+              overlayColor: _sliderColor.withValues(alpha: 0.2),
               trackHeight: 6,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
             ),
@@ -731,12 +737,14 @@ class _ProjectionCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF667EEA).withOpacity(isDark ? 0.2 : 0.1),
-            const Color(0xFF764BA2).withOpacity(isDark ? 0.2 : 0.1),
+            const Color(0xFF667EEA).withValues(alpha: isDark ? 0.2 : 0.1),
+            const Color(0xFF764BA2).withValues(alpha: isDark ? 0.2 : 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF667EEA).withOpacity(0.2)),
+        border: Border.all(
+          color: const Color(0xFF667EEA).withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,7 +754,7 @@ class _ProjectionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF667EEA).withOpacity(0.2),
+                  color: const Color(0xFF667EEA).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(

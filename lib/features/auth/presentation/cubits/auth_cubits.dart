@@ -53,29 +53,34 @@ class AuthCubits extends Cubit<AuthStates> {
         emit(Unauthenticated());
       }
     } on FirebaseAuthException catch (e) {
-      // OWASP 2025: Use generic error messages for credential failures
-      // to prevent account enumeration attacks
+      // OWASP 2025: Use generic error messages for credential failures to prevent account enumeration attacks
       if (e.code == 'invalid-credential' ||
           e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-email') {
         // Generic message - don't reveal if email exists or password is wrong
-        emit(AuthCredentialError(
-          generalError: "Invalid email or password. Please try again.",
-        ));
+        emit(
+          AuthCredentialError(
+            generalError: "Invalid email or password. Please try again.",
+          ),
+        );
       } else if (e.code == 'user-disabled') {
         // This is okay to reveal as it's an account status, not credential info
-        emit(AuthCredentialError(
-          generalError: "This account has been disabled. Contact support.",
-        ));
+        emit(
+          AuthCredentialError(
+            generalError: "This account has been disabled. Contact support.",
+          ),
+        );
       } else if (e.code == 'too-many-requests') {
-        emit(AuthCredentialError(
-          generalError: "Too many failed attempts. Please try again later.",
-        ));
+        emit(
+          AuthCredentialError(
+            generalError: "Too many failed attempts. Please try again later.",
+          ),
+        );
       } else {
-        emit(AuthCredentialError(
-          generalError: "Login failed. Please try again.",
-        ));
+        emit(
+          AuthCredentialError(generalError: "Login failed. Please try again."),
+        );
       }
     } catch (e) {
       emit(AuthCredentialError(generalError: "An unexpected error occurred."));
@@ -185,18 +190,56 @@ class AuthCubits extends Cubit<AuthStates> {
       final user = await authRepo.signInWithGoogle();
 
       if (user != null) {
-        final complete = await authRepo.isProfileComplete();
         _currentUser = user;
+        // Check if profile is complete (has age, height, weight, etc.)
+        final complete = await authRepo.isProfileComplete();
         if (complete) {
           emit(Authenticated(user));
         } else {
+          // New user or profile not complete - redirect to profile setup
           emit(AuthenticatedNeedsProfileSetup());
         }
       } else {
+        emit(AuthError("Google sign-in failed. Please try again."));
         emit(Unauthenticated());
       }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'sign-in-cancelled':
+          // Don't show error for user-initiated cancellation
+          emit(Unauthenticated());
+          return;
+        case 'google-auth-failed':
+        case 'google-sign-in-failed':
+        case 'firebase-auth-failed':
+          errorMessage =
+              e.message ?? "Google sign-in failed. Please try again.";
+          break;
+        case 'account-exists-with-different-credential':
+          errorMessage =
+              "An account already exists with the same email address but different sign-in credentials.";
+          break;
+        case 'network-request-failed':
+          errorMessage =
+              "Network error. Please check your internet connection.";
+          break;
+        default:
+          errorMessage = "Google sign-in failed. Please try again.";
+      }
+      emit(AuthError(errorMessage));
+      emit(Unauthenticated());
     } catch (e) {
-      emit(AuthError(e.toString()));
+      // Handle unexpected errors
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('canceled') ||
+          errorStr.contains('cancelled') ||
+          errorStr.contains('user_cancel')) {
+        // User cancelled - don't show error
+        emit(Unauthenticated());
+        return;
+      }
+      emit(AuthError("Google sign-in failed. Please try again."));
       emit(Unauthenticated());
     }
   }

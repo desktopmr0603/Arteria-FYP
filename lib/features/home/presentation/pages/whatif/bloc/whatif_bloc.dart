@@ -1,17 +1,17 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'whatif_event.dart';
 import 'whatif_state.dart';
-import 'bp_predictor_service.dart';
+import '../../../../data/data_sources/bp_predictor_remote_data_source.dart';
 
 /// BLoC for What-If Lifestyle Simulator
-/// 
+///
 /// Manages state for interactive lifestyle sliders and scenario simulations.
 class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
-  final BPPredictorService _predictorService;
+  final BPPredictorRemoteDataSource _predictorService;
 
-  WhatIfBloc({required BPPredictorService predictorService})
-      : _predictorService = predictorService,
-        super(const WhatIfState()) {
+  WhatIfBloc({required BPPredictorRemoteDataSource predictorService})
+    : _predictorService = predictorService,
+      super(const WhatIfState()) {
     on<InitializeWhatIf>(_onInitialize);
     on<UpdateSlider>(_onUpdateSlider);
     on<SelectScenario>(_onSelectScenario);
@@ -137,22 +137,27 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       // Calculate baseline risk
       final baselineRisk = _predictorService.predictRisk(event.userProfile);
 
-      emit(state.copyWith(
-        status: WhatIfStatus.ready,
-        baselineProfile: event.userProfile,
-        baselineRisk: baselineRisk,
-        projectedRisk: baselineRisk,
-        availableScenarios: _scenarios,
-        sliderConfigs: _sliderConfigs,
-        modifications: {
-          for (final config in _sliderConfigs) config.feature: config.defaultValue
-        },
-      ));
+      emit(
+        state.copyWith(
+          status: WhatIfStatus.ready,
+          baselineProfile: event.userProfile,
+          baselineRisk: baselineRisk,
+          projectedRisk: baselineRisk,
+          availableScenarios: _scenarios,
+          sliderConfigs: _sliderConfigs,
+          modifications: {
+            for (final config in _sliderConfigs)
+              config.feature: config.defaultValue,
+          },
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: WhatIfStatus.error,
-        errorMessage: 'Failed to load prediction model: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: WhatIfStatus.error,
+          errorMessage: 'Failed to load prediction model: $e',
+        ),
+      );
     }
   }
 
@@ -160,10 +165,12 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     final newModifications = Map<String, double>.from(state.modifications);
     newModifications[event.feature] = event.value;
 
-    emit(state.copyWith(
-      modifications: newModifications,
-      selectedScenarioId: null, // Clear scenario when manual adjustment
-    ));
+    emit(
+      state.copyWith(
+        modifications: newModifications,
+        selectedScenarioId: null, // Clear scenario when manual adjustment
+      ),
+    );
 
     add(const CalculateProjection());
   }
@@ -176,7 +183,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
 
     // Reset modifications to default, then apply scenario
     final newModifications = {
-      for (final config in _sliderConfigs) config.feature: config.defaultValue
+      for (final config in _sliderConfigs) config.feature: config.defaultValue,
     };
 
     // Apply scenario modifications
@@ -184,23 +191,28 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       newModifications[entry.key] = entry.value;
     }
 
-    emit(state.copyWith(
-      modifications: newModifications,
-      selectedScenarioId: event.scenarioId,
-    ));
+    emit(
+      state.copyWith(
+        modifications: newModifications,
+        selectedScenarioId: event.scenarioId,
+      ),
+    );
 
     add(const CalculateProjection());
   }
 
   void _onReset(ResetModifications event, Emitter<WhatIfState> emit) {
-    emit(state.copyWith(
-      modifications: {
-        for (final config in _sliderConfigs) config.feature: config.defaultValue
-      },
-      projectedRisk: state.baselineRisk,
-      selectedScenarioId: null,
-      projection: null,
-    ));
+    emit(
+      state.copyWith(
+        modifications: {
+          for (final config in _sliderConfigs)
+            config.feature: config.defaultValue,
+        },
+        projectedRisk: state.baselineRisk,
+        selectedScenarioId: null,
+        projection: null,
+      ),
+    );
   }
 
   Future<void> _onCalculate(
@@ -216,9 +228,10 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       for (final entry in state.modifications.entries) {
         // Apply modification (entry.value is a multiplier)
         // If profile doesn't have the key, start with the feature's default value
-        final baseValue = modifiedProfile[entry.key] ?? 
-                         _predictorService.getDefaultValue(entry.key);
-        
+        final baseValue =
+            modifiedProfile[entry.key] ??
+            _predictorService.getDefaultValue(entry.key);
+
         if (baseValue is num) {
           modifiedProfile[entry.key] = baseValue * entry.value;
         }
@@ -233,8 +246,8 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
 
       final projection = ProjectionResult(
         riskReduction: riskReduction,
-        relativeImprovement: state.baselineRisk > 0 
-            ? (riskReduction / state.baselineRisk) * 100 
+        relativeImprovement: state.baselineRisk > 0
+            ? (riskReduction / state.baselineRisk) * 100
             : 0,
         estimatedSystolicChange: estimatedSystolicChange,
         timeframe: '1-3 months',
@@ -242,16 +255,20 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
         tips: _generateTips(state.modifications),
       );
 
-      emit(state.copyWith(
-        status: WhatIfStatus.ready,
-        projectedRisk: projectedRisk,
-        projection: projection,
-      ));
+      emit(
+        state.copyWith(
+          status: WhatIfStatus.ready,
+          projectedRisk: projectedRisk,
+          projection: projection,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: WhatIfStatus.error,
-        errorMessage: 'Calculation failed: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: WhatIfStatus.error,
+          errorMessage: 'Calculation failed: $e',
+        ),
+      );
     }
   }
 
@@ -263,8 +280,8 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     if (riskReduction > 0.05) return -5;
     if (riskReduction > 0.02) return -3;
     if (riskReduction > 0) return -2;
-    
-    // For already-healthy users (low baseline risk), 
+
+    // For already-healthy users (low baseline risk),
     // lifestyle changes still provide maintenance benefit
     // Use selected scenario's expected change if available
     if (state.selectedScenarioId != null) {
@@ -275,7 +292,7 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       // Scale down for healthy users (they get ~50% of max benefit)
       return (scenario.expectedBpChange * 0.5).round();
     }
-    
+
     // Check if user made any slider modifications
     final hasModifications = state.modifications.entries.any((e) {
       final config = state.sliderConfigs.firstWhere(
@@ -284,11 +301,11 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
       );
       return e.value != config.defaultValue;
     });
-    
+
     if (hasModifications) {
       return -2; // Minimal maintenance benefit for healthy users
     }
-    
+
     return 0;
   }
 
@@ -305,11 +322,12 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
 
   List<String> _generateTips(Map<String, double> mods) {
     final tips = <String>[];
-    
+
     if (mods['sodium_intake'] != null && mods['sodium_intake']! < 0.9) {
       tips.add('Read food labels and choose low-sodium options');
     }
-    if (mods['physical_activity_score'] != null && mods['physical_activity_score']! > 1.2) {
+    if (mods['physical_activity_score'] != null &&
+        mods['physical_activity_score']! > 1.2) {
       tips.add('Start with 10-min walks and gradually increase');
     }
     if (mods['potassium_intake'] != null && mods['potassium_intake']! > 1.1) {
@@ -318,11 +336,11 @@ class WhatIfBloc extends Bloc<WhatIfEvent, WhatIfState> {
     if (mods['sedentary_minutes'] != null && mods['sedentary_minutes']! < 0.9) {
       tips.add('Take a 5-minute break every hour to move around');
     }
-    
+
     if (tips.isEmpty) {
       tips.add('Consistency is key - small daily changes add up!');
     }
-    
+
     return tips;
   }
 }

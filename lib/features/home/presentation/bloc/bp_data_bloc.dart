@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 /// Blood Pressure category based on AHA guidelines
 enum BPCategory {
@@ -72,7 +74,7 @@ class BPDataService {
         'timestamp': data['date'],
       };
     } catch (e) {
-      print('Error fetching latest BP reading: $e');
+      debugPrint('Error fetching latest BP reading: $e');
       return null;
     }
   }
@@ -102,7 +104,7 @@ class BPDataService {
         };
       }).toList();
     } catch (e) {
-      print('Error fetching today\'s BP readings: $e');
+      debugPrint('Error fetching today\'s BP readings: $e');
       return [];
     }
   }
@@ -134,7 +136,7 @@ class BPDataService {
         };
       }).toList();
     } catch (e) {
-      print('Error fetching BP history: $e');
+      debugPrint('Error fetching BP history: $e');
       return [];
     }
   }
@@ -145,53 +147,58 @@ class BPDataService {
       final doc = await _firestore.collection('users').doc(userId).get();
       return doc.exists ? doc.data() : null;
     } catch (e) {
-      print('Error fetching user profile: $e');
+      debugPrint('Error fetching user profile: $e');
       return null;
     }
   }
 
-  /// Classify BP reading (120/80 = Normal)
+  /// Classify BP reading per 2025 AHA/ACC Guidelines
+  ///
+  /// Normal: Systolic ≤120 AND Diastolic ≤80 (120/80 is Normal)
+  /// Elevated: Systolic 121-129 AND Diastolic ≤80
+  /// Stage 1 Hypertension: Systolic 130-139 OR Diastolic 81-89
+  /// Stage 2 Hypertension: Systolic ≥140 OR Diastolic ≥90
+  /// Hypertensive Crisis: Systolic >180 AND/OR Diastolic >120
+  ///
+  /// Treatment goal for most adults: below 130/80
   BPClassification classifyBP(int systolic, int diastolic, {int? age}) {
     BPCategory category;
     int severity;
     String description;
 
-    // Normal: systolic <= 120 AND diastolic <= 80 (includes 120/80)
-    if (systolic <= 120 && diastolic <= 80) {
-      category = BPCategory.normal;
-      severity = 0;
-      description = 'Your blood pressure is in the normal range.';
-    }
-    // Elevated: systolic 121-129 AND diastolic <= 80
-    else if (systolic > 120 && systolic < 130 && diastolic <= 80) {
-      category = BPCategory.elevated;
-      severity = 1;
+    // Hypertensive Crisis: systolic >180 AND/OR diastolic >120
+    if (systolic > 180 || diastolic > 120) {
+      category = BPCategory.hypertensiveCrisis;
+      severity = 4;
       description =
-          'Your blood pressure is slightly above normal. Lifestyle changes are recommended.';
+          'URGENT: You may be experiencing a hypertensive crisis. Seek immediate medical attention!';
+    }
+    // Stage 2 Hypertension: systolic ≥140 OR diastolic ≥90
+    else if (systolic >= 140 || diastolic >= 90) {
+      category = BPCategory.hypertensionStage2;
+      severity = 3;
+      description =
+          'You have Stage 2 Hypertension. Medical treatment is typically required. The goal is to bring your BP below 130/80.';
     }
     // Stage 1 Hypertension: systolic 130-139 OR diastolic 81-89
-    else if ((systolic >= 130 && systolic <= 139) ||
-        (diastolic > 80 && diastolic <= 89)) {
+    else if (systolic >= 130 || diastolic > 80) {
       category = BPCategory.hypertensionStage1;
       severity = 2;
       description =
-          'You have Stage 1 Hypertension. Consult your doctor about treatment options.';
-    } else if (systolic >= 140 || diastolic >= 90) {
-      if (systolic >= 180 || diastolic >= 120) {
-        category = BPCategory.hypertensiveCrisis;
-        severity = 4;
-        description =
-            'URGENT: You may be experiencing a hypertensive crisis. Seek immediate medical attention!';
-      } else {
-        category = BPCategory.hypertensionStage2;
-        severity = 3;
-        description =
-            'You have Stage 2 Hypertension. Medical treatment is typically required.';
-      }
-    } else {
+          'You have Stage 1 Hypertension. Lifestyle changes are recommended first. Medications may be needed if you have risk factors like heart disease or diabetes.';
+    }
+    // Elevated: systolic 121-129 AND diastolic ≤80
+    else if (systolic > 120 && diastolic <= 80) {
+      category = BPCategory.elevated;
+      severity = 1;
+      description =
+          'Your blood pressure is elevated. Lifestyle changes are recommended to prevent progression to hypertension.';
+    }
+    // Normal: systolic <120 AND diastolic <80
+    else {
       category = BPCategory.normal;
       severity = 0;
-      description = 'Your blood pressure is in the normal range.';
+      description = 'Your blood pressure is in the normal range. Keep up the healthy habits!';
     }
 
     // Age-specific considerations

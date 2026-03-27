@@ -30,7 +30,9 @@ class _SignupPageState extends State<SignupPage>
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
-  // Visibility and validation flags
+  // VISIBILITY AND VALIDATION FLAGS
+  // Control password visibility toggles and track validation state for
+  // displaying error indicators on input fields.
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
   bool _agreeToTerms = false;
@@ -39,10 +41,12 @@ class _SignupPageState extends State<SignupPage>
   bool _emailValid = true;
   bool _passwordValid = true;
 
-  // Progressive reveal flags
+  // I implemented a progressive disclosure pattern where password fields only appear
+  // after the user enters a valid email, reducing initial form complexity and improving user experience.
   bool _showPasswordField = false;
   bool _showConfirmPasswordField = false;
 
+  // Animation controller for the "shake" effect when passwords don't match.
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
 
@@ -55,6 +59,8 @@ class _SignupPageState extends State<SignupPage>
       duration: const Duration(milliseconds: 300),
     );
 
+    // Create a "shake" animation sequence that moves the widget
+    // left → right → center to draw attention to password mismatch errors.
     _slideAnimation = TweenSequence<Offset>([
       TweenSequenceItem(
         tween: Tween(begin: Offset.zero, end: const Offset(-0.02, 0)),
@@ -75,11 +81,12 @@ class _SignupPageState extends State<SignupPage>
     _passwordCtrl.addListener(_onPasswordChanged);
   }
 
+  /// Monitors email input and reveals the password field once the user enters a valid email format.
   void _onEmailChanged() {
     final email = _emailCtrl.text.trim();
     final emailRegex = RegExp(r"^[^\s@]+@[^\s@]+\.[a-z]{2,}$");
     final shouldShow = email.isNotEmpty && emailRegex.hasMatch(email);
-    
+
     if (shouldShow != _showPasswordField) {
       setState(() {
         _showPasswordField = shouldShow;
@@ -93,7 +100,7 @@ class _SignupPageState extends State<SignupPage>
   void _onPasswordChanged() {
     final password = _passwordCtrl.text;
     final shouldShow = password.length >= 8;
-    
+
     if (shouldShow != _showConfirmPasswordField) {
       setState(() {
         _showConfirmPasswordField = shouldShow;
@@ -210,7 +217,25 @@ class _SignupPageState extends State<SignupPage>
       data: signupTheme,
       child: BlocListener<AuthCubits, AuthStates>(
         listener: (context, state) {
-          if (state is Authenticated) {
+          // Dismiss loading dialog when state changes from AuthLoading
+          if (state is! AuthLoading) {
+            Navigator.of(context, rootNavigator: true).popUntil((route) {
+              return route.isFirst || route is! DialogRoute;
+            });
+          }
+
+          if (state is AuthLoading) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              useRootNavigator: true,
+              builder: (_) => const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE63946)),
+                ),
+              ),
+            );
+          } else if (state is Authenticated) {
             Navigator.pushReplacementNamed(context, '/');
           } else if (state is AuthenticatedNeedsProfileSetup) {
             Navigator.pushReplacementNamed(context, '/profile-setup');
@@ -300,7 +325,6 @@ class _SignupPageState extends State<SignupPage>
                       ),
                       const SizedBox(height: 16),
 
-
                       // Email
                       CustomTextField(
                         controller: _emailCtrl,
@@ -315,7 +339,7 @@ class _SignupPageState extends State<SignupPage>
                         },
                         isError: !_emailValid,
                       ),
-                      
+
                       // Helper text for email
                       if (!_showPasswordField && _emailCtrl.text.isNotEmpty)
                         Padding(
@@ -329,7 +353,7 @@ class _SignupPageState extends State<SignupPage>
                             ),
                           ),
                         ),
-                      
+
                       // Password - Progressive Reveal
                       AnimatedSize(
                         duration: const Duration(milliseconds: 400),
@@ -348,7 +372,8 @@ class _SignupPageState extends State<SignupPage>
                                       icon: Icons.lock_outline,
                                       isVisible: _passwordVisible,
                                       onToggleVisibility: () => setState(
-                                        () => _passwordVisible = !_passwordVisible,
+                                        () => _passwordVisible =
+                                            !_passwordVisible,
                                       ),
                                       focusNode: _passwordFocus,
                                       textInputAction: TextInputAction.next,
@@ -360,14 +385,19 @@ class _SignupPageState extends State<SignupPage>
                                       isError: !_passwordValid,
                                     ),
                                     // Password strength indicator
-                                    if (_passwordCtrl.text.isNotEmpty && !_showConfirmPasswordField)
+                                    if (_passwordCtrl.text.isNotEmpty &&
+                                        !_showConfirmPasswordField)
                                       Padding(
-                                        padding: const EdgeInsets.only(top: 8, left: 12),
+                                        padding: const EdgeInsets.only(
+                                          top: 8,
+                                          left: 12,
+                                        ),
                                         child: Text(
                                           "Password must be at least 8 characters",
                                           style: GoogleFonts.openSans(
                                             fontSize: 12,
-                                            color: _passwordCtrl.text.length >= 8
+                                            color:
+                                                _passwordCtrl.text.length >= 8
                                                 ? const Color(0xFF4CAF50)
                                                 : const Color(0xFFE63946),
                                             fontStyle: FontStyle.italic,

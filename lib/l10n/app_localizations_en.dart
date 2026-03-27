@@ -76,7 +76,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String welcomeFirstTime(String name) {
-    return 'Welcome, $name! 🎉';
+    return 'Welcome, $name!';
   }
 
   @override
@@ -197,6 +197,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comingSoon => 'Coming soon!';
 
   @override
+  String get resetPassword => 'Reset Password';
+
+  @override
+  String get resetPasswordMessage =>
+      'A password reset link will be sent to your email address.';
+
+  @override
+  String get passwordResetSent => 'Password reset email sent!';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get deleteAccountConfirmationMessage =>
+      'Are you sure you want to permanently delete your account? This action cannot be undone.';
+
+  @override
+  String get accountDeleted => 'Account deleted successfully.';
+
+  @override
   String get selectLanguage => 'Select Language';
 
   @override
@@ -308,7 +328,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqDataTrainingAnswer =>
-      'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.';
+      'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Qwen3 8b model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.';
 
   @override
   String get bloodPressure => 'Blood Pressure';
@@ -507,7 +527,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emergencyContactProvider => 'Contact your healthcare provider';
 
   @override
-  String get emergencyCall911 => 'Call 911';
+  String get emergencyCall911 => 'Call 114';
 
   @override
   String get emergencyCallContact => 'Call Contact';
@@ -795,8 +815,210 @@ class AppLocalizationsEn extends AppLocalizations {
   String get whatIfSimulatorConfirm => 'Open Simulator';
 
   @override
+  String get predictiveTimelineTitle => 'Predictive Health Timeline';
+
+  @override
+  String get predictiveTimelineSubtitle =>
+      'AI-powered 30-day health projections';
+
+  @override
+  String get predictiveTimelineAnalyzing => 'Analyzing health patterns...';
+
+  @override
+  String get predictiveTimelineDay => 'Day';
+
+  @override
+  String get predictiveTimelineRisk => 'Risk';
+
+  @override
+  String get predictiveTimelineConfidence => 'Confidence';
+
+  @override
+  String get predictiveTimelineKeyInsights => 'Key Insights';
+
+  @override
+  String get predictiveTimelineRiskProjection => 'Risk Projection';
+
+  @override
+  String get predictiveTimelineOver30Days => 'over 30 days';
+
+  @override
+  String get predictiveTimelineConfidenceLevel => 'Confidence Level';
+
+  @override
+  String get predictiveTimelineKeyFactors => 'Key Factors';
+
+  @override
+  String get predictiveTimelineFactorBPTrend => 'BP Trend';
+
+  @override
+  String get predictiveTimelineFactorLifestyle => 'Lifestyle';
+
+  @override
+  String get predictiveTimelineFactorStress => 'Stress';
+
+  @override
+  String get predictiveTimelineFactorMedication => 'Medication';
+
+  @override
+  String get riskTrendAnalysisTitle => 'Risk Trend Analysis';
+
+  @override
+  String get riskTrendAnalysisSubtitle =>
+      '90-day historical analysis with feature impact';
+
+  @override
+  String get riskTrendAnalysisAnalyzing => 'Analyzing risk patterns...';
+
+  @override
+  String get riskTrendAnalysisFeatureImpact => 'Feature Impact Analysis';
+
+  @override
+  String get riskTrendAnalysisSummary => 'Risk Summary';
+
+  @override
+  String get riskTrendAnalysisCurrentRisk => 'Current Risk';
+
+  @override
+  String get riskTrendAnalysisWeeklyChange => 'Weekly Change';
+
+  @override
+  String get riskTrendAnalysisMonthlyChange => 'Monthly Change';
+
+  @override
+  String get riskTrendAnalysisLowRisk => 'Low Risk';
+
+  @override
+  String get riskTrendAnalysisModerateRisk => 'Moderate Risk';
+
+  @override
+  String get riskTrendAnalysisElevatedRisk => 'Elevated Risk';
+
+  @override
+  String get riskTrendAnalysisHighRisk => 'High Risk';
+
+  @override
+  String get riskTrendAnalysisVeryHighRisk => 'Very High Risk';
+
+  @override
+  String get historicalPatternsTitle => 'Historical Patterns';
+
+  @override
+  String get historicalPatternsSubtitle =>
+      'AI-detected patterns and anomalies from your health data';
+
+  @override
+  String get historicalPatternsAnalyzing => 'Analyzing historical patterns...';
+
+  @override
+  String get historicalPatternsPositivePatterns => 'Positive Patterns';
+
+  @override
+  String get historicalPatternsNeedsAttention => 'Needs Attention';
+
+  @override
+  String get historicalPatternsRecentAnomalies => 'Recent Anomalies';
+
+  @override
+  String get historicalPatternsDetectedPatterns => 'Detected Patterns';
+
+  @override
+  String get historicalPatternsDaily => 'Daily';
+
+  @override
+  String get historicalPatternsWeekly => 'Weekly';
+
+  @override
+  String get historicalPatternsVariable => 'Variable';
+
+  @override
+  String get historicalPatternsPositive => 'Positive';
+
+  @override
+  String get historicalPatternsModerate => 'Moderate';
+
+  @override
+  String get historicalPatternsHigh => 'High';
+
+  @override
+  String get historicalPatternsOccurrences => 'occurrences';
+
+  @override
+  String get historicalPatternsResolved => 'Resolved';
+
+  @override
+  String get historicalPatternsToday => 'Today';
+
+  @override
+  String get historicalPatternsYesterday => 'Yesterday';
+
+  @override
+  String historicalPatternsDaysAgo(int days) {
+    return '$days days ago';
+  }
+
+  @override
+  String get patternMorningSpikeTitle => 'Morning Blood Pressure Spike';
+
+  @override
+  String patternMorningSpikeDescription(Object diff) {
+    return 'Your morning systolic readings run about $diff mmHg higher than the rest of the day.';
+  }
+
+  @override
+  String get patternMorningSpikeRecommendation =>
+      'Try measuring after 5 minutes seated. If this keeps happening, discuss timing of medication, sleep, and caffeine with your doctor.';
+
+  @override
+  String get patternWeekendReliefTitle => 'Weekend Stress Relief';
+
+  @override
+  String patternWeekendReliefDescription(Object diff) {
+    return 'Your systolic readings are about $diff mmHg lower on weekends compared to weekdays.';
+  }
+
+  @override
+  String get patternWeekendReliefRecommendation =>
+      'Whatever you do on weekends (sleep, walking, less stress) seems to help — try bringing one of those habits into weekdays.';
+
+  @override
+  String get patternHighVariabilityTitle => 'High Variability';
+
+  @override
+  String patternHighVariabilityDescription(Object diff) {
+    return 'Your readings vary quite a bit (about $diff mmHg typical swing).';
+  }
+
+  @override
+  String get patternHighVariabilityRecommendation =>
+      'Try to measure at consistent times each day, avoid measuring right after activity/caffeine, and record notes (stress, sleep, meals).';
+
+  @override
+  String anomalyDeviationHigh(Object value) {
+    return 'Reading is $value mmHg higher than usual.';
+  }
+
+  @override
+  String anomalyDeviationLow(Object value) {
+    return 'Reading is $value mmHg lower than usual.';
+  }
+
+  @override
+  String anomalySpikeIncrease(Object value) {
+    return 'Sudden increase of $value mmHg from previous.';
+  }
+
+  @override
+  String anomalySpikeDecrease(Object value) {
+    return 'Sudden decrease of $value mmHg from previous.';
+  }
+
+  @override
+  String get anomalyResolved => 'Resolved';
+
+  @override
   String medicationAddedMessage(String name) {
-    return '$name has been added to your medications.';
+    return '$name added successfully.';
   }
 
   @override
@@ -819,7 +1041,90 @@ class AppLocalizationsEn extends AppLocalizations {
   String get medicationInstructionsLabel => 'Instructions';
 
   @override
-  String medicationAlreadyExists(Object name) {
+  String medicationAlreadyExists(String name) {
     return '$name is already in your list.';
   }
+
+  @override
+  String get logoutConfirmationMessage => 'Are you sure you want to log out?';
+
+  @override
+  String get loggingOut => 'Logging out...';
+
+  @override
+  String remindersSetCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reminders set',
+      one: '1 reminder set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statusConnecting => 'Connecting...';
+
+  @override
+  String get statusTapToSpeak => 'Tap to speak';
+
+  @override
+  String get statusListening => 'Listening...';
+
+  @override
+  String get statusDetectingSilence => 'Detecting silence...';
+
+  @override
+  String get statusProcessing => 'Processing...';
+
+  @override
+  String get statusTranscribing => 'Transcribing...';
+
+  @override
+  String get statusThinking => 'Thinking...';
+
+  @override
+  String get statusResponseReceived => 'Response received';
+
+  @override
+  String get statusSpeaking => 'Speaking...';
+
+  @override
+  String get statusConnectionError => 'Connection error';
+
+  @override
+  String get statusErrorProcessingAudio => 'Error processing audio';
+
+  @override
+  String get statusClarificationNeeded => 'Clarification needed';
+
+  @override
+  String get statusGeneratingReport => 'Generating report...';
+
+  @override
+  String get statusErrorGeneratingReport => 'Error generating report';
+
+  @override
+  String get statusUnderstandingQuery => 'Understanding your health query...';
+
+  @override
+  String get bpCategoryNormal => 'Normal';
+
+  @override
+  String get bpCategoryElevated => 'Elevated';
+
+  @override
+  String get bpCategoryStage1 => 'Stage 1 Hypertension';
+
+  @override
+  String get bpCategoryStage2 => 'Stage 2 Hypertension';
+
+  @override
+  String get bpCategoryCrisis => 'Hypertensive Crisis';
+
+  @override
+  String get insightsPageTitle => 'Health Assistant';
+
+  @override
+  String get insightsHeroPrompt => 'How are you feeling today?';
 }

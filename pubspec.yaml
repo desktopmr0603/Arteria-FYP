@@ -79,6 +79,7 @@ dependencies:
   confetti: ^0.7.0
   uuid: ^4.5.1
   url_launcher: ^6.3.1
+  http_parser: ^4.1.2
 
 dev_dependencies:
   flutter_test:
@@ -112,6 +113,7 @@ flutter:
     - assets/models/doctor_model.glb
     - assets/models/bp_predictor.tflite
     - assets/models/model_metadata.json
+    - assets/animations/mic-record-button.riv
     - .env
     
 

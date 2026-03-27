@@ -39,25 +39,17 @@ class TrendData extends Equatable {
     );
   }
 
-  /// Classifies blood pressure based on AHA guidelines
+  /// Classifies blood pressure per 2025 AHA/ACC guidelines
   static BPCategory _classifyBP(int systolic, int diastolic) {
-    // Normal: systolic <= 120 AND diastolic <= 80 (includes 120/80)
-    if (systolic <= 120 && diastolic <= 80) return BPCategory.normal;
-    // Elevated: systolic 121-129 AND diastolic <= 80
-    if (systolic > 120 && systolic < 130 && diastolic <= 80)
-      return BPCategory.elevated;
-    // Stage 1 Hypertension: systolic 130-139 OR diastolic 81-89
-    if ((systolic >= 130 && systolic <= 139) ||
-        (diastolic > 80 && diastolic <= 89)) {
-      return BPCategory.hypertensionStage1;
-    }
-    // Stage 2 Hypertension: systolic >= 140 OR diastolic >= 90
-    if (systolic >= 140 || diastolic >= 90) {
-      // Hypertensive Crisis: systolic >= 180 OR diastolic >= 120
-      if (systolic >= 180 || diastolic >= 120)
-        return BPCategory.hypertensiveCrisis;
-      return BPCategory.hypertensionStage2;
-    }
+    // Hypertensive Crisis: systolic >180 AND/OR diastolic >120
+    if (systolic > 180 || diastolic > 120) { return BPCategory.hypertensiveCrisis; }
+    // Stage 2 Hypertension: systolic >=140 OR diastolic >=90
+    if (systolic >= 140 || diastolic >= 90) { return BPCategory.hypertensionStage2; }
+    // Stage 1 Hypertension: systolic >=130 OR diastolic >80
+    if (systolic >= 130 || diastolic > 80) { return BPCategory.hypertensionStage1; }
+    // Elevated: systolic 121-129 AND diastolic <=80
+    if (systolic > 120 && diastolic <= 80) { return BPCategory.elevated; }
+    // Normal: systolic <120 AND diastolic <80
     return BPCategory.normal;
   }
 

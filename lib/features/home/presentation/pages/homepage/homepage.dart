@@ -9,8 +9,9 @@ import 'package:arteria/features/home/presentation/components/emergency_alert_ca
 import 'package:arteria/features/home/presentation/components/family_circle_card.dart';
 import 'package:arteria/features/home/presentation/components/health_tips_card.dart';
 import 'package:arteria/features/home/presentation/components/weekly_overview_card.dart';
-import 'package:arteria/features/home/presentation/pages/microphone_transcribe.dart';
-import 'package:arteria/features/home/presentation/pages/settings/settings_screen.dart';
+import 'package:arteria/features/home/presentation/components/insight_highlight_card.dart';
+import 'package:arteria/features/microphone_transcribe/pages/microphone_transcribe.dart';
+import 'package:arteria/features/home/presentation/pages/settings/pages/settings_screen.dart';
 import 'package:arteria/features/trends/presentation/pages/trends_screen.dart';
 import 'package:arteria/features/home/presentation/pages/Insights/insights_screen.dart';
 import 'package:arteria/features/user%20data/user_bloc.dart';
@@ -81,7 +82,11 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           final userAge = state is UserLoaded
               ? (state.latestReading?['age'] as int?)
               : null;
-          return InsightsScreen(userId: userId, userAge: userAge);
+          return InsightsScreen(
+            userId: userId,
+            userAge: userAge,
+            onNavigateToHome: () => _onTabTapped(0),
+          );
         },
       ),
       const TrendsScreen(),
@@ -205,8 +210,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         label: AppLocalizations.of(context)!.history,
       ),
       _NavItem(
-        icon: Icons.settings_outlined,
-        activeIcon: Icons.settings_rounded,
+        icon: Icons.more_horiz_outlined,
+        activeIcon: Icons.more_horiz_rounded,
         label: AppLocalizations.of(context)!.more,
       ),
     ];
@@ -382,7 +387,9 @@ class DashboardContent extends StatelessWidget {
     return BlocBuilder<UserBloc, UserState>(
       builder: (context, state) {
         final l10n = AppLocalizations.of(context)!;
-        final firstName = state is UserLoaded ? state.firstName : l10n.userDefault;
+        final firstName = state is UserLoaded
+            ? state.firstName
+            : l10n.userDefault;
         final latest = state is UserLoaded ? state.latestReading : null;
 
         return CustomScrollView(
@@ -417,6 +424,9 @@ class DashboardContent extends StatelessWidget {
                     readings: state is UserLoaded ? state.weeklyReadings : [],
                   ),
                   const SizedBox(height: 16),
+                  // Premium AI-driven insight card
+                  const InsightHighlightCard(),
+                  const SizedBox(height: 16),
                   const FamilyCircleCard(),
                   const SizedBox(height: 16),
                   const HealthTipsCard(),
@@ -436,7 +446,9 @@ class DashboardContent extends StatelessWidget {
     bool isFirstReading,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final buttonText = isFirstReading ? l10n.takeFirstReading : l10n.recordNewReading;
+    final buttonText = isFirstReading
+        ? l10n.takeFirstReading
+        : l10n.recordNewReading;
 
     return GestureDetector(
       onTap: onRecordPressed,

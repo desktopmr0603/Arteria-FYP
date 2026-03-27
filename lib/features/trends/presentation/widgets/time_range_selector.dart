@@ -107,7 +107,7 @@ class _TimeRangeSelectorState extends State<TimeRangeSelector> {
       },
       backgroundColor: isDark
           ? theme.cardColor
-          : theme.cardColor.withOpacity(0.8),
+          : theme.cardColor.withValues(alpha: 0.8),
       selectedColor: theme.primaryColor,
       checkmarkColor: isDark ? Colors.white : Colors.white,
       shape: RoundedRectangleBorder(
@@ -192,8 +192,8 @@ class TimeRangeChips extends StatelessWidget {
           }
         },
         backgroundColor: isDark
-            ? theme.cardColor.withOpacity(0.8)
-            : theme.cardColor.withOpacity(0.6),
+            ? theme.cardColor.withValues(alpha: 0.8)
+            : theme.cardColor.withValues(alpha: 0.6),
         selectedColor: theme.primaryColor,
         checkmarkColor: Colors.white,
         shape: RoundedRectangleBorder(
@@ -201,7 +201,7 @@ class TimeRangeChips extends StatelessWidget {
           side: BorderSide(
             color: isSelected
                 ? theme.primaryColor
-                : theme.dividerColor.withOpacity(0.5),
+                : theme.dividerColor.withValues(alpha: 0.5),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -210,7 +210,7 @@ class TimeRangeChips extends StatelessWidget {
           vertical: showLabels ? 12 : 8,
         ),
         elevation: isSelected ? 2 : 0,
-        shadowColor: theme.primaryColor.withOpacity(0.3),
+        shadowColor: theme.primaryColor.withValues(alpha: 0.3),
       ),
     );
   }

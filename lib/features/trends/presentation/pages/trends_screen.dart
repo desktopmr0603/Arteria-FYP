@@ -11,6 +11,12 @@ import 'package:arteria/features/trends/presentation/widgets/bp_line_chart.dart'
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:arteria/l10n/app_localizations.dart';
+import '../../../home/data/data_sources/health_risk_score_service.dart';
+import '../../../home/data/data_sources/bp_anomaly_remote_data_source.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/predictive_timeline.dart';
+import '../widgets/risk_trend_analysis.dart';
+import '../widgets/historical_patterns.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -25,6 +31,13 @@ class _TrendsScreenState extends State<TrendsScreen>
   late AnimationController _fadeController;
   late AnimationController _slideController;
 
+  // Enhanced services for advanced visualizations
+  final HealthRiskScoreService _riskScoreService = HealthRiskScoreService();
+  final BPAnomalyRemoteDataSource _anomalyService = BPAnomalyRemoteDataSource();
+
+  String get _userId =>
+      FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +51,9 @@ class _TrendsScreenState extends State<TrendsScreen>
       vsync: this,
     );
 
+    // Initialize enhanced services
+    _initializeEnhancedServices();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fadeController.forward();
       context.read<TrendsBloc>().add(
@@ -47,6 +63,16 @@ class _TrendsScreenState extends State<TrendsScreen>
         ),
       );
     });
+  }
+
+  Future<void> _initializeEnhancedServices() async {
+    try {
+      await _riskScoreService.initialize();
+      await _anomalyService.initialize(_userId);
+      debugPrint('✅ Enhanced trends services initialized');
+    } catch (e) {
+      debugPrint('⚠️ Error initializing enhanced services: $e');
+    }
   }
 
   @override
@@ -100,13 +126,25 @@ class _TrendsScreenState extends State<TrendsScreen>
                             children: [
                               const SizedBox(height: 16),
                               _buildTimeRangeSelector(),
-                              const SizedBox(height: 20),
-                              _buildChartCard(state, isDark),
                               if (state.isLoaded) ...[
+                                const SizedBox(height: 20),
+                                _buildChartCard(state, isDark),
                                 const SizedBox(height: 20),
                                 _buildSummarySection(state.asLoaded!, isDark),
                                 const SizedBox(height: 20),
                                 _buildReadingsSection(state.asLoaded!, isDark),
+                                const SizedBox(height: 30),
+                                _buildPredictiveTimeline(isDark),
+                                const SizedBox(height: 30),
+                                _buildRiskTrendAnalysis(
+                                  state.asLoaded!,
+                                  isDark,
+                                ),
+                                const SizedBox(height: 30),
+                                _buildHistoricalPatterns(
+                                  state.asLoaded!,
+                                  isDark,
+                                ),
                               ],
                               if (state.isLoading) ...[
                                 const SizedBox(height: 40),
@@ -635,7 +673,7 @@ class _TrendsScreenState extends State<TrendsScreen>
             const SizedBox(height: 16),
             _buildBPGuideRow(
               AppLocalizations.of(context)!.trendsBpNormal,
-              '< 120/80',
+              '≤ 120/80',
               const Color(0xFF10B981),
               isDark,
             ),
@@ -1333,7 +1371,10 @@ class _TrendsScreenState extends State<TrendsScreen>
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  AppLocalizations.of(context)!.trendsReadingsOver(state.trendData.length, _getLocalizedTimeRange(context, _selectedTimeRange)),
+                  AppLocalizations.of(context)!.trendsReadingsOver(
+                    state.trendData.length,
+                    _getLocalizedTimeRange(context, _selectedTimeRange),
+                  ),
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -1361,6 +1402,34 @@ class _TrendsScreenState extends State<TrendsScreen>
           ),
         ),
       ),
+    );
+  }
+
+  // ─────────────── Enhanced Visualizations ───────────────
+
+  Widget _buildPredictiveTimeline(bool isDark) {
+    return PredictiveTimeline(
+      userId: _userId,
+      riskScoreService: _riskScoreService,
+      isDark: isDark,
+    );
+  }
+
+  Widget _buildRiskTrendAnalysis(TrendsLoaded loaded, bool isDark) {
+    return RiskTrendAnalysis(
+      userId: _userId,
+      riskScoreService: _riskScoreService,
+      isDark: isDark,
+      trendData: loaded.trendData,
+    );
+  }
+
+  Widget _buildHistoricalPatterns(TrendsLoaded loaded, bool isDark) {
+    return HistoricalPatterns(
+      userId: _userId,
+      anomalyService: _anomalyService,
+      isDark: isDark,
+      trendData: loaded.trendData,
     );
   }
 }

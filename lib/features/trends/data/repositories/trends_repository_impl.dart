@@ -124,8 +124,6 @@ class TrendsRepositoryImpl implements TrendsRepository {
     required ExportFormat format,
   }) async {
     try {
-      // For now, we'll create a placeholder export result
-      // In a real implementation, this would handle actual file creation
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filename =
           'bp_trends_${timeRange.type.name}_$timestamp${format.fileExtension}';
@@ -241,6 +239,10 @@ class TrendsRepositoryImpl implements TrendsRepository {
   }
 
   /// Calculate standard deviation
+  /// What do the standard deviation values indicate about the user's blood pressure readings?
+  /// Low std dev (e.g., 3):  Consistent readings
+  /// Medium std dev (e.g., 8): Some variation (which isnt good)
+  /// High std dev (e.g., 20): Very inconsistent (critical)
   double _calculateStandardDeviation(List<int> values, double mean) {
     final squaredDiffs = values.map((v) => (v - mean) * (v - mean)).toList();
     final avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b) / values.length;

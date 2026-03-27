@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 class EmergencyContact extends Equatable {
   final String id;
@@ -24,9 +25,7 @@ class EmergencyContact extends Equatable {
       phone: map['phone'] ?? '',
       relationship: map['relationship'] ?? '',
       isPrimary: map['isPrimary'] ?? false,
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
-          : DateTime.now(),
+      createdAt: FirebaseHelpers.parseDateTime(map['createdAt']) ?? DateTime.now(),
     );
   }
 

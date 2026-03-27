@@ -233,7 +233,7 @@ abstract class AppLocalizations {
   /// First time user welcome message
   ///
   /// In en, this message translates to:
-  /// **'Welcome, {name}! 🎉'**
+  /// **'Welcome, {name}!'**
   String welcomeFirstTime(String name);
 
   /// Morning greeting
@@ -464,6 +464,42 @@ abstract class AppLocalizations {
   /// **'Coming soon!'**
   String get comingSoon;
 
+  /// Reset password option
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get resetPassword;
+
+  /// Reset password confirmation message
+  ///
+  /// In en, this message translates to:
+  /// **'A password reset link will be sent to your email address.'**
+  String get resetPasswordMessage;
+
+  /// Password reset success message
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset email sent!'**
+  String get passwordResetSent;
+
+  /// Delete account option
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccount;
+
+  /// Delete account warning message
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to permanently delete your account? This action cannot be undone.'**
+  String get deleteAccountConfirmationMessage;
+
+  /// Account deleted success message
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted successfully.'**
+  String get accountDeleted;
+
   /// Language selection dialog title
   ///
   /// In en, this message translates to:
@@ -659,7 +695,7 @@ abstract class AppLocalizations {
   /// FAQ Answer about Data Training
   ///
   /// In en, this message translates to:
-  /// **'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.'**
+  /// **'We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Qwen3 8b model\'s reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.'**
   String get faqDataTrainingAnswer;
 
   /// Blood Pressure title
@@ -1031,7 +1067,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyCall911.
   ///
   /// In en, this message translates to:
-  /// **'Call 911'**
+  /// **'Call 114'**
   String get emergencyCall911;
 
   /// No description provided for @emergencyCallContact.
@@ -1556,16 +1592,376 @@ abstract class AppLocalizations {
   /// **'Not Now'**
   String get whatIfSimulatorCancel;
 
-  /// Confirm button for the What-If confirmation dialog
+  /// Button to confirm opening simulator
   ///
   /// In en, this message translates to:
   /// **'Open Simulator'**
   String get whatIfSimulatorConfirm;
 
+  /// No description provided for @predictiveTimelineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Predictive Health Timeline'**
+  String get predictiveTimelineTitle;
+
+  /// No description provided for @predictiveTimelineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-powered 30-day health projections'**
+  String get predictiveTimelineSubtitle;
+
+  /// No description provided for @predictiveTimelineAnalyzing.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing health patterns...'**
+  String get predictiveTimelineAnalyzing;
+
+  /// No description provided for @predictiveTimelineDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get predictiveTimelineDay;
+
+  /// No description provided for @predictiveTimelineRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk'**
+  String get predictiveTimelineRisk;
+
+  /// No description provided for @predictiveTimelineConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence'**
+  String get predictiveTimelineConfidence;
+
+  /// No description provided for @predictiveTimelineKeyInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Key Insights'**
+  String get predictiveTimelineKeyInsights;
+
+  /// No description provided for @predictiveTimelineRiskProjection.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk Projection'**
+  String get predictiveTimelineRiskProjection;
+
+  /// No description provided for @predictiveTimelineOver30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'over 30 days'**
+  String get predictiveTimelineOver30Days;
+
+  /// No description provided for @predictiveTimelineConfidenceLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence Level'**
+  String get predictiveTimelineConfidenceLevel;
+
+  /// No description provided for @predictiveTimelineKeyFactors.
+  ///
+  /// In en, this message translates to:
+  /// **'Key Factors'**
+  String get predictiveTimelineKeyFactors;
+
+  /// No description provided for @predictiveTimelineFactorBPTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'BP Trend'**
+  String get predictiveTimelineFactorBPTrend;
+
+  /// No description provided for @predictiveTimelineFactorLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get predictiveTimelineFactorLifestyle;
+
+  /// No description provided for @predictiveTimelineFactorStress.
+  ///
+  /// In en, this message translates to:
+  /// **'Stress'**
+  String get predictiveTimelineFactorStress;
+
+  /// No description provided for @predictiveTimelineFactorMedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication'**
+  String get predictiveTimelineFactorMedication;
+
+  /// No description provided for @riskTrendAnalysisTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk Trend Analysis'**
+  String get riskTrendAnalysisTitle;
+
+  /// No description provided for @riskTrendAnalysisSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'90-day historical analysis with feature impact'**
+  String get riskTrendAnalysisSubtitle;
+
+  /// No description provided for @riskTrendAnalysisAnalyzing.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing risk patterns...'**
+  String get riskTrendAnalysisAnalyzing;
+
+  /// No description provided for @riskTrendAnalysisFeatureImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature Impact Analysis'**
+  String get riskTrendAnalysisFeatureImpact;
+
+  /// No description provided for @riskTrendAnalysisSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk Summary'**
+  String get riskTrendAnalysisSummary;
+
+  /// No description provided for @riskTrendAnalysisCurrentRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Risk'**
+  String get riskTrendAnalysisCurrentRisk;
+
+  /// No description provided for @riskTrendAnalysisWeeklyChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Change'**
+  String get riskTrendAnalysisWeeklyChange;
+
+  /// No description provided for @riskTrendAnalysisMonthlyChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Change'**
+  String get riskTrendAnalysisMonthlyChange;
+
+  /// No description provided for @riskTrendAnalysisLowRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Risk'**
+  String get riskTrendAnalysisLowRisk;
+
+  /// No description provided for @riskTrendAnalysisModerateRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate Risk'**
+  String get riskTrendAnalysisModerateRisk;
+
+  /// No description provided for @riskTrendAnalysisElevatedRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevated Risk'**
+  String get riskTrendAnalysisElevatedRisk;
+
+  /// No description provided for @riskTrendAnalysisHighRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'High Risk'**
+  String get riskTrendAnalysisHighRisk;
+
+  /// No description provided for @riskTrendAnalysisVeryHighRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Very High Risk'**
+  String get riskTrendAnalysisVeryHighRisk;
+
+  /// No description provided for @historicalPatternsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical Patterns'**
+  String get historicalPatternsTitle;
+
+  /// No description provided for @historicalPatternsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-detected patterns and anomalies from your health data'**
+  String get historicalPatternsSubtitle;
+
+  /// No description provided for @historicalPatternsAnalyzing.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing historical patterns...'**
+  String get historicalPatternsAnalyzing;
+
+  /// No description provided for @historicalPatternsPositivePatterns.
+  ///
+  /// In en, this message translates to:
+  /// **'Positive Patterns'**
+  String get historicalPatternsPositivePatterns;
+
+  /// No description provided for @historicalPatternsNeedsAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Attention'**
+  String get historicalPatternsNeedsAttention;
+
+  /// No description provided for @historicalPatternsRecentAnomalies.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Anomalies'**
+  String get historicalPatternsRecentAnomalies;
+
+  /// No description provided for @historicalPatternsDetectedPatterns.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected Patterns'**
+  String get historicalPatternsDetectedPatterns;
+
+  /// No description provided for @historicalPatternsDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get historicalPatternsDaily;
+
+  /// No description provided for @historicalPatternsWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get historicalPatternsWeekly;
+
+  /// No description provided for @historicalPatternsVariable.
+  ///
+  /// In en, this message translates to:
+  /// **'Variable'**
+  String get historicalPatternsVariable;
+
+  /// No description provided for @historicalPatternsPositive.
+  ///
+  /// In en, this message translates to:
+  /// **'Positive'**
+  String get historicalPatternsPositive;
+
+  /// No description provided for @historicalPatternsModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get historicalPatternsModerate;
+
+  /// No description provided for @historicalPatternsHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get historicalPatternsHigh;
+
+  /// No description provided for @historicalPatternsOccurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'occurrences'**
+  String get historicalPatternsOccurrences;
+
+  /// No description provided for @historicalPatternsResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get historicalPatternsResolved;
+
+  /// No description provided for @historicalPatternsToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get historicalPatternsToday;
+
+  /// No description provided for @historicalPatternsYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get historicalPatternsYesterday;
+
+  /// No description provided for @historicalPatternsDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days ago'**
+  String historicalPatternsDaysAgo(int days);
+
+  /// No description provided for @patternMorningSpikeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning Blood Pressure Spike'**
+  String get patternMorningSpikeTitle;
+
+  /// No description provided for @patternMorningSpikeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your morning systolic readings run about {diff} mmHg higher than the rest of the day.'**
+  String patternMorningSpikeDescription(Object diff);
+
+  /// No description provided for @patternMorningSpikeRecommendation.
+  ///
+  /// In en, this message translates to:
+  /// **'Try measuring after 5 minutes seated. If this keeps happening, discuss timing of medication, sleep, and caffeine with your doctor.'**
+  String get patternMorningSpikeRecommendation;
+
+  /// No description provided for @patternWeekendReliefTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekend Stress Relief'**
+  String get patternWeekendReliefTitle;
+
+  /// No description provided for @patternWeekendReliefDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your systolic readings are about {diff} mmHg lower on weekends compared to weekdays.'**
+  String patternWeekendReliefDescription(Object diff);
+
+  /// No description provided for @patternWeekendReliefRecommendation.
+  ///
+  /// In en, this message translates to:
+  /// **'Whatever you do on weekends (sleep, walking, less stress) seems to help — try bringing one of those habits into weekdays.'**
+  String get patternWeekendReliefRecommendation;
+
+  /// No description provided for @patternHighVariabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'High Variability'**
+  String get patternHighVariabilityTitle;
+
+  /// No description provided for @patternHighVariabilityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your readings vary quite a bit (about {diff} mmHg typical swing).'**
+  String patternHighVariabilityDescription(Object diff);
+
+  /// No description provided for @patternHighVariabilityRecommendation.
+  ///
+  /// In en, this message translates to:
+  /// **'Try to measure at consistent times each day, avoid measuring right after activity/caffeine, and record notes (stress, sleep, meals).'**
+  String get patternHighVariabilityRecommendation;
+
+  /// No description provided for @anomalyDeviationHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading is {value} mmHg higher than usual.'**
+  String anomalyDeviationHigh(Object value);
+
+  /// No description provided for @anomalyDeviationLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading is {value} mmHg lower than usual.'**
+  String anomalyDeviationLow(Object value);
+
+  /// No description provided for @anomalySpikeIncrease.
+  ///
+  /// In en, this message translates to:
+  /// **'Sudden increase of {value} mmHg from previous.'**
+  String anomalySpikeIncrease(Object value);
+
+  /// No description provided for @anomalySpikeDecrease.
+  ///
+  /// In en, this message translates to:
+  /// **'Sudden decrease of {value} mmHg from previous.'**
+  String anomalySpikeDecrease(Object value);
+
+  /// No description provided for @anomalyResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get anomalyResolved;
+
   /// Success message when a medication is added via AI
   ///
   /// In en, this message translates to:
-  /// **'{name} has been added to your medications.'**
+  /// **'{name} added successfully.'**
   String medicationAddedMessage(String name);
 
   /// No description provided for @medicationAddError.
@@ -1604,11 +2000,161 @@ abstract class AppLocalizations {
   /// **'Instructions'**
   String get medicationInstructionsLabel;
 
-  /// No description provided for @medicationAlreadyExists.
+  /// Error message when medication already exists
   ///
   /// In en, this message translates to:
   /// **'{name} is already in your list.'**
-  String medicationAlreadyExists(Object name);
+  String medicationAlreadyExists(String name);
+
+  /// Logout confirmation dialog message
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get logoutConfirmationMessage;
+
+  /// Logging out loading message
+  ///
+  /// In en, this message translates to:
+  /// **'Logging out...'**
+  String get loggingOut;
+
+  /// Number of reminders set for medication
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 reminder set} other{{count} reminders set}}'**
+  String remindersSetCount(int count);
+
+  /// No description provided for @statusConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get statusConnecting;
+
+  /// No description provided for @statusTapToSpeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to speak'**
+  String get statusTapToSpeak;
+
+  /// No description provided for @statusListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening...'**
+  String get statusListening;
+
+  /// No description provided for @statusDetectingSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'Detecting silence...'**
+  String get statusDetectingSilence;
+
+  /// No description provided for @statusProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get statusProcessing;
+
+  /// No description provided for @statusTranscribing.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribing...'**
+  String get statusTranscribing;
+
+  /// No description provided for @statusThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking...'**
+  String get statusThinking;
+
+  /// No description provided for @statusResponseReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Response received'**
+  String get statusResponseReceived;
+
+  /// No description provided for @statusSpeaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking...'**
+  String get statusSpeaking;
+
+  /// No description provided for @statusConnectionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection error'**
+  String get statusConnectionError;
+
+  /// No description provided for @statusErrorProcessingAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Error processing audio'**
+  String get statusErrorProcessingAudio;
+
+  /// No description provided for @statusClarificationNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Clarification needed'**
+  String get statusClarificationNeeded;
+
+  /// No description provided for @statusGeneratingReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating report...'**
+  String get statusGeneratingReport;
+
+  /// No description provided for @statusErrorGeneratingReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Error generating report'**
+  String get statusErrorGeneratingReport;
+
+  /// No description provided for @statusUnderstandingQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Understanding your health query...'**
+  String get statusUnderstandingQuery;
+
+  /// No description provided for @bpCategoryNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get bpCategoryNormal;
+
+  /// No description provided for @bpCategoryElevated.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevated'**
+  String get bpCategoryElevated;
+
+  /// No description provided for @bpCategoryStage1.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage 1 Hypertension'**
+  String get bpCategoryStage1;
+
+  /// No description provided for @bpCategoryStage2.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage 2 Hypertension'**
+  String get bpCategoryStage2;
+
+  /// No description provided for @bpCategoryCrisis.
+  ///
+  /// In en, this message translates to:
+  /// **'Hypertensive Crisis'**
+  String get bpCategoryCrisis;
+
+  /// Page title for the Insights conversational assistant screen
+  ///
+  /// In en, this message translates to:
+  /// **'Health Assistant'**
+  String get insightsPageTitle;
+
+  /// Primary hero prompt shown above the avatar on the Insights screen
+  ///
+  /// In en, this message translates to:
+  /// **'How are you feeling today?'**
+  String get insightsHeroPrompt;
 }
 
 class _AppLocalizationsDelegate

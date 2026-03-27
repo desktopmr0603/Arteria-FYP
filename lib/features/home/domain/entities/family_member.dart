@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 enum FamilyInviteStatus {
   pending,
@@ -85,13 +86,9 @@ class FamilyMember extends Equatable {
         (e) => e.name == map['status'],
         orElse: () => FamilyInviteStatus.pending,
       ),
-      lastReadingAt: map['lastReadingAt'] != null
-          ? DateTime.parse(map['lastReadingAt'])
-          : null,
+      lastReadingAt: FirebaseHelpers.parseDateTime(map['lastReadingAt']),
       lastReading: map['lastReading'],
-      addedAt: map['addedAt'] != null
-          ? DateTime.parse(map['addedAt'])
-          : DateTime.now(),
+      addedAt: FirebaseHelpers.parseDateTime(map['addedAt']) ?? DateTime.now(),
     );
   }
 
@@ -196,12 +193,8 @@ class FamilyInvite extends Equatable {
         (e) => e.name == map['status'],
         orElse: () => FamilyInviteStatus.pending,
       ),
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
-          : DateTime.now(),
-      expiresAt: map['expiresAt'] != null
-          ? DateTime.parse(map['expiresAt'])
-          : DateTime.now().add(const Duration(days: 7)),
+      createdAt: FirebaseHelpers.parseDateTime(map['createdAt']) ?? DateTime.now(),
+      expiresAt: FirebaseHelpers.parseDateTime(map['expiresAt']) ?? DateTime.now().add(const Duration(days: 7)),
     );
   }
 

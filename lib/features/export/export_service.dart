@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,9 +13,9 @@ class ExportService {
   Future<Uint8List> generateBPReportPdf() async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User not logged in');
-    
+
     debugPrint('ExportService: Starting PDF generation for user ${user.uid}');
-    
+
     try {
       // Fetch user profile
       debugPrint('ExportService: Fetching user profile...');
@@ -26,17 +25,23 @@ class ExportService {
 
       // Fetch all BP readings
       debugPrint('ExportService: Fetching BP readings...');
+
+      // fetch user's blood pressure readings
       final readingsSnapshot = await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('readings')
           .orderBy('date', descending: true)
           .get();
-      debugPrint('ExportService: Found ${readingsSnapshot.docs.length} readings');
+      debugPrint(
+        'ExportService: Found ${readingsSnapshot.docs.length} readings',
+      );
 
       final readings = readingsSnapshot.docs.map((doc) {
         final data = doc.data();
-        // Safely parse numbers to int
+        // Firestore can store numbers as int, double, or String
+        // Different devices may serialize data differently
+        // this prevents crashes from type mismatches and ensures we get an int value for systolic and diastolic
         int parseToInt(dynamic value) {
           if (value == null) return 0;
           if (value is int) return value;
@@ -57,7 +62,9 @@ class ExportService {
 
       debugPrint('ExportService: Building PDF document...');
       final pdfBytes = await _buildPdf(userData, readings);
-      debugPrint('ExportService: PDF generated successfully, size: ${pdfBytes.length} bytes');
+      debugPrint(
+        'ExportService: PDF generated successfully, size: ${pdfBytes.length} bytes',
+      );
       return pdfBytes;
     } catch (e, stackTrace) {
       debugPrint('ExportService ERROR: $e');
@@ -84,10 +91,18 @@ class ExportService {
       userName = 'User';
     }
 
-    final age = (userData['age']?.toString() ?? '').isEmpty ? '—' : userData['age'].toString();
-    final gender = (userData['gender'] ?? '').toString().trim().isEmpty ? '—' : userData['gender'].toString();
-    final height = (userData['height']?.toString() ?? '').isEmpty ? '—' : userData['height'].toString();
-    final weight = (userData['weight']?.toString() ?? '').isEmpty ? '—' : userData['weight'].toString();
+    final age = (userData['age']?.toString() ?? '').isEmpty
+        ? '—'
+        : userData['age'].toString();
+    final gender = (userData['gender'] ?? '').toString().trim().isEmpty
+        ? '—'
+        : userData['gender'].toString();
+    final height = (userData['height']?.toString() ?? '').isEmpty
+        ? '—'
+        : userData['height'].toString();
+    final weight = (userData['weight']?.toString() ?? '').isEmpty
+        ? '—'
+        : userData['weight'].toString();
 
     // Calculate statistics
     int totalSystolic = 0;
@@ -96,8 +111,12 @@ class ExportService {
       totalSystolic += (r['systolic'] as int? ?? 0);
       totalDiastolic += (r['diastolic'] as int? ?? 0);
     }
-    final avgSystolic = readings.isNotEmpty ? totalSystolic ~/ readings.length : 0;
-    final avgDiastolic = readings.isNotEmpty ? totalDiastolic ~/ readings.length : 0;
+    final avgSystolic = readings.isNotEmpty
+        ? totalSystolic ~/ readings.length
+        : 0;
+    final avgDiastolic = readings.isNotEmpty
+        ? totalDiastolic ~/ readings.length
+        : 0;
 
     pdf.addPage(
       pw.MultiPage(
@@ -112,7 +131,12 @@ class ExportService {
 
           // Statistics Summary
           if (readings.isNotEmpty) ...[
-            _buildStatisticsCard(readings, avgSystolic, avgDiastolic, dateFormat),
+            _buildStatisticsCard(
+              readings,
+              avgSystolic,
+              avgDiastolic,
+              dateFormat,
+            ),
             pw.SizedBox(height: 24),
           ],
 
@@ -124,6 +148,10 @@ class ExportService {
 
     return pdf.save();
   }
+
+  // The following sections will build different parts of the PDF document, such as the header, footer,
+  // profile card, statistics card, and readings table. Each section is designed to be visually appealing and informative,
+  // following a consistent color scheme and layout.
 
   pw.Widget _buildHeader(String userName, DateTime now, DateFormat dateFormat) {
     return pw.Container(
@@ -150,10 +178,7 @@ class ExportService {
               pw.SizedBox(height: 4),
               pw.Text(
                 'Blood Pressure Health Report',
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  color: PdfColors.grey700,
-                ),
+                style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
               ),
             ],
           ),
@@ -250,8 +275,12 @@ class ExportService {
     int avgDiastolic,
     DateFormat dateFormat,
   ) {
-    final firstDate = readings.isNotEmpty ? readings.last['date'] as DateTime : DateTime.now();
-    final lastDate = readings.isNotEmpty ? readings.first['date'] as DateTime : DateTime.now();
+    final firstDate = readings.isNotEmpty
+        ? readings.last['date'] as DateTime
+        : DateTime.now();
+    final lastDate = readings.isNotEmpty
+        ? readings.first['date'] as DateTime
+        : DateTime.now();
     final avgCategory = _getCategory(avgSystolic, avgDiastolic);
 
     return pw.Container(
@@ -259,7 +288,10 @@ class ExportService {
       decoration: pw.BoxDecoration(
         color: const PdfColor.fromInt(0xFFFFF5F5),
         borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(color: const PdfColor.fromInt(0xFFE63946), width: 0.5),
+        border: pw.Border.all(
+          color: const PdfColor.fromInt(0xFFE63946),
+          width: 0.5,
+        ),
       ),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
@@ -267,7 +299,10 @@ class ExportService {
           _statItem('Total Readings', '${readings.length}'),
           _statItem('Average BP', '$avgSystolic/$avgDiastolic mmHg'),
           _statItem('Average Category', avgCategory),
-          _statItem('Date Range', '${dateFormat.format(firstDate)} - ${dateFormat.format(lastDate)}'),
+          _statItem(
+            'Date Range',
+            '${dateFormat.format(firstDate)} - ${dateFormat.format(lastDate)}',
+          ),
         ],
       ),
     );
@@ -323,7 +358,10 @@ class ExportService {
         ),
         pw.SizedBox(height: 12),
         pw.Table(
-          border: pw.TableBorder.all(color: const PdfColor.fromInt(0xFFE0E0E0), width: 0.5),
+          border: pw.TableBorder.all(
+            color: const PdfColor.fromInt(0xFFE0E0E0),
+            width: 0.5,
+          ),
           columnWidths: {
             0: const pw.FlexColumnWidth(2),
             1: const pw.FlexColumnWidth(1.5),
@@ -333,7 +371,9 @@ class ExportService {
           children: [
             // Header row
             pw.TableRow(
-              decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF8F9FA)),
+              decoration: const pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFF8F9FA),
+              ),
               children: [
                 _tableHeader('Date & Time'),
                 _tableHeader('Systolic'),
@@ -351,7 +391,9 @@ class ExportService {
 
               return pw.TableRow(
                 children: [
-                  _tableCell('${dateFormat.format(date)} ${timeFormat.format(date)}'),
+                  _tableCell(
+                    '${dateFormat.format(date)} ${timeFormat.format(date)}',
+                  ),
                   _tableCell('$systolic mmHg'),
                   _tableCell('$diastolic mmHg'),
                   _tableCellColored(category, categoryColor),
@@ -386,18 +428,21 @@ class ExportService {
       padding: const pw.EdgeInsets.all(8),
       child: pw.Text(
         text,
-        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: color),
+        style: pw.TextStyle(
+          fontSize: 10,
+          fontWeight: pw.FontWeight.bold,
+          color: color,
+        ),
       ),
     );
   }
 
   String _getCategory(int systolic, int diastolic) {
-    if (systolic < 120 && diastolic < 80) return 'Normal';
-    if (systolic < 130 && diastolic < 80) return 'Elevated';
-    if (systolic < 140 || diastolic < 90) return 'Stage 1 Hypertension';
-    if (systolic >= 140 || diastolic >= 90) return 'Stage 2 Hypertension';
     if (systolic > 180 || diastolic > 120) return 'Hypertensive Crisis';
-    return 'Unknown';
+    if (systolic >= 140 || diastolic >= 90) return 'Stage 2 Hypertension';
+    if (systolic >= 130 || diastolic > 80) return 'Stage 1 Hypertension';
+    if (systolic > 120 && diastolic <= 80) return 'Elevated';
+    return 'Normal';
   }
 
   PdfColor _getCategoryColor(String category) {

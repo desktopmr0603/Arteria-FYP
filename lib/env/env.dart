@@ -9,4 +9,7 @@ abstract class Env {
 
   @EnviedField(varName: 'RUNPOD_API_KEY')
   static const String runpodApiKey = _Env.runpodApiKey;
+
+  @EnviedField(varName: 'QWEN_SERVER_URL', defaultValue: 'http://localhost:8000')
+  static const String qwenServerUrl = _Env.qwenServerUrl;
 }

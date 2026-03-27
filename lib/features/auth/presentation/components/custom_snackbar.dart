@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class CustomSnackBar {
+  /// Displays a floating Snackbar with an icon and a text message.
+  /// The snack bar automatically adapts to the app's current ThemeData using `colorScheme.error` as the default background and
+  /// `colorScheme.onError` for the icon and text colors.
+
   static void show(
     BuildContext context,
     String message, {

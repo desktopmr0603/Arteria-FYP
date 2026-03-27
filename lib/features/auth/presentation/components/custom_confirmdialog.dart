@@ -21,63 +21,77 @@ class CustomConfirmDialog extends StatelessWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
       backgroundColor: theme.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.montserrat(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              content,
-              style: GoogleFonts.openSans(
-                fontSize: 16,
-                color: theme.textTheme.bodyMedium?.color,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: Text(
-                    cancelText,
-                    style: GoogleFonts.openSans(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.montserrat(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    confirmText,
-                    style: GoogleFonts.montserrat(
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onPrimary,
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                content,
+                style: GoogleFonts.openSans(
+                  fontSize: 16,
+                  color: theme.textTheme.bodyMedium?.color,
                 ),
-              ],
-            )
-          ],
+                softWrap: true,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(
+                        cancelText,
+                        style: GoogleFonts.openSans(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 1,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        confirmText,
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

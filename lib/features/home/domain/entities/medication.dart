@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 enum MedicationFrequency {
   onceDaily,
@@ -77,13 +78,9 @@ class Medication extends Equatable {
       ),
       times: List<String>.from(map['times'] ?? []),
       isActive: map['isActive'] ?? true,
-      lastTakenAt: map['lastTakenAt'] != null
-          ? DateTime.parse(map['lastTakenAt'])
-          : null,
+      lastTakenAt: FirebaseHelpers.parseDateTime(map['lastTakenAt']),
       takenToday: map['takenToday'] ?? false,
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
-          : DateTime.now(),
+      createdAt: FirebaseHelpers.parseDateTime(map['createdAt']) ?? DateTime.now(),
       instructions: map['instructions'],
       color: map['color'] != null
           ? Color(map['color'])
@@ -170,7 +167,7 @@ class MedicationLog extends Equatable {
     return MedicationLog(
       id: map['id'] ?? '',
       medicationId: map['medicationId'] ?? '',
-      takenAt: DateTime.parse(map['takenAt']),
+      takenAt: FirebaseHelpers.parseDateTime(map['takenAt']) ?? DateTime.now(),
       skipped: map['skipped'] ?? false,
       notes: map['notes'],
     );

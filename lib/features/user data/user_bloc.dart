@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'user_event.dart';
 import 'user_state.dart';
+import 'package:arteria/features/home/data/data_sources/health_risk_score_service.dart';
+import 'package:arteria/features/home/data/data_sources/insight_generator_service.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
   UserBloc() : super(UserLoading()) {
@@ -61,7 +64,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
           .orderBy('date', descending: true)
           .get();
 
-      final List<Map<String, dynamic>> weeklyReadings = weeklyQuery.docs.map((doc) {
+      final List<Map<String, dynamic>> weeklyReadings = weeklyQuery.docs.map((
+        doc,
+      ) {
         final data = doc.data();
         final date = data['date'];
         return {
@@ -97,7 +102,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         return;
       }
 
-      // store inside the user's bp readings database
+      // Store inside the user's bp readings database
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -108,10 +113,175 @@ class UserBloc extends Bloc<UserEvent, UserState> {
             'date': FieldValue.serverTimestamp(),
           });
 
+      // Auto-compute and store risk score after saving BP reading
+      // This populates the risk_scores collection so the Risk Trend chart
+      // shows real model-based scores instead of a heuristic fallback.
+      _computeAndStoreRiskScore(user.uid, event.systolic, event.diastolic);
+
       // Reload data after saving
       add(LoadUserData());
     } catch (e) {
       emit(UserError('Failed to save reading: $e'));
     }
+  }
+
+  /// Compute risk score in background after a BP reading is recorded.
+  /// Uses real user data from Firestore to build the feature vector.
+  Future<void> _computeAndStoreRiskScore(
+    String uid,
+    int newSystolic,
+    int newDiastolic,
+  ) async {
+    try {
+      final userFeatures = await _buildUserFeaturesFromFirebase(
+        uid,
+        newSystolic,
+        newDiastolic,
+      );
+
+      // Trigger GPT Insight Generation asynchronously without awaiting so it doesn't block RiskService
+      InsightGeneratorService.generateAndSaveInsight(
+        uid: uid,
+        newSystolic: newSystolic.toDouble(),
+        newDiastolic: newDiastolic.toDouble(),
+        avgSystolic: userFeatures['avg_systolic'] as double? ?? newSystolic.toDouble(),
+        avgDiastolic: userFeatures['avg_diastolic'] as double? ?? newDiastolic.toDouble(),
+        hasSymptoms: false,
+      );
+
+      final riskService = HealthRiskScoreService();
+      await riskService.initialize();
+      await riskService.calculateRiskScore(
+        userId: uid,
+        userFeatures: userFeatures,
+      );
+      riskService.dispose();
+
+      debugPrint('✅ Risk score computed and stored after BP recording');
+    } catch (e) {
+      // Non-critical — don't block the save flow
+      debugPrint('⚠️ Risk score computation failed (non-blocking): $e');
+    }
+  }
+
+  /// Build a real userFeatures map from Firestore data for the TFLite model.
+  Future<Map<String, dynamic>> _buildUserFeaturesFromFirebase(
+    String uid,
+    int newSystolic,
+    int newDiastolic,
+  ) async {
+    final firestore = FirebaseFirestore.instance;
+    final userRef = firestore.collection('users').doc(uid);
+
+    // 1. User profile (age, gender)
+    final userDoc = await userRef.get();
+    final userData = userDoc.data() ?? {};
+    final age = userData['age'] as int? ?? 45;
+    final gender = userData['gender'] as String? ?? 'Unknown';
+
+    // 2. Medical profile (smoking, diabetes, activity, weight, height)
+    final medicalDoc = await userRef
+        .collection('medicalProfile')
+        .doc('current')
+        .get();
+    final medical = medicalDoc.exists
+        ? medicalDoc.data() ?? {}
+        : <String, dynamic>{};
+
+    final smoker = (medical['smoker'] as bool?) == true ? 1.0 : 0.0;
+    final hasDiabetes = (medical['hasDiabetes'] as bool?) == true ? 1.0 : 0.0;
+    final weight = (medical['weight'] as num?)?.toDouble();
+    final height = (medical['height'] as num?)?.toDouble();
+    double bmi = 25.0; // default
+    if (weight != null && height != null && height > 0) {
+      final heightM = height / 100.0;
+      bmi = weight / (heightM * heightM);
+    }
+
+    // Map physical activity level to a score
+    final activityStr = (medical['physicalActivity'] as String?) ?? '';
+    double activityScore;
+    switch (activityStr.toLowerCase()) {
+      case 'very active':
+      case 'high':
+        activityScore = 2.5;
+        break;
+      case 'active':
+      case 'moderate':
+        activityScore = 1.5;
+        break;
+      case 'light':
+      case 'low':
+        activityScore = 0.8;
+        break;
+      case 'sedentary':
+      case 'none':
+        activityScore = 0.3;
+        break;
+      default:
+        activityScore = 1.0;
+    }
+
+    // 3. Recent BP readings to calculate averages
+    final now = DateTime.now();
+    final monthAgo = now.subtract(const Duration(days: 30));
+    final readingsQuery = await userRef
+        .collection('readings')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(monthAgo))
+        .orderBy('date', descending: true)
+        .limit(30)
+        .get();
+
+    double avgSystolic = newSystolic.toDouble();
+    double avgDiastolic = newDiastolic.toDouble();
+
+    if (readingsQuery.docs.isNotEmpty) {
+      final allSys =
+          readingsQuery.docs
+              .map((d) => (d.data()['systolic'] as num?)?.toDouble())
+              .whereType<double>()
+              .toList()
+            ..add(newSystolic.toDouble());
+      final allDia =
+          readingsQuery.docs
+              .map((d) => (d.data()['diastolic'] as num?)?.toDouble())
+              .whereType<double>()
+              .toList()
+            ..add(newDiastolic.toDouble());
+
+      avgSystolic = allSys.reduce((a, b) => a + b) / allSys.length;
+      avgDiastolic = allDia.reduce((a, b) => a + b) / allDia.length;
+    }
+
+    // Estimate sedentary minutes from activity level
+    double sedentaryMinutes;
+    if (activityScore >= 2.0) {
+      sedentaryMinutes = 180;
+    } else if (activityScore >= 1.0) {
+      sedentaryMinutes = 360;
+    } else {
+      sedentaryMinutes = 540;
+    }
+
+    return {
+      'age': age,
+      'gender': gender,
+      'avg_systolic': avgSystolic,
+      'avg_diastolic': avgDiastolic,
+      'latest_systolic': newSystolic,
+      'latest_diastolic': newDiastolic,
+      'bmi': bmi,
+      'smoker_status': smoker,
+      'has_diabetes': hasDiabetes,
+      'physical_activity_score': activityScore,
+      'sedentary_minutes': sedentaryMinutes,
+      'sodium_intake': 2300, // default estimate, refine if user logs diet
+      'total_cholesterol': 200, // default estimate
+      'fasting_glucose': 100, // default estimate
+      'alcohol_use': 0,
+      'takes_bp_medication':
+          (medical['medications'] as String?)?.isNotEmpty == true ? 1.0 : 0.0,
+      'has_heart_condition': 0,
+    };
   }
 }

@@ -146,8 +146,12 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                         children: [
                           Text(
                             isCritical
-                                ? AppLocalizations.of(context)!.emergencyHypertensiveCrisis
-                                : AppLocalizations.of(context)!.emergencyHighBloodPressure,
+                                ? AppLocalizations.of(
+                                    context,
+                                  )!.emergencyHypertensiveCrisis
+                                : AppLocalizations.of(
+                                    context,
+                                  )!.emergencyHighBloodPressure,
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -184,7 +188,9 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                   child: Text(
                     isCritical
                         ? AppLocalizations.of(context)!.emergencySeekImmediate
-                        : AppLocalizations.of(context)!.emergencyContactProvider,
+                        : AppLocalizations.of(
+                            context,
+                          )!.emergencyContactProvider,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -201,14 +207,16 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                         label: AppLocalizations.of(context)!.emergencyCall911,
                         icon: Icons.call_rounded,
                         isEmergency: true,
-                        onTap: () => launchUrl(Uri.parse('tel:911')),
+                        onTap: () => launchUrl(Uri.parse('tel:114')),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionButton(
                         context,
-                        label: AppLocalizations.of(context)!.emergencyCallContact,
+                        label: AppLocalizations.of(
+                          context,
+                        )!.emergencyCallContact,
                         icon: Icons.person_rounded,
                         isEmergency: false,
                         onTap: _primaryContact != null
@@ -291,7 +299,7 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           gradient: isEmergency
               ? LinearGradient(
@@ -312,15 +320,19 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, color: iconColor),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: textColor,
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -361,18 +373,20 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      'Add Emergency Contact',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context)!.emergencyAddContactTitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'This person will be notified in case of emergency',
+                  AppLocalizations.of(context)!.emergencyContactNotified,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -381,22 +395,22 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                 const SizedBox(height: 24),
                 _buildTextField(
                   controller: nameController,
-                  label: 'Contact Name',
+                  label: AppLocalizations.of(context)!.emergencyContactName,
                   icon: Icons.person_rounded,
                   hint: 'e.g., John Doe',
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   controller: phoneController,
-                  label: 'Phone Number',
+                  label: AppLocalizations.of(context)!.emergencyPhoneNumber,
                   icon: Icons.call_rounded,
-                  hint: '+1 (555) 123-4567',
+                  hint: '+230 5789 1234',
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   controller: relationshipController,
-                  label: 'Relationship',
+                  label: AppLocalizations.of(context)!.emergencyRelationship,
                   icon: Icons.family_restroom_rounded,
                   hint: 'e.g., Son, Daughter, Spouse',
                 ),
@@ -418,7 +432,7 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('Save Contact'),
+                    child: Text(AppLocalizations.of(context)!.emergencySaveContact),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -427,7 +441,7 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
-                      'Cancel',
+                      AppLocalizations.of(context)!.cancel,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

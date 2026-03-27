@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -22,16 +24,15 @@ class MicrophoneTranscribeBloc
   Timer? _recordingTimer;
   StreamSubscription? _audioPlayerSubscription;
 
-  // Endpoints
-  static const String _whisperEndpoint =
-      'https://api.runpod.ai/v2/qpo2u2i4x2rutp/runsync';
-  static const String _apiBaseUrl = 'https://arteriamain.share.zrok.io';
-  static String get _fastApiEndpoint => '$_apiBaseUrl/analyze/smart'; // 2025: LangGraph + RAG
-  static String get _speakEndpoint => '$_apiBaseUrl/speak';
+  // OpenAI Configuration
+  static const String _openAIModel = 'gpt-4.1-mini-2025-04-14';
+  static const String _whisperModel = 'whisper-1';
+  static const String _ttsModel = 'tts-1';
+  static const String _ttsVoice = 'alloy';
 
   String _selectedLanguage = 'en';
   Map<String, dynamic>? _userProfile;
-  final List<Map<String, String>> _conversationHistory = [];
+
 
   MicrophoneTranscribeBloc({String language = 'en'}) : _selectedLanguage = language, super(const MicrophoneTranscribeInitialState()) {
     on<StartRecordingEvent>(_onStartRecording);
@@ -83,7 +84,7 @@ class MicrophoneTranscribeBloc
         'physical_activity': data['physicalActivity'] as String?,
       };
     } catch (e) {
-      print('❌ Failed to load user profile: $e');
+      debugPrint('❌ Failed to load user profile: $e');
     }
   }
 
@@ -93,13 +94,12 @@ class MicrophoneTranscribeBloc
   ) async {
     try {
       final dir = await getTemporaryDirectory();
+      // Use .wav extension for full backend compatibility (OpenAI Whisper + librosa)
       _audioPath =
-          '${dir.path}/bp_recording_${DateTime.now().millisecondsSinceEpoch}.aac';
+          '${dir.path}/bp_recording_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-      bool supported = await _recorder.isEncoderSupported(Codec.aacADTS);
-      final codec = supported ? Codec.aacADTS : Codec.aacMP4;
-
-      await _recorder.startRecorder(toFile: _audioPath, codec: codec);
+      // Use pcm16WAV codec which produces WAV files natively supported by python backends
+      await _recorder.startRecorder(toFile: _audioPath, codec: Codec.pcm16WAV);
 
       emit(const RecordingState(secondsElapsed: 0));
 
@@ -160,53 +160,66 @@ class MicrophoneTranscribeBloc
   }
 
   Future<void> _transcribeAudio() async {
-    final runpodKey = Env.runpodApiKey;
-    if (runpodKey.isEmpty) {
-      add(const TranscriptionFailedEvent('RunPod API key missing'));
+    final openaiKey = Env.openaiApiKey;
+    if (openaiKey.isEmpty) {
+      add(const TranscriptionFailedEvent('OpenAI API key missing'));
       return;
     }
 
     try {
-      final bytes = await File(_audioPath!).readAsBytes();
+      final audioFile = File(_audioPath!);
+      final bytes = await audioFile.readAsBytes();
       if (bytes.isEmpty) {
         add(const TranscriptionFailedEvent('Empty audio file'));
         return;
       }
 
-      final response = await http
-          .post(
-            Uri.parse(_whisperEndpoint),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $runpodKey',
-            },
-            body: jsonEncode({
-              'input': {
-                'audio_base64': base64Encode(bytes),
-                'model': 'turbo',
-                'transcription': 'plain_text',
-                'language': _selectedLanguage,
-              },
-            }),
-          )
-          .timeout(const Duration(seconds: 60));
+      debugPrint('🎤 Transcribing audio: ${bytes.length} bytes');
 
+      // Use OpenAI Whisper API
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://api.openai.com/v1/audio/transcriptions'),
+      );
+      
+      request.headers['Authorization'] = 'Bearer $openaiKey';
+      request.fields['model'] = _whisperModel;
+      request.fields['language'] = _selectedLanguage;
+      request.fields['response_format'] = 'text';
+      
+      // CRITICAL: Include contentType for OpenAI to accept the file
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: 'audio.m4a',
+          contentType: MediaType('audio', 'mp4'),
+        ),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📝 OpenAI Whisper response: ${response.statusCode}');
+      
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final text = (data['output']?['transcription'] as String?)?.trim();
-        if (text == null || text.isEmpty) {
+        final text = response.body.trim();
+        if (text.isEmpty) {
           add(const TranscriptionFailedEvent('No speech detected'));
         } else {
+          debugPrint('✅ Transcription: $text');
           add(TranscriptionCompletedEvent(text));
         }
       } else {
+        debugPrint('❌ OpenAI Whisper error: ${response.body}');
         add(
           TranscriptionFailedEvent(
-            'Transcription failed (${response.statusCode})',
+            'Transcription failed (${response.statusCode}): ${response.body}',
           ),
         );
       }
     } catch (e) {
+      debugPrint('❌ Transcription exception: $e');
       add(TranscriptionFailedEvent('Transcription error: ${e.toString()}'));
     } finally {
       // Clean up audio file
@@ -329,91 +342,117 @@ class MicrophoneTranscribeBloc
   Future<void> _analyzeWithLLM(Map<String, int> parsedBP) async {
     final sys = parsedBP['systolic'] ?? 120;
     final dia = parsedBP['diastolic'] ?? 80;
+    final openaiKey = Env.openaiApiKey;
+
+    if (openaiKey.isEmpty) {
+      add(const LLMAnalysisFailedEvent('OpenAI API key missing'));
+      return;
+    }
 
     try {
-      final Map<String, dynamic> userProfilePayload = {};
-
+      // Build user context from profile
+      String userContext = '';
       if (_userProfile != null) {
-        if (_userProfile!['age'] != null) {
-          userProfilePayload['age'] = _userProfile!['age'];
-        }
-        if (_userProfile!['gender'] != null) {
-          userProfilePayload['gender'] = _userProfile!['gender'];
-        }
-        if (_userProfile!['weight_kg'] != null) {
-          userProfilePayload['weight_kg'] = _userProfile!['weight_kg'];
-        }
-        if (_userProfile!['height_cm'] != null) {
-          userProfilePayload['height_cm'] = _userProfile!['height_cm'];
-        }
-        if (_userProfile!['smoker'] != null) {
-          userProfilePayload['smoker'] = _userProfile!['smoker'];
-        }
-        if (_userProfile!['is_pregnant'] != null) {
-          userProfilePayload['is_pregnant'] = _userProfile!['is_pregnant'];
-        }
-        if (_userProfile!['has_diabetes'] != null) {
-          userProfilePayload['has_diabetes'] = _userProfile!['has_diabetes'];
-        }
-        if (_userProfile!['medications'] != null &&
+        final parts = <String>[];
+        if (_userProfile!['age'] != null) parts.add('Age: ${_userProfile!['age']}');
+        if (_userProfile!['gender'] != null) parts.add('Gender: ${_userProfile!['gender']}');
+        if (_userProfile!['smoker'] == true) parts.add('Smoker');
+        if (_userProfile!['has_diabetes'] == true) parts.add('Has diabetes');
+        if (_userProfile!['is_pregnant'] == true) parts.add('Pregnant');
+        if (_userProfile!['medications'] != null && 
             _userProfile!['medications'].toString().isNotEmpty) {
-          userProfilePayload['medications'] = _userProfile!['medications'];
+          parts.add('Medications: ${_userProfile!['medications']}');
         }
-        if (_userProfile!['physical_activity'] != null &&
-            _userProfile!['physical_activity'].toString().isNotEmpty) {
-          userProfilePayload['physical_activity'] =
-              _userProfile!['physical_activity'];
-        }
+        userContext = parts.join(', ');
       }
 
-      final requestBody = {
-        'bp_reading': '$sys/$dia',
-        'user_profile': userProfilePayload.isEmpty ? null : userProfilePayload,
-        'conversation_history': _conversationHistory,
-        'language': _selectedLanguage,
-      };
+      // Build system prompt with AHA/ACC 2025 guidelines
+      final systemPrompt = '''You are Arteria, a compassionate medical assistant specializing in blood pressure.
 
-      final response = await http
-          .post(
-            Uri.parse(_fastApiEndpoint),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(requestBody),
-          )
-          .timeout(const Duration(seconds: 60));
+BLOOD PRESSURE CLASSIFICATION (AHA/ACC 2025 Guidelines - applies uniformly to all adults 18+):
+- Normal: Systolic ≤120 AND Diastolic ≤80 mmHg (120/80 is Normal)
+- Elevated: Systolic 121-129 AND Diastolic ≤80 mmHg (e.g., 125/78)
+- Stage 1 Hypertension: Systolic 130-139 OR Diastolic 81-89 mmHg (e.g., 130/82, 135/85)
+- Stage 2 Hypertension: Systolic ≥140 OR Diastolic ≥90 mmHg
+- Hypertensive Crisis: Systolic >180 OR Diastolic >120 mmHg (EMERGENCY)
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+IMPORTANT: 120/80 mmHg is classified as NORMAL, not elevated or hypertensive.
 
-        final analysis = (data['analysis_text'] ?? '').toString().trim();
-        final questions =
-            (data['follow_up_questions'] as List?)
-                ?.map((q) => q.toString().trim())
-                .where((q) => q.isNotEmpty)
-                .toList() ??
-            [];
-        final category = (data['category'] ?? 'unknown').toString();
-        final severity = (data['severity'] ?? 'normal').toString();
+Respond in JSON format:
+{
+  "classification": "Normal/Elevated/Stage 1 Hypertension/Stage 2 Hypertension/Hypertensive Crisis",
+  "severity": "normal/elevated/high/critical",
+  "analysis": "Brief, empathetic analysis (2-3 sentences)",
+  "recommendations": ["Recommendation 1", "Recommendation 2"]
+}
 
-        final systolic = data['systolic'] ?? sys;
-        final diastolic = data['diastolic'] ?? dia;
+User context: ${userContext.isNotEmpty ? userContext : 'None provided'}
+Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
 
-        add(
-          LLMAnalysisCompletedEvent(
-            analysisText: analysis,
-            systolic: systolic,
-            diastolic: diastolic,
-            category: category,
-            severity: severity,
-            followUpQuestions: questions,
+      OpenAI.apiKey = openaiKey;
+
+      final completion = await OpenAI.instance.chat.create(
+        model: _openAIModel,
+        temperature: 0.7,
+        maxTokens: 500,
+        messages: [
+          OpenAIChatCompletionChoiceMessageModel(
+            role: OpenAIChatMessageRole.system,
+            content: [
+              OpenAIChatCompletionChoiceMessageContentItemModel.text(systemPrompt),
+            ],
           ),
-        );
-      } else {
-        add(
-          LLMAnalysisFailedEvent(
-            'Analysis failed (status ${response.statusCode})',
+          OpenAIChatCompletionChoiceMessageModel(
+            role: OpenAIChatMessageRole.user,
+            content: [
+              OpenAIChatCompletionChoiceMessageContentItemModel.text(
+                'My blood pressure reading is $sys/$dia mmHg. Please analyze.',
+              ),
+            ],
           ),
-        );
+        ],
+      );
+
+      final raw = completion.choices.first.message.content
+          ?.map((c) => c.text)
+          .join(' ')
+          .trim() ?? '';
+
+      // Parse JSON response
+      Map<String, dynamic> parsed = {};
+      try {
+        // Extract JSON from response (handle markdown code blocks)
+        String jsonStr = raw;
+        if (raw.contains('```json')) {
+          jsonStr = raw.split('```json')[1].split('```')[0].trim();
+        } else if (raw.contains('```')) {
+          jsonStr = raw.split('```')[1].split('```')[0].trim();
+        }
+        parsed = jsonDecode(jsonStr);
+      } catch (_) {
+        // Fallback if JSON parsing fails
+        parsed = {
+          'classification': _classifyBP(sys, dia),
+          'severity': _getSeverity(sys, dia),
+          'analysis': raw,
+          'recommendations': ['Consult your healthcare provider.'],
+        };
       }
+
+      final analysis = (parsed['analysis'] ?? raw).toString();
+      final category = (parsed['classification'] ?? _classifyBP(sys, dia)).toString();
+      final severity = (parsed['severity'] ?? _getSeverity(sys, dia)).toString();
+
+      add(
+        LLMAnalysisCompletedEvent(
+          analysisText: analysis,
+          systolic: sys,
+          diastolic: dia,
+          category: category,
+          severity: severity,
+          followUpQuestions: [],
+        ),
+      );
     } on SocketException {
       add(
         const LLMAnalysisFailedEvent(
@@ -429,6 +468,33 @@ class MicrophoneTranscribeBloc
     } catch (e) {
       add(LLMAnalysisFailedEvent('An unexpected error occurred: $e'));
     }
+  }
+
+  /// Classifies blood pressure according to AHA/ACC 2025 guidelines.
+  /// Normal: ≤120/≤80 (includes 120/80)
+  /// Elevated: 121-129 AND ≤80
+  /// Stage 1: ≥130 OR 81-89 diastolic
+  /// Stage 2: ≥140 OR ≥90
+  String _classifyBP(int sys, int dia) {
+    // Hypertensive Crisis - EMERGENCY
+    if (sys > 180 || dia > 120) return 'Hypertensive Crisis';
+    // Stage 2 Hypertension
+    if (sys >= 140 || dia >= 90) return 'Stage 2 Hypertension';
+    // Stage 1 Hypertension (sys ≥130 OR dia 81-89)
+    if (sys >= 130 || dia > 80) return 'Stage 1 Hypertension';
+    // Elevated (sys 121-129 AND dia ≤80)
+    if (sys > 120 && dia <= 80) return 'Elevated';
+    // Normal (sys ≤120 AND dia ≤80, includes 120/80)
+    return 'Normal';
+  }
+
+  String _getSeverity(int sys, int dia) {
+    if (sys > 180 || dia > 120) return 'critical';
+    if (sys >= 140 || dia >= 90) return 'high';
+    // Stage 1: sys ≥130 OR dia > 80
+    if (sys >= 130 || dia > 80) return 'elevated';
+    // Normal includes 120/80
+    return 'normal';
   }
 
   Future<void> _onLLMAnalysisCompleted(
@@ -475,20 +541,35 @@ class MicrophoneTranscribeBloc
   }
 
   Future<void> _fetchSpeakAndPlay(String text) async {
-    try {
-      final uri = Uri.parse(_speakEndpoint);
-      final resp = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': text, 'language': _selectedLanguage}),
-      );
+    final openaiKey = Env.openaiApiKey;
+    if (openaiKey.isEmpty) {
+      add(const TTSPlaybackFailedEvent('OpenAI API key missing'));
+      return;
+    }
 
-      if (resp.statusCode != 200) {
-        add(TTSPlaybackFailedEvent('TTS server responded ${resp.statusCode}'));
+    try {
+      // Use OpenAI TTS API
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/audio/speech'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $openaiKey',
+        },
+        body: jsonEncode({
+          'model': _ttsModel,
+          'input': text,
+          'voice': _ttsVoice,
+          'response_format': 'mp3',
+          'speed': 1.0,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        add(TTSPlaybackFailedEvent('TTS failed: ${response.statusCode}'));
         return;
       }
 
-      final bytes = resp.bodyBytes;
+      final bytes = response.bodyBytes;
       final dir = await getTemporaryDirectory();
       final file = File(
         '${dir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.mp3',
@@ -591,7 +672,7 @@ class MicrophoneTranscribeBloc
             'date': Timestamp.now(),
           });
     } catch (e) {
-      print('Failed to save BP reading: $e');
+      debugPrint('Failed to save BP reading: $e');
     }
   }
 

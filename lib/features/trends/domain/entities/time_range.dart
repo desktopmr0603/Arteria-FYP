@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 /// Time range for filtering trend data
 class TimeRange extends Equatable {
@@ -75,7 +76,7 @@ class TimeRange extends Equatable {
 
   /// Get formatted display name
   String get formattedName {
-    return displayName ?? _formatDate(start) + ' - ' + _formatDate(end);
+    return displayName ?? '${_formatDate(start)} - ${_formatDate(end)}';
   }
 
   /// Get duration of time range
@@ -144,8 +145,8 @@ class TimeRange extends Equatable {
   /// Create from Map
   factory TimeRange.fromMap(Map<String, dynamic> map) {
     return TimeRange(
-      start: DateTime.parse(map['start']),
-      end: DateTime.parse(map['end']),
+      start: FirebaseHelpers.parseDateTime(map['start']) ?? DateTime.now(),
+      end: FirebaseHelpers.parseDateTime(map['end']) ?? DateTime.now(),
       type: TimeRangeType.values.firstWhere((e) => e.name == map['type']),
       displayName: map['displayName'],
     );

@@ -1,5 +1,6 @@
 import 'package:arteria/features/home/domain/entities/medication.dart';
 import 'package:flutter/material.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 class MedicationModel {
   final String id;
@@ -30,18 +31,18 @@ class MedicationModel {
     required this.color,
   });
 
-  factory MedicationModel.fromDocument(Map<String, dynamic> doc) {
+  factory MedicationModel.fromDocument(Map<String, dynamic> doc, {String? documentId}) {
     return MedicationModel(
-      id: doc['id'] ?? '',
+      id: documentId ?? doc['id'] ?? '',
       userId: doc['userId'] ?? '',
       name: doc['name'] ?? '',
       dosage: doc['dosage'] ?? '',
       frequency: doc['frequency'] ?? 'onceDaily',
       times: List<String>.from(doc['times'] ?? []),
       isActive: doc['isActive'] ?? true,
-      lastTakenAt: doc['lastTakenAt'],
+      lastTakenAt: FirebaseHelpers.parseDateTime(doc['lastTakenAt'])?.toIso8601String(),
       takenToday: doc['takenToday'] ?? false,
-      createdAt: doc['createdAt'] ?? DateTime.now().toIso8601String(),
+      createdAt: FirebaseHelpers.parseDateTime(doc['createdAt'])?.toIso8601String() ?? DateTime.now().toIso8601String(),
       instructions: doc['instructions'],
       color: doc['color'] ?? 0xFF6366F1,
     );
@@ -58,9 +59,9 @@ class MedicationModel {
       ),
       times: times,
       isActive: isActive,
-      lastTakenAt: lastTakenAt != null ? DateTime.parse(lastTakenAt!) : null,
+      lastTakenAt: FirebaseHelpers.parseDateTime(lastTakenAt),
       takenToday: takenToday,
-      createdAt: DateTime.parse(createdAt),
+      createdAt: FirebaseHelpers.parseDateTime(createdAt) ?? DateTime.now(),
       instructions: instructions,
       color: Color(color),
     );

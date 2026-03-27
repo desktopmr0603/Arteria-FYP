@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:arteria/features/home/domain/entities/emergency_contact.dart';
 import 'package:arteria/features/home/domain/repositories/emergency_contact_repository.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 class EmergencyContactRepositoryImpl implements EmergencyContactRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -23,9 +24,7 @@ class EmergencyContactRepositoryImpl implements EmergencyContactRepository {
           phone: data['phone'] ?? '',
           relationship: data['relationship'] ?? '',
           isPrimary: data['isPrimary'] ?? false,
-          createdAt: data['createdAt'] != null
-              ? DateTime.parse(data['createdAt'])
-              : DateTime.now(),
+          createdAt: FirebaseHelpers.parseDateTime(data['createdAt']) ?? DateTime.now(),
         );
       }).toList();
     } catch (e) {
@@ -50,9 +49,7 @@ class EmergencyContactRepositoryImpl implements EmergencyContactRepository {
               phone: data['phone'] ?? '',
               relationship: data['relationship'] ?? '',
               isPrimary: data['isPrimary'] ?? false,
-              createdAt: data['createdAt'] != null
-                  ? DateTime.parse(data['createdAt'])
-                  : DateTime.now(),
+              createdAt: FirebaseHelpers.parseDateTime(data['createdAt']) ?? DateTime.now(),
             );
           }).toList(),
         );
@@ -78,9 +75,7 @@ class EmergencyContactRepositoryImpl implements EmergencyContactRepository {
         phone: data['phone'] ?? '',
         relationship: data['relationship'] ?? '',
         isPrimary: true,
-        createdAt: data['createdAt'] != null
-            ? DateTime.parse(data['createdAt'])
-            : DateTime.now(),
+        createdAt: FirebaseHelpers.parseDateTime(data['createdAt']) ?? DateTime.now(),
       );
     } catch (e) {
       throw Exception('Failed to fetch primary contact: $e');

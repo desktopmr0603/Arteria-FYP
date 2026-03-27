@@ -2,9 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:arteria/features/home/domain/entities/family_member.dart';
-import 'package:arteria/features/home/domain/repositories/family_repository.dart';
+import 'package:arteria/features/home/domain/repositories/family_member_repository.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
-class FamilyRepositoryImpl implements FamilyRepository {
+class FamilyMemberRepositoryImpl implements FamilyRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
@@ -29,13 +30,10 @@ class FamilyRepositoryImpl implements FamilyRepository {
             orElse: () => SharePermission.viewOnly,
           ),
           status: FamilyInviteStatus.accepted,
-          lastReadingAt: data['lastReadingAt'] != null
-              ? DateTime.parse(data['lastReadingAt'])
-              : null,
+          lastReadingAt: FirebaseHelpers.parseDateTime(data['lastReadingAt']),
           lastReading: data['lastReading'],
-          addedAt: data['addedAt'] != null
-              ? DateTime.parse(data['addedAt'])
-              : DateTime.now(),
+          addedAt:
+              FirebaseHelpers.parseDateTime(data['addedAt']) ?? DateTime.now(),
         );
       }).toList();
     } catch (e) {
@@ -64,13 +62,13 @@ class FamilyRepositoryImpl implements FamilyRepository {
                 orElse: () => SharePermission.viewOnly,
               ),
               status: FamilyInviteStatus.accepted,
-              lastReadingAt: data['lastReadingAt'] != null
-                  ? DateTime.parse(data['lastReadingAt'])
-                  : null,
+              lastReadingAt: FirebaseHelpers.parseDateTime(
+                data['lastReadingAt'],
+              ),
               lastReading: data['lastReading'],
-              addedAt: data['addedAt'] != null
-                  ? DateTime.parse(data['addedAt'])
-                  : DateTime.now(),
+              addedAt:
+                  FirebaseHelpers.parseDateTime(data['addedAt']) ??
+                  DateTime.now(),
             );
           }).toList(),
         );
@@ -102,13 +100,10 @@ class FamilyRepositoryImpl implements FamilyRepository {
           (e) => e.name == data['status'],
           orElse: () => FamilyInviteStatus.pending,
         ),
-        lastReadingAt: data['lastReadingAt'] != null
-            ? DateTime.parse(data['lastReadingAt'])
-            : null,
+        lastReadingAt: FirebaseHelpers.parseDateTime(data['lastReadingAt']),
         lastReading: data['lastReading'],
-        addedAt: data['addedAt'] != null
-            ? DateTime.parse(data['addedAt'])
-            : DateTime.now(),
+        addedAt:
+            FirebaseHelpers.parseDateTime(data['addedAt']) ?? DateTime.now(),
       );
     } catch (e) {
       throw Exception('Failed to fetch family member: $e');
@@ -309,12 +304,12 @@ class FamilyRepositoryImpl implements FamilyRepository {
             orElse: () => SharePermission.viewOnly,
           ),
           status: FamilyInviteStatus.pending,
-          createdAt: data['createdAt'] != null
-              ? DateTime.parse(data['createdAt'])
-              : DateTime.now(),
-          expiresAt: data['expiresAt'] != null
-              ? DateTime.parse(data['expiresAt'])
-              : DateTime.now().add(const Duration(days: 7)),
+          createdAt:
+              FirebaseHelpers.parseDateTime(data['createdAt']) ??
+              DateTime.now(),
+          expiresAt:
+              FirebaseHelpers.parseDateTime(data['expiresAt']) ??
+              DateTime.now().add(const Duration(days: 7)),
         );
       }).toList();
     } catch (e) {
@@ -370,12 +365,11 @@ class FamilyRepositoryImpl implements FamilyRepository {
           (e) => e.name == data['status'],
           orElse: () => FamilyInviteStatus.pending,
         ),
-        createdAt: data['createdAt'] != null
-            ? DateTime.parse(data['createdAt'])
-            : DateTime.now(),
-        expiresAt: data['expiresAt'] != null
-            ? DateTime.parse(data['expiresAt'])
-            : DateTime.now().add(const Duration(days: 7)),
+        createdAt:
+            FirebaseHelpers.parseDateTime(data['createdAt']) ?? DateTime.now(),
+        expiresAt:
+            FirebaseHelpers.parseDateTime(data['expiresAt']) ??
+            DateTime.now().add(const Duration(days: 7)),
       );
     } catch (e) {
       throw Exception('Failed to get invite: $e');

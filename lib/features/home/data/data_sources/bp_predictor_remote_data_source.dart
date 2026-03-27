@@ -1,13 +1,12 @@
 import 'dart:convert';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 /// On-device BP Risk Predictor using TensorFlow Lite
-/// 
 /// Provides hypertension risk predictions without requiring network access.
-/// Model files should be placed in assets/models/
-class BPPredictorService {
+class BPPredictorRemoteDataSource {
   Interpreter? _interpreter;
   List<String> _featureNames = [];
   List<double> _featureMeans = [];
@@ -22,12 +21,16 @@ class BPPredictorService {
   Future<void> loadModel() async {
     try {
       // Load TFLite model
-      _interpreter = await Interpreter.fromAsset('assets/models/bp_predictor.tflite');
-      
+      _interpreter = await Interpreter.fromAsset(
+        'assets/models/bp_predictor.tflite',
+      );
+
       // Load model metadata
-      final metadataJson = await rootBundle.loadString('assets/models/model_metadata.json');
+      final metadataJson = await rootBundle.loadString(
+        'assets/models/model_metadata.json',
+      );
       _metadata = jsonDecode(metadataJson);
-      
+
       // Extract feature names and scaling parameters
       // Note: metadata uses 'input_features' key, not 'feature_names'
       if (_metadata.containsKey('input_features')) {
@@ -36,23 +39,28 @@ class BPPredictorService {
         _featureNames = List<String>.from(_metadata['feature_names']);
       }
       if (_metadata.containsKey('feature_means')) {
-        _featureMeans = List<double>.from(_metadata['feature_means'].map((e) => e.toDouble()));
+        _featureMeans = List<double>.from(
+          _metadata['feature_means'].map((e) => e.toDouble()),
+        );
       }
       if (_metadata.containsKey('feature_stds')) {
-        _featureStds = List<double>.from(_metadata['feature_stds'].map((e) => e.toDouble()));
+        _featureStds = List<double>.from(
+          _metadata['feature_stds'].map((e) => e.toDouble()),
+        );
       }
-      
+
       _isLoaded = true;
-      print('✅ BP Predictor model loaded with ${_featureNames.length} features');
+      debugPrint(
+        'BP Predictor model loaded with ${_featureNames.length} features',
+      );
     } catch (e) {
-      print('❌ Failed to load BP Predictor model: $e');
+      debugPrint('Failed to load BP Predictor model: $e');
       _isLoaded = false;
       rethrow;
     }
   }
 
   /// Predict hypertension risk from user features
-  /// 
   /// Returns a probability value between 0.0 and 1.0
   double predictRisk(Map<String, dynamic> features) {
     if (!_isLoaded || _interpreter == null) {
@@ -87,28 +95,27 @@ class BPPredictorService {
   /// Safely parse feature value to double, handling strings and categorical mappings
   double _parseFeatureValue(String featureName, dynamic value) {
     if (value is num) return value.toDouble();
-    
+
     if (value is String) {
       final lowerValue = value.toLowerCase();
-      
+
       // Categorical Mapping: Gender
       if (featureName == 'gender') {
         if (lowerValue.contains('female')) return 1.0;
         if (lowerValue.contains('male')) return 0.0;
         return 0.5; // Unknown/Other
       }
-      
+
       // Categorical Mapping: Boolean types (has_diabetes, etc)
       if (lowerValue == 'true' || lowerValue == 'yes') return 1.0;
       if (lowerValue == 'false' || lowerValue == 'no') return 0.0;
-      
+
       // Attempt generic parse
       return double.tryParse(value) ?? getDefaultValue(featureName);
     }
-    
+
     return getDefaultValue(featureName);
   }
-
 
   /// Normalize features using stored mean/std
   /// If metadata lacks normalization params, use built-in population statistics
@@ -120,7 +127,7 @@ class BPPredictorService {
         return (features[i] - _featureMeans[i]) / std;
       });
     }
-    
+
     // Built-in normalization based on NHANES population statistics
     // These are approximate mean/std values for each feature
     final builtInMeans = <String, double>{
@@ -148,7 +155,7 @@ class BPPredictorService {
       'has_heart_condition': 0.1,
       'physical_activity_score': 1.5,
     };
-    
+
     final builtInStds = <String, double>{
       'age': 18.0,
       'avg_systolic': 18.0,
@@ -174,7 +181,7 @@ class BPPredictorService {
       'has_heart_condition': 0.3,
       'physical_activity_score': 0.8,
     };
-    
+
     // Normalize each feature using built-in stats
     return List.generate(features.length, (i) {
       final featureName = _featureNames[i];

@@ -3,11 +3,34 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 
+/// Avatar emotion states for intelligent visual feedback
+enum AvatarEmotion {
+  neutral,
+  listening,   // User is speaking - attentive pose
+  thinking,    // Processing/generating response
+  concerned,   // BP reading is concerning
+  reassuring,  // BP is good/improving
+  helpful,     // Providing health advice/recommendations
+  analytical,  // Analyzing trends/comparisons
+  informative, // Sharing factual health data
+}
+
 /// A 3D talking avatar widget that plays animations based on speaking state.
 /// Uses glassmorphism styling for a modern, premium look.
+/// 
+/// Features:
+/// - Speaking animation synced with TTS playback
+/// - Listening state when user is recording
+/// - Emotion-aware visual feedback (glow colors based on health status)
 class TalkingAvatarWidget extends StatefulWidget {
   /// Whether the avatar is currently speaking (plays talking animation).
   final bool isSpeaking;
+  
+  /// Whether the avatar is listening to user input.
+  final bool isListening;
+  
+  /// Current emotion state for visual feedback.
+  final AvatarEmotion emotion;
 
   /// Callback when the 3D model has finished loading.
   final VoidCallback? onLoaded;
@@ -21,6 +44,8 @@ class TalkingAvatarWidget extends StatefulWidget {
   const TalkingAvatarWidget({
     super.key,
     required this.isSpeaking,
+    this.isListening = false,
+    this.emotion = AvatarEmotion.neutral,
     this.onLoaded,
     this.width = 300,
     this.height = 400,
@@ -131,9 +156,42 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
   @override
   void didUpdateWidget(TalkingAvatarWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isSpeaking != oldWidget.isSpeaking && _isLoaded) {
-      widget.isSpeaking ? _playTalkingAnimation() : _playIdleAnimation();
+    if (!_isLoaded) return;
+    
+    // Prioritize states: Speaking > Listening > Idle
+    final stateChanged = widget.isSpeaking != oldWidget.isSpeaking ||
+                         widget.isListening != oldWidget.isListening;
+    
+    if (stateChanged) {
+      if (widget.isSpeaking) {
+        _playTalkingAnimation();
+      } else if (widget.isListening) {
+        _playListeningAnimation();
+      } else {
+        _playIdleAnimation();
+      }
     }
+  }
+  
+  /// Play a listening/attentive animation when user is speaking
+  Future<void> _playListeningAnimation() async {
+    if (_availableAnimations == null || _availableAnimations!.isEmpty) {
+      debugPrint('⚠️ No animations available for listening');
+      return;
+    }
+    
+    // Try to find a listening/attentive animation
+    final listeningAnim = _availableAnimations!.firstWhere((a) {
+      final lower = a.toLowerCase();
+      return lower.contains('listen') ||
+          lower.contains('nod') ||
+          lower.contains('attent') ||
+          lower.contains('wait') ||
+          lower.contains('idle');  // Fallback to idle for listening
+    }, orElse: () => _availableAnimations!.first);
+    
+    debugPrint('👂 Playing listening animation: $listeningAnim');
+    _controller.playAnimation(animationName: listeningAnim);
   }
 
   Future<void> _playTalkingAnimation() async {
@@ -165,7 +223,7 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
       return;
     }
 
-    // Try to find an idle animation by various names
+    // Try to find a dedicated idle animation by name
     final idleAnim = _availableAnimations!.firstWhere((a) {
       final lower = a.toLowerCase();
       return lower.contains('idle') ||
@@ -179,13 +237,10 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
     if (idleAnim.isNotEmpty) {
       debugPrint('😌 Playing idle animation: $idleAnim');
       _controller.playAnimation(animationName: idleAnim);
-    } else if (_availableAnimations!.isNotEmpty) {
-      // Fallback: play the first animation but at slower pace
-      debugPrint(
-        '😌 No idle found, playing first animation: ${_availableAnimations!.first}',
-      );
-      _controller.playAnimation(animationName: _availableAnimations!.first);
     } else {
+      // No idle animation found — freeze on current frame rather than
+      // continuously looping the talking animation.
+      debugPrint('😌 No idle animation found, pausing at current frame');
       _controller.pauseAnimation();
     }
   }
@@ -193,6 +248,34 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Emotion-aware glow color
+    Color? emotionGlowColor;
+    switch (widget.emotion) {
+      case AvatarEmotion.concerned:
+        emotionGlowColor = const Color(0xFFEF5350); // Red for concern
+        break;
+      case AvatarEmotion.reassuring:
+        emotionGlowColor = const Color(0xFF4CAF50); // Green for reassurance
+        break;
+      case AvatarEmotion.listening:
+        emotionGlowColor = const Color(0xFF2196F3); // Blue for listening
+        break;
+      case AvatarEmotion.thinking:
+        emotionGlowColor = const Color(0xFFFFA726); // Orange for thinking
+        break;
+      case AvatarEmotion.helpful:
+        emotionGlowColor = const Color(0xFF9C27B0); // Purple for helpful
+        break;
+      case AvatarEmotion.analytical:
+        emotionGlowColor = const Color(0xFF00BCD4); // Cyan for analytical
+        break;
+      case AvatarEmotion.informative:
+        emotionGlowColor = const Color(0xFF607D8B); // Blue Grey for informative
+        break;
+      default:
+        emotionGlowColor = null;
+    }
 
     return Container(
       width: widget.width,
@@ -224,11 +307,26 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
+          // Emotion-aware glow effect
+          if (emotionGlowColor != null)
+            BoxShadow(
+              color: emotionGlowColor.withValues(alpha: 0.4),
+              blurRadius: 25,
+              spreadRadius: 3,
+            ),
+          // Speaking glow (takes priority over emotion glow)
           if (widget.isSpeaking)
             BoxShadow(
               color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
               blurRadius: 30,
               spreadRadius: 2,
+            ),
+          // Listening pulse glow
+          if (widget.isListening && !widget.isSpeaking)
+            BoxShadow(
+              color: const Color(0xFF2196F3).withValues(alpha: 0.25),
+              blurRadius: 20,
+              spreadRadius: 1,
             ),
         ],
       ),

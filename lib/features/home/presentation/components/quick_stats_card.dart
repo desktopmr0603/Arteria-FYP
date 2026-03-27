@@ -1,9 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:arteria/l10n/app_localizations.dart';
+import 'package:arteria/features/home/presentation/components/premium_dashboard_card.dart';
 
 class QuickStatsCard extends StatelessWidget {
   final Map<String, dynamic>? latestReading;
@@ -20,10 +20,10 @@ class QuickStatsCard extends StatelessWidget {
     final readingTimestamp = readingDate is Timestamp
         ? readingDate.toDate()
         : readingDate is DateTime
-            ? readingDate
-            : readingDate != null
-                ? DateTime.parse(readingDate.toString())
-                : null;
+        ? readingDate
+        : readingDate != null
+        ? DateTime.parse(readingDate.toString())
+        : null;
 
     final statusInfo = _getStatusInfo(context, systolic, diastolic);
     final statusColor = statusInfo['color'] as Color;
@@ -32,28 +32,13 @@ class QuickStatsCard extends StatelessWidget {
         ? _formatDate(context, readingTimestamp)
         : l10n.quickStatsNoReadingsYet;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F0F1A) : Colors.white,
-        borderRadius: BorderRadius.circular(36),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 20),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
-          width: 1.5,
-        ),
-      ),
+    return PremiumDashboardCard(
+      padding: EdgeInsets.zero,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(36),
+        borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
-            // Decorative Background (Positioned to NOT cut off content)
+            // Decorative Background
             Positioned(
               top: -40,
               right: -40,
@@ -66,7 +51,7 @@ class QuickStatsCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
               child: Column(
@@ -77,13 +62,15 @@ class QuickStatsCard extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white.withValues(alpha: 0.2) : const Color(0xFF94A3B8),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFF94A3B8),
                       letterSpacing: 4.5,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 48),
-                  
+
                   // Main Readings Section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -93,7 +80,7 @@ class QuickStatsCard extends StatelessWidget {
                         value: systolic,
                         isDark: isDark,
                       ),
-                      
+
                       // Refined 'Slash' Divider
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -102,12 +89,14 @@ class QuickStatsCard extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 72,
                             fontWeight: FontWeight.w200,
-                            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.1)
+                                : Colors.black.withValues(alpha: 0.05),
                             height: 1.0,
                           ),
                         ),
                       ),
-                      
+
                       _buildBlock(
                         label: l10n.quickStatsDiastolic,
                         value: diastolic,
@@ -115,16 +104,19 @@ class QuickStatsCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 48),
-                  
+
                   // Footer with Refined Glass-Pill Status
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // High-Definition Status Pill
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -143,7 +135,7 @@ class QuickStatsCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       // Last Checked Metadata
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -153,7 +145,9 @@ class QuickStatsCard extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white.withValues(alpha: 0.25) : const Color(0xFF64748B),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.25)
+                                  : const Color(0xFF64748B),
                               letterSpacing: 1.0,
                             ),
                           ),
@@ -162,7 +156,9 @@ class QuickStatsCard extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF334155),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.6)
+                                  : const Color(0xFF334155),
                             ),
                           ),
                         ],
@@ -190,7 +186,9 @@ class QuickStatsCard extends StatelessWidget {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 10,
             fontWeight: FontWeight.w800,
-            color: isDark ? Colors.white.withValues(alpha: 0.25) : const Color(0xFF94A3B8),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.25)
+                : const Color(0xFF94A3B8),
             letterSpacing: 1.2,
           ),
         ),
@@ -210,14 +208,20 @@ class QuickStatsCard extends StatelessWidget {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 9,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : const Color(0xFFCBD5E1),
           ),
         ),
       ],
     );
   }
 
-  Map<String, dynamic> _getStatusInfo(BuildContext context, int? systolic, int? diastolic) {
+  Map<String, dynamic> _getStatusInfo(
+    BuildContext context,
+    int? systolic,
+    int? diastolic,
+  ) {
     final sys = systolic ?? 0;
     final dia = diastolic ?? 0;
     final l10n = AppLocalizations.of(context)!;
@@ -226,7 +230,9 @@ class QuickStatsCard extends StatelessWidget {
       return {
         'statusText': 'Critical Level',
         'label': l10n.statusHypertensiveCrisis,
-        'color': const Color(0xFFC026D3), // Deep Magenta - distinct for high alert
+        'color': const Color(
+          0xFFC026D3,
+        ), // Deep Magenta - distinct for high alert
         'icon': Icons.warning_amber_rounded,
         'description': 'Emergency! Seek medical attention immediately.',
       };
@@ -250,7 +256,9 @@ class QuickStatsCard extends StatelessWidget {
       return {
         'statusText': 'Elevated',
         'label': l10n.statusElevated,
-        'color': const Color(0xFFFACC15), // Vibrant Yellow - colorblind safe against red
+        'color': const Color(
+          0xFFFACC15,
+        ), // Vibrant Yellow - colorblind safe against red
         'icon': Icons.info_outline_rounded,
         'description': 'Blood pressure is slightly high but not hypertensive.',
       };
@@ -266,7 +274,9 @@ class QuickStatsCard extends StatelessWidget {
       return {
         'statusText': 'Normal Range',
         'label': l10n.statusNormal,
-        'color': const Color(0xFF2DD4BF), // Teal - more modern and colorblind safe than pure green
+        'color': const Color(
+          0xFF2DD4BF,
+        ), // Teal - more modern and colorblind safe than pure green
         'icon': Icons.check_circle_rounded,
         'description': 'Your blood pressure is within the healthy range.',
       };

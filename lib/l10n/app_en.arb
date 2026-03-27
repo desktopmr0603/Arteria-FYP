@@ -109,7 +109,7 @@
     "description": "More navigation label"
   },
   
-  "welcomeFirstTime": "Welcome, {name}! 🎉",
+  "welcomeFirstTime": "Welcome, {name}!",
   "@welcomeFirstTime": {
     "description": "First time user welcome message",
     "placeholders": {
@@ -320,6 +320,31 @@
     "description": "Generic coming soon message"
   },
   
+  "resetPassword": "Reset Password",
+  "@resetPassword": {
+    "description": "Reset password option"
+  },
+  "resetPasswordMessage": "A password reset link will be sent to your email address.",
+  "@resetPasswordMessage": {
+    "description": "Reset password confirmation message"
+  },
+  "passwordResetSent": "Password reset email sent!",
+  "@passwordResetSent": {
+    "description": "Password reset success message"
+  },
+  "deleteAccount": "Delete Account",
+  "@deleteAccount": {
+    "description": "Delete account option"
+  },
+  "deleteAccountConfirmationMessage": "Are you sure you want to permanently delete your account? This action cannot be undone.",
+  "@deleteAccountConfirmationMessage": {
+    "description": "Delete account warning message"
+  },
+  "accountDeleted": "Account deleted successfully.",
+  "@accountDeleted": {
+    "description": "Account deleted success message"
+  },
+  
   "selectLanguage": "Select Language",
   "@selectLanguage": {
     "description": "Language selection dialog title"
@@ -493,7 +518,7 @@
   "@faqDataTrainingQuestion": {
     "description": "FAQ Question about Data Training"
   },
-  "faqDataTrainingAnswer": "We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Mistral 7B model's reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.",
+  "faqDataTrainingAnswer": "We may use anonymized and aggregated user data to continuously improve the accuracy and relevance of the Qwen3 8b model's reasoning capabilities. Your personal identifying information is never used for training purposes without explicit, informed consent.",
   "@faqDataTrainingAnswer": {
     "description": "FAQ Answer about Data Training"
   },
@@ -682,7 +707,7 @@
   "emergencyHighBloodPressure": "High Blood Pressure",
   "emergencySeekImmediate": "Seek immediate medical care",
   "emergencyContactProvider": "Contact your healthcare provider",
-  "emergencyCall911": "Call 911",
+  "emergencyCall911": "Call 114",
   "emergencyCallContact": "Call Contact",
   "emergencyAddContact": "Add Emergency Contact",
   "emergencyAddContactTitle": "Add Emergency Contact",
@@ -810,9 +835,79 @@
   },
   "whatIfSimulatorConfirm": "Open Simulator",
   "@whatIfSimulatorConfirm": {
-    "description": "Confirm button for the What-If confirmation dialog"
+    "description": "Button to confirm opening simulator"
   },
-  "medicationAddedMessage": "{name} has been added to your medications.",
+  "predictiveTimelineTitle": "Predictive Health Timeline",
+  "predictiveTimelineSubtitle": "AI-powered 30-day health projections",
+  "predictiveTimelineAnalyzing": "Analyzing health patterns...",
+  "predictiveTimelineDay": "Day",
+  "predictiveTimelineRisk": "Risk",
+  "predictiveTimelineConfidence": "Confidence",
+  "predictiveTimelineKeyInsights": "Key Insights",
+  "predictiveTimelineRiskProjection": "Risk Projection",
+  "predictiveTimelineOver30Days": "over 30 days",
+  "predictiveTimelineConfidenceLevel": "Confidence Level",
+  "predictiveTimelineKeyFactors": "Key Factors",
+  "predictiveTimelineFactorBPTrend": "BP Trend",
+  "predictiveTimelineFactorLifestyle": "Lifestyle",
+  "predictiveTimelineFactorStress": "Stress",
+  "predictiveTimelineFactorMedication": "Medication",
+  
+  "riskTrendAnalysisTitle": "Risk Trend Analysis",
+  "riskTrendAnalysisSubtitle": "90-day historical analysis with feature impact",
+  "riskTrendAnalysisAnalyzing": "Analyzing risk patterns...",
+  "riskTrendAnalysisFeatureImpact": "Feature Impact Analysis",
+  "riskTrendAnalysisSummary": "Risk Summary",
+  "riskTrendAnalysisCurrentRisk": "Current Risk",
+  "riskTrendAnalysisWeeklyChange": "Weekly Change",
+  "riskTrendAnalysisMonthlyChange": "Monthly Change",
+  "riskTrendAnalysisLowRisk": "Low Risk",
+  "riskTrendAnalysisModerateRisk": "Moderate Risk",
+  "riskTrendAnalysisElevatedRisk": "Elevated Risk",
+  "riskTrendAnalysisHighRisk": "High Risk",
+  "riskTrendAnalysisVeryHighRisk": "Very High Risk",
+
+  "historicalPatternsTitle": "Historical Patterns",
+  "historicalPatternsSubtitle": "AI-detected patterns and anomalies from your health data",
+  "historicalPatternsAnalyzing": "Analyzing historical patterns...",
+  "historicalPatternsPositivePatterns": "Positive Patterns",
+  "historicalPatternsNeedsAttention": "Needs Attention",
+  "historicalPatternsRecentAnomalies": "Recent Anomalies",
+  "historicalPatternsDetectedPatterns": "Detected Patterns",
+  "historicalPatternsDaily": "Daily",
+  "historicalPatternsWeekly": "Weekly",
+  "historicalPatternsVariable": "Variable",
+  "historicalPatternsPositive": "Positive",
+  "historicalPatternsModerate": "Moderate",
+  "historicalPatternsHigh": "High",
+  "historicalPatternsOccurrences": "occurrences",
+  "historicalPatternsResolved": "Resolved",
+  "historicalPatternsToday": "Today",
+  "historicalPatternsYesterday": "Yesterday",
+  "historicalPatternsDaysAgo": "{days} days ago",
+  "@historicalPatternsDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "patternMorningSpikeTitle": "Morning Blood Pressure Spike",
+  "patternMorningSpikeDescription": "Your morning systolic readings run about {diff} mmHg higher than the rest of the day.",
+  "patternMorningSpikeRecommendation": "Try measuring after 5 minutes seated. If this keeps happening, discuss timing of medication, sleep, and caffeine with your doctor.",
+  "patternWeekendReliefTitle": "Weekend Stress Relief",
+  "patternWeekendReliefDescription": "Your systolic readings are about {diff} mmHg lower on weekends compared to weekdays.",
+  "patternWeekendReliefRecommendation": "Whatever you do on weekends (sleep, walking, less stress) seems to help — try bringing one of those habits into weekdays.",
+  "patternHighVariabilityTitle": "High Variability",
+  "patternHighVariabilityDescription": "Your readings vary quite a bit (about {diff} mmHg typical swing).",
+  "patternHighVariabilityRecommendation": "Try to measure at consistent times each day, avoid measuring right after activity/caffeine, and record notes (stress, sleep, meals).",
+  "anomalyDeviationHigh": "Reading is {value} mmHg higher than usual.",
+  "anomalyDeviationLow": "Reading is {value} mmHg lower than usual.",
+  "anomalySpikeIncrease": "Sudden increase of {value} mmHg from previous.",
+  "anomalySpikeDecrease": "Sudden decrease of {value} mmHg from previous.",
+  "anomalyResolved": "Resolved",
+  "medicationAddedMessage": "{name} added successfully.",
   "@medicationAddedMessage": {
     "description": "Success message when a medication is added via AI",
     "placeholders": {
@@ -828,5 +923,62 @@
   "medicationDosageLabel": "Dosage",
   "medicationFrequencyLabel": "Frequency",
   "medicationInstructionsLabel": "Instructions",
-  "medicationAlreadyExists": "{name} is already in your list."
+  "medicationAlreadyExists": "{name} is already in your list.",
+  "@medicationAlreadyExists": {
+    "description": "Error message when medication already exists",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Metformin"
+      }
+    }
+  },
+  "logoutConfirmationMessage": "Are you sure you want to log out?",
+  "@logoutConfirmationMessage": {
+    "description": "Logout confirmation dialog message"
+  },
+  "loggingOut": "Logging out...",
+  "@loggingOut": {
+    "description": "Logging out loading message"
+  },
+  "remindersSetCount": "{count, plural, =1{1 reminder set} other{{count} reminders set}}",
+  "@remindersSetCount": {
+    "description": "Number of reminders set for medication",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+
+  "statusConnecting": "Connecting...",
+  "statusTapToSpeak": "Tap to speak",
+  "statusListening": "Listening...",
+  "statusDetectingSilence": "Detecting silence...",
+  "statusProcessing": "Processing...",
+  "statusTranscribing": "Transcribing...",
+  "statusThinking": "Thinking...",
+  "statusResponseReceived": "Response received",
+  "statusSpeaking": "Speaking...",
+  "statusConnectionError": "Connection error",
+  "statusErrorProcessingAudio": "Error processing audio",
+  "statusClarificationNeeded": "Clarification needed",
+  "statusGeneratingReport": "Generating report...",
+  "statusErrorGeneratingReport": "Error generating report",
+  "statusUnderstandingQuery": "Understanding your health query...",
+
+  "bpCategoryNormal": "Normal",
+  "bpCategoryElevated": "Elevated",
+  "bpCategoryStage1": "Stage 1 Hypertension",
+  "bpCategoryStage2": "Stage 2 Hypertension",
+  "bpCategoryCrisis": "Hypertensive Crisis",
+  "insightsPageTitle": "Health Assistant",
+  "@insightsPageTitle": {
+    "description": "Page title for the Insights conversational assistant screen"
+  },
+  "insightsHeroPrompt": "How are you feeling today?",
+  "@insightsHeroPrompt": {
+    "description": "Primary hero prompt shown above the avatar on the Insights screen"
+  }
 }

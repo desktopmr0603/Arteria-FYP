@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "1074635639605-n3pi09i2vvqnsdlap4qnhftnmr38p2bg.apps.googleusercontent.com",
+          "client_id": "1074635639605-j99fu25no323fknidpcdeu6ogq3hlbe1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "app.arteria.blm",
-            "certificate_hash": "048fd63f0bb04b55036db6a31aafe3a3b7bed5fa"
+            "certificate_hash": "21a41dacc7f84d5fb680631d904316c754d244aa"
           }
         },
         {

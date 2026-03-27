@@ -39,7 +39,7 @@ class BPReadingCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: (statusInfo['borderColor'] as Color).withOpacity(0.1),
+            color: (statusInfo['borderColor'] as Color).withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -111,7 +111,7 @@ class BPReadingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: (statusInfo['borderColor'] as Color).withOpacity(0.15),
+                color: (statusInfo['borderColor'] as Color).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -143,7 +143,7 @@ class BPReadingCard extends StatelessWidget {
                 style: GoogleFonts.montserrat(
                   fontSize: 48,
                   fontWeight: FontWeight.w300,
-                  color: theme.textTheme.bodyLarge?.color?.withOpacity(0.5),
+                  color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5),
                 ),
               ),
             ),

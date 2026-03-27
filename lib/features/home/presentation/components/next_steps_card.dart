@@ -55,7 +55,7 @@ class NextStepsCard extends StatelessWidget {
                 AppLocalizations.of(context)!.noPendingActions,
                 style: GoogleFonts.openSans(
                   fontSize: 14,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,
                 ),
               ),

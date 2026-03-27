@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:arteria/features/home/data/models/medication_model.dart';
 import 'package:arteria/features/home/domain/entities/medication.dart';
 import 'package:arteria/features/home/domain/repositories/medication_repository.dart';
+import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
 class MedicationRepositoryImpl implements MedicationRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,7 +18,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
           .get();
 
       return snapshot.docs
-          .map((doc) => MedicationModel.fromDocument(doc.data()).toEntity())
+          .map((doc) => MedicationModel.fromDocument(doc.data(), documentId: doc.id).toEntity())
           .toList();
     } catch (e) {
       throw Exception('Failed to fetch medications: $e');
@@ -34,7 +35,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => MedicationModel.fromDocument(doc.data()).toEntity())
+              .map((doc) => MedicationModel.fromDocument(doc.data(), documentId: doc.id).toEntity())
               .toList(),
         );
   }
@@ -50,7 +51,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
           .get();
 
       if (!doc.exists) return null;
-      return MedicationModel.fromDocument(doc.data()!).toEntity();
+      return MedicationModel.fromDocument(doc.data()!, documentId: doc.id).toEntity();
     } catch (e) {
       throw Exception('Failed to fetch medication: $e');
     }
@@ -209,7 +210,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
         return MedicationLog(
           id: doc.id,
           medicationId: data['medicationId'] ?? '',
-          takenAt: DateTime.parse(data['takenAt']),
+          takenAt: FirebaseHelpers.parseDateTime(data['takenAt']) ?? DateTime.now(),
           skipped: data['skipped'] ?? false,
           notes: data['notes'],
         );
@@ -253,7 +254,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
           .get();
 
       final medications = snapshot.docs
-          .map((doc) => MedicationModel.fromDocument(doc.data()).toEntity())
+          .map((doc) => MedicationModel.fromDocument(doc.data(), documentId: doc.id).toEntity())
           .where((med) {
             if (med.takenToday) return false;
 

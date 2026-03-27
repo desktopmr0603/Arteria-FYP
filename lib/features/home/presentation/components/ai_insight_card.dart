@@ -76,7 +76,7 @@ class AIInsightCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.green.shade900.withOpacity(0.3)
+                    ? Colors.green.shade900.withValues(alpha: 0.3)
                     : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
