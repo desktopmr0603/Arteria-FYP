@@ -83,7 +83,10 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe>
     if (_bloc == null) {
       final settingsState = context.read<SettingsBloc>().state;
       final language = settingsState.locale.languageCode;
-      _bloc = MicrophoneTranscribeBloc(language: language);
+      _bloc = MicrophoneTranscribeBloc(
+        language: language,
+        l10n: AppLocalizations.of(context)!,
+      );
     }
   }
 
@@ -122,6 +125,8 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe>
         return const Color(0xFFF97316);
       case 'elevated':
         return const Color(0xFFFBBF24);
+      case 'low':
+        return const Color(0xFF3B82F6);
       default:
         return const Color(0xFF22C55E);
     }
@@ -146,7 +151,7 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe>
         listener: (context, state) {
           if (state is SavingAndReturningState) {
             Future.delayed(const Duration(milliseconds: 1500), () {
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(context, {
                   'systolic': state.systolic,
                   'diastolic': state.diastolic,
@@ -377,6 +382,7 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe>
   }
 
   Widget _buildWaveformDisplay() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -389,7 +395,7 @@ class _MicrophoneTranscribeState extends State<MicrophoneTranscribe>
         ),
         const SizedBox(height: 20),
         Text(
-          'Processing your reading...',
+          l10n.micProcessingReading,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w500,

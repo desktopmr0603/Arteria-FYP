@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:arteria/features/home/presentation/components/bp_color_extension.dart';
 
 /// A reusable base card that standardizes the dashboard layout and aesthetic.
 /// 
@@ -29,6 +30,7 @@ class PremiumDashboardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final bpColor = context.bpStatusColor;
 
     // Standard dashboard card radius
     const double outerRadius = 24.0;
@@ -46,16 +48,12 @@ class PremiumDashboardCard extends StatelessWidget {
     final accentGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: isDark
-          ? [const Color(0xFF00E5FF), const Color(0xFF00BFA6)]
-          : [const Color(0xFF00C4D6), const Color(0xFF00A29C)],
+      colors: [bpColor.withValues(alpha: 0.8), bpColor],
     );
 
     // Provide a subtle non-accented border if the accent is missing
     final subtleBorder = Border.all(
-      color: isDark 
-          ? Colors.white.withValues(alpha: 0.04) 
-          : Colors.black.withValues(alpha: 0.03),
+      color: bpColor.withValues(alpha: isDark ? 0.15 : 0.25),
       width: 1,
     );
 

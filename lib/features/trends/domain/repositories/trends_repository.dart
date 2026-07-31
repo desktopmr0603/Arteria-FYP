@@ -48,11 +48,14 @@ abstract class TrendsRepository {
     required ExportFormat format,
   });
 
-  /// Get real-time trend data stream
+  /// Get real-time trend data stream scoped to a time range.
   ///
   /// [userId] - The user ID to stream data for
-  /// Returns stream of trend data updates
-  Stream<List<TrendData>> getTrendDataStream(String userId);
+  /// [timeRange] - The time range to filter on
+  Stream<List<TrendData>> getTrendDataStream({
+    required String userId,
+    required TimeRange timeRange,
+  });
 
   /// Save chart configuration
   ///

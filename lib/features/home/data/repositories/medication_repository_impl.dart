@@ -78,7 +78,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
           takenToday: medication.takenToday,
           createdAt: medication.createdAt.toIso8601String(),
           instructions: medication.instructions,
-          color: medication.color?.toARGB32() ?? 0xFF6366F1,
+          color: medication.color?.toARGB32() ?? 0xFFF76C5E,
         ).toDocument(),
       );
 
@@ -109,7 +109,7 @@ class MedicationRepositoryImpl implements MedicationRepository {
               takenToday: medication.takenToday,
               createdAt: medication.createdAt.toIso8601String(),
               instructions: medication.instructions,
-              color: medication.color?.toARGB32() ?? 0xFF6366F1,
+              color: medication.color?.toARGB32() ?? 0xFFF76C5E,
             ).toDocument(),
           );
 

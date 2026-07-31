@@ -26,13 +26,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:arteria/env/env.dart';
-import 'package:arteria/services/health_notification_service.dart';
-import 'package:arteria/features/home/data/data_sources/health_risk_score_service.dart';
-import 'package:arteria/features/home/data/data_sources/bp_anomaly_remote_data_source.dart';
 
 /// Application entry point - initializes all required services before app starts
 Future<void> main() async {
-  // Required for async operations before runApp()
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -49,26 +45,10 @@ Future<void> main() async {
   // Set up local notification system for medication reminders
   await ReminderService().initialize();
 
-  // Initialize health monitoring services with placeholder user ID
-  // Will be updated with real user ID after authentication
-  try {
-    final riskScoreService = HealthRiskScoreService();
-    final anomalyService = BPAnomalyRemoteDataSource();
-
-    await riskScoreService.initialize();
-    await anomalyService.initialize('default_user');
-
-    final notificationService = HealthNotificationService(
-      userId: 'default_user',
-      riskScoreService: riskScoreService,
-      anomalyService: anomalyService,
-    );
-
-    await notificationService.initialize();
-    debugPrint('Health Notification Service initialized');
-  } catch (e) {
-    debugPrint('Health Notification Service init failed: $e');
-  }
+  // Health push notifications are evaluated against the *authenticated* user —
+  // on app open and after each reading is saved via
+  // HealthNotificationService.runChecksForCurrentUser(). There is no signed-in
+  // user this early in startup, so nothing is initialized here.
 
   // Configure API keys for external services such as OpenAI, RunPod
   try {
@@ -82,7 +62,6 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-/// Root widget - sets up state management and theming infrastructure
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -142,11 +121,32 @@ class MyApp extends StatelessWidget {
                     themeMode: themeCubit.isDarkMode
                         ? ThemeMode.dark
                         : ThemeMode.light,
-                    routes: {
-                      '/': (context) => const _AuthWrapper(),
-                      '/login': (context) => const LoginPage(),
-                      '/signup': (context) => const SignupPage(),
-                      '/profile-setup': (context) => const ProfileSetupScreen(),
+                    onGenerateRoute: (settings) {
+                      final routes = <String, WidgetBuilder>{
+                        '/': (_) => const _AuthWrapper(),
+                        '/login': (_) => const LoginPage(),
+                        '/signup': (_) => const SignupPage(),
+                        '/profile-setup': (_) => const ProfileSetupScreen(),
+                      };
+                      final builder = routes[settings.name];
+                      if (builder == null) return null;
+                      return PageRouteBuilder(
+                        settings: settings,
+                        pageBuilder: (ctx, _, __) => builder(ctx),
+                        transitionDuration: const Duration(milliseconds: 300),
+                        reverseTransitionDuration: const Duration(
+                          milliseconds: 250,
+                        ),
+                        transitionsBuilder: (_, animation, __, child) {
+                          return FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOut,
+                            ),
+                            child: child,
+                          );
+                        },
+                      );
                     },
                   ),
                 );

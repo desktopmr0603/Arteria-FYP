@@ -2,13 +2,18 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:arteria/env/env.dart';
 
 class InsightGeneratorService {
   static const String _openAIModel = 'gpt-4.1-mini-2025-04-14';
 
-  /// Triggers a background generation of a personalized health insight 
+  /// Triggers a background generation of a personalized health insight
   /// using the most recent BP context and safely persists it to the dashboard.
+  ///
+  /// [language] is the BCP-47 code the insight text should be written in
+  /// ('en' or 'fr'). When omitted, it is read from the persisted app locale so
+  /// the dashboard summary always matches the language the user picked.
   static Future<void> generateAndSaveInsight({
     required String uid,
     required double newSystolic,
@@ -16,6 +21,7 @@ class InsightGeneratorService {
     required double avgSystolic,
     required double avgDiastolic,
     required bool hasSymptoms,
+    String? language,
   }) async {
     try {
       final openaiKey = Env.openaiApiKey;
@@ -23,6 +29,10 @@ class InsightGeneratorService {
         debugPrint('⚠️ Cannot generate insight: OpenAI API key missing.');
         return;
       }
+
+      // Resolve the target language: explicit arg wins, else the saved locale.
+      final lang = (language ?? await _savedLocaleCode()).toLowerCase();
+      final languageName = lang == 'fr' ? 'French' : 'English';
 
       OpenAI.apiKey = openaiKey;
 
@@ -43,6 +53,8 @@ CRÍTICAL RULES:
   "type": "blood_pressure" | "trend" | "medication" | "symptom" | "general",
   "icon": "blood_pressure" | "trend" | "medication" | "symptom"
 }
+4. Write the "title" and "message" values in $languageName. Keep the "status",
+   "type", and "icon" values exactly as the English enum tokens above.
 ''';
 
       final userPrompt = '''
@@ -96,13 +108,25 @@ Please generate the JSON insight.
         'status': statusStr,
         'type': type,
         'icon': iconStr,
+        'lang': lang,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      debugPrint('✅ Dashboard Insight generated and saved successfully.');
+      debugPrint('✅ Dashboard Insight ($lang) generated and saved successfully.');
     } catch (e) {
       // Intentionally swallow errors so the primary reading save is NEVER blocked
       debugPrint('⚠️ AI Insight Generation failed smoothly: $e');
+    }
+  }
+
+  /// The app locale persisted by SettingsBloc (SharedPreferences key 'locale').
+  /// Defaults to 'en' if unset or unreadable.
+  static Future<String> _savedLocaleCode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('locale') ?? 'en';
+    } catch (_) {
+      return 'en';
     }
   }
 }

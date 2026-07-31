@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -41,6 +42,11 @@ class TalkingAvatarWidget extends StatefulWidget {
   /// Optional height for the container.
   final double height;
 
+  /// When true, renders only the 3D viewer with no decoration, border,
+  /// backdrop blur, or overlays. The parent widget handles all framing.
+  /// Useful when embedding inside a custom-shaped container (e.g. circle).
+  final bool bare;
+
   const TalkingAvatarWidget({
     super.key,
     required this.isSpeaking,
@@ -49,6 +55,7 @@ class TalkingAvatarWidget extends StatefulWidget {
     this.onLoaded,
     this.width = 300,
     this.height = 400,
+    this.bare = false,
   });
 
   @override
@@ -56,17 +63,30 @@ class TalkingAvatarWidget extends StatefulWidget {
 }
 
 class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final Flutter3DController _controller = Flutter3DController();
   bool _isLoaded = false;
   List<String>? _availableAnimations;
-  
+
+  // Circular loading spinner
+  late AnimationController _loadingController;
+
+  /// Time the original/first clip plays before settling on its resting pose.
+  /// Shared by the initial load and the post-speaking return so the avatar
+  /// always comes to rest on the *same* frame the user first saw.
+  static const Duration _initialPoseDelay = Duration(milliseconds: 1000);
+
+  /// Monotonic token for the "settle to resting pose" routine. Each new
+  /// transition bumps it so a delayed pause from an earlier transition can't
+  /// freeze a freshly-started animation (e.g. user speaks again mid-settle).
+  int _restGeneration = 0;
+
   // DEBUG MODE: Set to true to show camera adjustment controls
   // Once you find the right values, set to false and update the defaults below
   static const bool _debugMode = false;
-  
+
   // Camera values - LOCKED IN based on user testing
-  double _orbitTheta = 0;    // Horizontal rotation (0 = front)
+  final double _orbitTheta = 0; // Horizontal rotation (0 = front)
   double _orbitPhi = 90;     // Vertical angle (90 = level view)
   double _orbitRadius = 2.0; // Distance from model
   double _targetY = 1.3;     // Vertical target point
@@ -74,6 +94,10 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
   @override
   void initState() {
     super.initState();
+    _loadingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
     _controller.onModelLoaded.addListener(_onModelLoaded);
     // Check if model is already loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,6 +107,7 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
 
   void _onModelLoaded() {
     if (_controller.onModelLoaded.value && !_isLoaded) {
+      _loadingController.stop();
       setState(() {
         _isLoaded = true;
       });
@@ -123,17 +148,24 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
       if (_availableAnimations != null && _availableAnimations!.isNotEmpty) {
         final anim = _availableAnimations!.first;
         debugPrint('🎭 Playing animation briefly for initial pose: $anim');
+        final int generation = ++_restGeneration;
         _controller.playAnimation(animationName: anim);
 
-        // Wait 1 second to let the animation reach a good frame, then pause
-        await Future.delayed(const Duration(milliseconds: 1000));
+        // Let the clip reach its resting frame, then pause — the same routine
+        // the avatar uses to return to rest after speaking, so the load pose
+        // and the post-speech pose are identical.
+        await Future.delayed(_initialPoseDelay);
 
-        // Only pause if we're not supposed to be speaking
-        if (!widget.isSpeaking) {
+        // Only pause if nothing newer took over (speaking/listening started or
+        // another transition superseded this one).
+        if (mounted &&
+            generation == _restGeneration &&
+            !widget.isSpeaking &&
+            !widget.isListening) {
           _controller.pauseAnimation();
-          debugPrint('⏸️ Animation paused at 1s mark for initial pose');
+          debugPrint('⏸️ Animation settled on initial resting pose');
         } else {
-          debugPrint('🗣️ Continuing animation - avatar is speaking');
+          debugPrint('🗣️ Skipping initial pause - a newer state took over');
         }
       }
 
@@ -223,7 +255,12 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
       return;
     }
 
-    // Try to find a dedicated idle animation by name
+    // Invalidate any settle still pending from an earlier transition.
+    final int generation = ++_restGeneration;
+
+    // Prefer a dedicated idle/breathing loop. model-viewer cross-fades into
+    // it from the talking clip, so the hand-off is smooth and the avatar keeps
+    // a gentle, lifelike motion rather than snapping to a halt.
     final idleAnim = _availableAnimations!.firstWhere((a) {
       final lower = a.toLowerCase();
       return lower.contains('idle') ||
@@ -237,41 +274,93 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
     if (idleAnim.isNotEmpty) {
       debugPrint('😌 Playing idle animation: $idleAnim');
       _controller.playAnimation(animationName: idleAnim);
-    } else {
-      // No idle animation found — freeze on current frame rather than
-      // continuously looping the talking animation.
-      debugPrint('😌 No idle animation found, pausing at current frame');
-      _controller.pauseAnimation();
+      return;
     }
+
+    // No dedicated idle clip. Instead of hard-freezing on whatever talking
+    // frame we happened to land on (the abrupt stop), cross-fade back into the
+    // original animation and let it settle on the exact resting pose the
+    // avatar shows on first load — a smooth, deliberate "return to rest".
+    final anim = _availableAnimations!.first;
+    debugPrint('😌 No idle clip; easing back to original pose via: $anim');
+    _controller.playAnimation(animationName: anim);
+
+    await Future.delayed(_initialPoseDelay);
+
+    // Bail if we resumed speaking/listening, the widget went away, or a newer
+    // transition superseded this one — so a stale pause never freezes a fresh
+    // animation.
+    if (!mounted ||
+        generation != _restGeneration ||
+        widget.isSpeaking ||
+        widget.isListening) {
+      return;
+    }
+    _controller.pauseAnimation();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // Emotion-aware glow color
+
+    // ── Bare mode: just the 3D viewer, no decoration ──
+    if (widget.bare) {
+      return SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: Stack(
+          children: [
+            Flutter3DViewer(
+              controller: _controller,
+              src: 'assets/models/model.glb',
+              // Hide built-in flat progress bar; we use our own circular loader
+              progressBarColor: Colors.transparent,
+            ),
+            if (!_isLoaded)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _loadingController,
+                  builder: (context, _) {
+                    return CustomPaint(
+                      painter: _CircularArcLoadingPainter(
+                        progress: _loadingController.value,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.35)
+                            : Colors.black.withValues(alpha: 0.18),
+                        strokeWidth: 2.5,
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // ── Full decorated mode (original glassmorphism) ──
     Color? emotionGlowColor;
     switch (widget.emotion) {
       case AvatarEmotion.concerned:
-        emotionGlowColor = const Color(0xFFEF5350); // Red for concern
+        emotionGlowColor = const Color(0xFFEF5350);
         break;
       case AvatarEmotion.reassuring:
-        emotionGlowColor = const Color(0xFF4CAF50); // Green for reassurance
+        emotionGlowColor = const Color(0xFF4CAF50);
         break;
       case AvatarEmotion.listening:
-        emotionGlowColor = const Color(0xFF2196F3); // Blue for listening
+        emotionGlowColor = const Color(0xFF2196F3);
         break;
       case AvatarEmotion.thinking:
-        emotionGlowColor = const Color(0xFFFFA726); // Orange for thinking
+        emotionGlowColor = const Color(0xFFFFA726);
         break;
       case AvatarEmotion.helpful:
-        emotionGlowColor = const Color(0xFF9C27B0); // Purple for helpful
+        emotionGlowColor = const Color(0xFF9C27B0);
         break;
       case AvatarEmotion.analytical:
-        emotionGlowColor = const Color(0xFF00BCD4); // Cyan for analytical
+        emotionGlowColor = const Color(0xFF00BCD4);
         break;
       case AvatarEmotion.informative:
-        emotionGlowColor = const Color(0xFF607D8B); // Blue Grey for informative
+        emotionGlowColor = const Color(0xFF607D8B);
         break;
       default:
         emotionGlowColor = null;
@@ -282,7 +371,6 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
       height: widget.height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        // Glassmorphism gradient background
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -296,7 +384,6 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                   Colors.white.withValues(alpha: 0.3),
                 ],
         ),
-        // Subtle border for glass effect
         border: Border.all(
           color: Colors.white.withValues(alpha: isDark ? 0.2 : 0.5),
           width: 1.5,
@@ -307,21 +394,18 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
-          // Emotion-aware glow effect
           if (emotionGlowColor != null)
             BoxShadow(
               color: emotionGlowColor.withValues(alpha: 0.4),
               blurRadius: 25,
               spreadRadius: 3,
             ),
-          // Speaking glow (takes priority over emotion glow)
           if (widget.isSpeaking)
             BoxShadow(
               color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
               blurRadius: 30,
               spreadRadius: 2,
             ),
-          // Listening pulse glow
           if (widget.isListening && !widget.isSpeaking)
             BoxShadow(
               color: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -336,16 +420,12 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Stack(
             children: [
-              // 3D Avatar
               Flutter3DViewer(
                 controller: _controller,
-                // Using doctor_model.glb - has correct orientation
-                // If textures don't appear, model may need re-export with embedded textures
                 src: 'assets/models/model.glb',
                 progressBarColor: Theme.of(context).primaryColor,
               ),
 
-              // Loading overlay
               if (!_isLoaded)
                 Container(
                   color: isDark
@@ -371,7 +451,6 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                   ),
                 ),
 
-              // Speaking indicator glow effect
               if (widget.isSpeaking && _isLoaded)
                 Positioned(
                   bottom: 16,
@@ -416,9 +495,7 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                     ),
                   ),
                 ),
-              
-              // DEBUG PANEL: Camera adjustment controls
-              // Remove this entire block once you find the right values
+
               if (_debugMode && _isLoaded)
                 Positioned(
                   top: 8,
@@ -437,7 +514,6 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                           'CAMERA DEBUG - Copy values to console',
                           style: TextStyle(color: Colors.white, fontSize: 10),
                         ),
-                        // Phi slider (vertical angle)
                         Row(
                           children: [
                             Text('φ:', style: TextStyle(color: Colors.white, fontSize: 10)),
@@ -455,7 +531,6 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                             Text('${_orbitPhi.toInt()}°', style: TextStyle(color: Colors.white, fontSize: 10)),
                           ],
                         ),
-                        // Radius slider (zoom)
                         Row(
                           children: [
                             Text('r:', style: TextStyle(color: Colors.white, fontSize: 10)),
@@ -473,7 +548,6 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
                             Text(_orbitRadius.toStringAsFixed(1), style: TextStyle(color: Colors.white, fontSize: 10)),
                           ],
                         ),
-                        // Target Y slider (vertical position)
                         Row(
                           children: [
                             Text('Y:', style: TextStyle(color: Colors.white, fontSize: 10)),
@@ -504,7 +578,51 @@ class _TalkingAvatarWidgetState extends State<TalkingAvatarWidget>
 
   @override
   void dispose() {
+    _loadingController.dispose();
     _controller.onModelLoaded.removeListener(_onModelLoaded);
     super.dispose();
   }
+}
+
+/// Paints a spinning arc that follows the circular border of the avatar.
+class _CircularArcLoadingPainter extends CustomPainter {
+  final double progress; // 0..1 rotation
+  final Color color;
+  final double strokeWidth;
+
+  _CircularArcLoadingPainter({
+    required this.progress,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  static const double _arcLength = math.pi * 0.8; // ~144° arc
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) / 2) - strokeWidth;
+    if (radius <= 0) return;
+
+    final startAngle = progress * math.pi * 2 - math.pi / 2;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      _arcLength,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CircularArcLoadingPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color;
 }

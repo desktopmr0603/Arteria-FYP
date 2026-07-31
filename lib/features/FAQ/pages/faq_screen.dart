@@ -52,7 +52,11 @@ class FaqScreen extends StatelessWidget {
               ],
             ),
             child: Theme(
-              data: theme.copyWith(dividerColor: Colors.transparent),
+              data: theme.copyWith(
+                dividerColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
               child: ExpansionTile(
                 tilePadding: const EdgeInsets.symmetric(
                   horizontal: 20,

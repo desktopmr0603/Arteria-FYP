@@ -30,6 +30,12 @@ class RiskTrendAnalysis extends StatefulWidget {
   State<RiskTrendAnalysis> createState() => _RiskTrendAnalysisState();
 }
 
+/// Source of the risk history shown in the chart. "model" means scores came
+/// from the TFLite predictor's historical log; "heuristic" means we derived
+/// a severity-weighted score from raw BP readings because no model history
+/// was available.
+enum _RiskSource { model, heuristic, none }
+
 class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
@@ -37,6 +43,7 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
   List<RiskDataPoint> _riskHistory = [];
   List<FeatureImpact> _featureImpacts = [];
   bool _isLoading = true;
+  _RiskSource _source = _RiskSource.none;
 
   @override
   void initState() {
@@ -59,15 +66,33 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
     super.dispose();
   }
 
+  /// Minimum number of real BP readings required before we draw any risk
+  /// trend curve. Below this we show the insufficient-data state instead of
+  /// fabricating a "trend" from too few points.
+  static const int _minReadingsForTrend = 3;
+
   Future<void> _loadRiskData() async {
     try {
       final historicalScores = await widget.riskScoreService
           .getHistoricalScores(widget.userId, days: 90);
 
-      if (historicalScores.isNotEmpty) {
-        _riskHistory = _riskHistoryFromScores(historicalScores);
+      // The curve must be grounded in the user's own BP readings. The
+      // `risk_scores` collection can be populated by the home-screen
+      // predictor even when no readings exist, which previously rendered a
+      // confident "downhill trend" out of phantom/fallback points. Require
+      // real readings first, and enough of them to be meaningful.
+      if (widget.trendData.length < _minReadingsForTrend) {
+        _riskHistory = const [];
+        _source = _RiskSource.none;
       } else {
-        _riskHistory = _riskHistoryFromReadings(widget.trendData);
+        final modelHistory = _riskHistoryFromScores(historicalScores);
+        if (modelHistory.length >= _minReadingsForTrend) {
+          _riskHistory = modelHistory;
+          _source = _RiskSource.model;
+        } else {
+          _riskHistory = _riskHistoryFromReadings(widget.trendData);
+          _source = _RiskSource.heuristic;
+        }
       }
 
       // Fetch real medical profile to enrich feature impacts
@@ -176,17 +201,9 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
   ) {
     final impacts = <FeatureImpact>[];
 
-    if (readings.length < 3) {
-      return [
-        FeatureImpact(
-          name: 'Blood Pressure',
-          impact: 100.0,
-          trend: 0.0,
-          color: const Color(0xFFEF4444),
-          icon: Icons.favorite,
-        ),
-      ];
-    }
+    // Not enough data for a meaningful factor breakdown — surface an empty
+    // state upstream instead of a misleading single 100% bar.
+    if (readings.length < 3) return impacts;
 
     final sorted = [...readings]
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -370,12 +387,12 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
           end: Alignment.bottomRight,
           colors: widget.isDark
               ? [
-                  const Color(0xFF1A1F36).withOpacity(0.8),
-                  const Color(0xFF0E1225).withOpacity(0.8),
+                  const Color(0xFF1A1F36).withValues(alpha: 0.8),
+                  const Color(0xFF0E1225).withValues(alpha: 0.8),
                 ]
               : [
-                  Colors.white.withOpacity(0.9),
-                  const Color(0xFFF8FAFF).withOpacity(0.9),
+                  Colors.white.withValues(alpha: 0.9),
+                  const Color(0xFFF8FAFF).withValues(alpha: 0.9),
                 ],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -394,10 +411,17 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
             const SizedBox(height: 24),
             if (_isLoading) ...[
               _buildLoadingState(),
+            ] else if (_riskHistory.isEmpty) ...[
+              _buildInsufficientDataState(),
             ] else ...[
+              _buildSourceBadge(),
+              const SizedBox(height: 14),
               _buildRiskTrendChart(),
               const SizedBox(height: 24),
-              _buildFeatureImpactAnalysis(),
+              if (_featureImpacts.isEmpty)
+                _buildFeatureImpactsInsufficientState()
+              else
+                _buildFeatureImpactAnalysis(),
               const SizedBox(height: 24),
               _buildRiskSummary(),
             ],
@@ -475,7 +499,132 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
       ),
     );
   }
-  // ...
+
+  /// Small pill that tells the user whether the risk curve above is from the
+  /// TFLite model's historical output or a transparent heuristic derived
+  /// from BP severity. Honesty about provenance is more defensible than a
+  /// generic "AI analysis" label.
+  Widget _buildSourceBadge() {
+    final isModel = _source == _RiskSource.model;
+    final label = isModel
+        ? 'Source: ML model · historical scores'
+        : 'Source: BP severity heuristic · no model history yet';
+    final color = isModel
+        ? const Color(0xFF10B981)
+        : const Color(0xFFF59E0B);
+    final icon = isModel ? Icons.auto_awesome : Icons.calculate_outlined;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsufficientDataState() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: widget.isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.analytics_outlined,
+                  size: 20,
+                  color: Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Risk analysis unavailable',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Log at least $_minReadingsForTrend blood pressure readings to '
+            'generate a risk trend. Everything on this card is computed from '
+            'your own data — nothing is filled in.',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              height: 1.5,
+              color: widget.isDark ? Colors.white70 : Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureImpactsInsufficientState() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: widget.isDark
+            ? Colors.white.withValues(alpha: 0.03)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline,
+            size: 16,
+            color: Color(0xFF64748B),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Factor breakdown needs at least 3 readings.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: widget.isDark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildRiskTrendChart() {
     return SizedBox(
@@ -739,12 +888,12 @@ class _RiskTrendAnalysisState extends State<RiskTrendAnalysis>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF10B981).withOpacity(0.1),
-            const Color(0xFF059669).withOpacity(0.05),
+            const Color(0xFF10B981).withValues(alpha: 0.1),
+            const Color(0xFF059669).withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

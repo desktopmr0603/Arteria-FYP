@@ -49,6 +49,8 @@ class TrendData extends Equatable {
     if (systolic >= 130 || diastolic > 80) { return BPCategory.hypertensionStage1; }
     // Elevated: systolic 121-129 AND diastolic <=80
     if (systolic > 120 && diastolic <= 80) { return BPCategory.elevated; }
+    // Hypotension (Low): systolic <90 OR diastolic <60 — checked before Normal
+    if (systolic < 90 || diastolic < 60) { return BPCategory.hypotension; }
     // Normal: systolic <120 AND diastolic <80
     return BPCategory.normal;
   }
@@ -108,6 +110,7 @@ class TrendData extends Equatable {
 
 /// Blood Pressure category based on AHA guidelines
 enum BPCategory {
+  hypotension,
   normal,
   elevated,
   hypertensionStage1,
@@ -116,6 +119,8 @@ enum BPCategory {
 
   String get displayName {
     switch (this) {
+      case BPCategory.hypotension:
+        return 'Low (Hypotension)';
       case BPCategory.normal:
         return 'Normal';
       case BPCategory.elevated:
@@ -132,6 +137,8 @@ enum BPCategory {
   /// Returns color for the category
   String get colorCode {
     switch (this) {
+      case BPCategory.hypotension:
+        return '#2196F3'; // Blue
       case BPCategory.normal:
         return '#4CAF50'; // Green
       case BPCategory.elevated:
@@ -148,6 +155,8 @@ enum BPCategory {
   /// Returns severity level (0-4)
   int get severity {
     switch (this) {
+      case BPCategory.hypotension:
+        return 2;
       case BPCategory.normal:
         return 0;
       case BPCategory.elevated:

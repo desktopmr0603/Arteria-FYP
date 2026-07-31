@@ -359,7 +359,7 @@ class CompactVoiceStressIndicator extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${stressScore}%',
+                        '$stressScore%',
                         style: GoogleFonts.montserrat(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,

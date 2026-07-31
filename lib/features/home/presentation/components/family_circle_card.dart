@@ -1,12 +1,14 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:arteria/features/home/presentation/components/premium_dashboard_card.dart';
+import 'package:arteria/features/home/domain/entities/family_member.dart';
+import 'package:arteria/features/home/domain/repositories/family_member_repository.dart';
+import 'package:arteria/features/home/data/repositories/family_member_repository_impl.dart';
 
 class FamilyCircleCard extends StatefulWidget {
   const FamilyCircleCard({super.key});
@@ -16,11 +18,21 @@ class FamilyCircleCard extends StatefulWidget {
 }
 
 class _FamilyCircleCardState extends State<FamilyCircleCard> {
+  final FamilyRepository _repo = FamilyMemberRepositoryImpl();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _redeemController = TextEditingController();
   String _selectedPermission = 'viewOnly';
   String? _generatedInviteCode;
   bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _redeemController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,68 +61,69 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
         return PremiumDashboardCard(
           padding: const EdgeInsets.all(20),
           child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF8B5CF6,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.family_restroom_rounded,
-                                size: 22,
-                                color: Color(0xFF8B5CF6),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(context)!.familyCircle,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? Colors.white
-                                        : const Color(0xFF1E293B),
-                                  ),
-                                ),
-                                Text(
-                                  AppLocalizations.of(context)!.familyConnected(familyMembers.length),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? Colors.white.withValues(alpha: 0.5)
-                                        : const Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF76C5E).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        _buildAddButton(isDark),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (familyMembers.isEmpty) ...[
-                      _buildEmptyState(isDark),
-                    ] else ...[
-                      ...familyMembers.map(
-                        (member) => _buildMemberItem(member, isDark),
+                        child: const Icon(
+                          Icons.family_restroom_rounded,
+                          size: 22,
+                          color: Color(0xFFF76C5E),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)!.familyCircle,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1E293B),
+                            ),
+                          ),
+                          Text(
+                            AppLocalizations.of(
+                              context,
+                            )!.familyConnected(familyMembers.length),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.5)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    _buildInviteSection(isDark),
-                  ],
+                  ),
+                  _buildAddButton(isDark),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (familyMembers.isEmpty) ...[
+                _buildEmptyState(isDark),
+              ] else ...[
+                ...familyMembers.map(
+                  (member) => _buildMemberItem(member, isDark),
+                ),
+              ],
+              const SizedBox(height: 12),
+              _buildInviteSection(isDark),
+              _buildJoinAction(isDark),
+            ],
           ),
         );
       },
@@ -125,8 +138,8 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-              const Color(0xFF6366F1).withValues(alpha: 0.1),
+              const Color(0xFFF76C5E).withValues(alpha: 0.1),
+              const Color(0xFFF76C5E).withValues(alpha: 0.1),
             ],
           ),
           borderRadius: BorderRadius.circular(10),
@@ -134,14 +147,14 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.add_rounded, size: 18, color: Color(0xFF8B5CF6)),
+            const Icon(Icons.add_rounded, size: 18, color: Color(0xFFF76C5E)),
             const SizedBox(width: 4),
             Text(
               AppLocalizations.of(context)!.familyInvite,
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF8B5CF6),
+                color: const Color(0xFFF76C5E),
               ),
             ),
           ],
@@ -159,13 +172,13 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                color: const Color(0xFFF76C5E).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.family_restroom_rounded,
                 size: 32,
-                color: Color(0xFF8B5CF6),
+                color: Color(0xFFF76C5E),
               ),
             ),
             const SizedBox(height: 12),
@@ -219,7 +232,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                colors: [Color(0xFFF76C5E), Color(0xFFF76C5E)],
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -254,7 +267,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                    color: const Color(0xFFF76C5E).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -262,7 +275,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF8B5CF6),
+                      color: const Color(0xFFF76C5E),
                     ),
                   ),
                 ),
@@ -290,13 +303,13 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-            const Color(0xFF6366F1).withValues(alpha: 0.1),
+            const Color(0xFFF76C5E).withValues(alpha: 0.1),
+            const Color(0xFFF76C5E).withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+          color: const Color(0xFFF76C5E).withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -325,7 +338,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                    color: const Color(0xFFF76C5E).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -334,7 +347,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                       Icon(
                         Icons.content_copy_rounded,
                         size: 14,
-                        color: const Color(0xFF8B5CF6),
+                        color: const Color(0xFFF76C5E),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -342,7 +355,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF8B5CF6),
+                          color: const Color(0xFFF76C5E),
                         ),
                       ),
                     ],
@@ -358,7 +371,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
               color: isDark ? const Color(0xFF2D2D3A) : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                color: const Color(0xFFF76C5E).withValues(alpha: 0.3),
               ),
             ),
             child: Column(
@@ -369,7 +382,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                     Icon(
                       Icons.qr_code_2_rounded,
                       size: 24,
-                      color: const Color(0xFF8B5CF6),
+                      color: const Color(0xFFF76C5E),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -397,7 +410,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF8B5CF6),
+                      color: const Color(0xFFF76C5E),
                       letterSpacing: 2,
                     ),
                     textAlign: TextAlign.center,
@@ -422,11 +435,17 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
   }
 
   String _getInitials(String name) {
-    final parts = name.split(' ');
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    final first = parts[0];
+    return (first.length >= 2 ? first.substring(0, 2) : first).toUpperCase();
   }
 
   String _getPermissionLabel(String permission) {
@@ -442,14 +461,43 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
     }
   }
 
+  // ── Dialog theme palette ───────────────────────────────────────────
+  // Hardcoded light-theme colours previously made this dialog unreadable
+  // in dark mode (near-white field fills on a dark surface, low-contrast
+  // text). These resolve per-theme so every surface reads correctly.
+  static const _accent = Color(0xFFF76C5E);
+
+  Color _dialogSurface(bool isDark) =>
+      isDark ? const Color(0xFF1E1E24) : Colors.white;
+  Color _dialogFieldFill(bool isDark) =>
+      isDark ? const Color(0xFF2A2A33) : const Color(0xFFF1F5F9);
+  Color _dialogTextPrimary(bool isDark) =>
+      isDark ? Colors.white : const Color(0xFF1E293B);
+  Color _dialogTextMuted(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.55) : const Color(0xFF64748B);
+  Color _dialogTextFaint(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.38) : const Color(0xFF94A3B8);
+  Color _dialogBorder(bool isDark) =>
+      isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
+
   void _showInviteDialog(BuildContext context) {
+    // Reset in case a previous attempt was dismissed mid-request — keeps
+    // the Send button enabled on re-open.
+    _isLoading = false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = _dialogSurface(isDark);
+    final textPrimary = _dialogTextPrimary(isDark);
+    final textMuted = _dialogTextMuted(isDark);
+    final border = _dialogBorder(isDark);
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
         child: StatefulBuilder(
-          builder: (context, setState) => Container(
+          builder: (context, dialogSetState) => Container(
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(
@@ -461,12 +509,14 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                          color: _accent.withValues(
+                            alpha: isDark ? 0.18 : 0.10,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.share_rounded,
-                          color: Color(0xFF8B5CF6),
+                          color: _accent,
                           size: 24,
                         ),
                       ),
@@ -477,6 +527,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                           style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
+                            color: textPrimary,
                           ),
                         ),
                       ),
@@ -485,13 +536,11 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                   const SizedBox(height: 8),
                   Text(
                     'Share your health data with family members',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: GoogleFonts.inter(fontSize: 14, color: textMuted),
                   ),
                   const SizedBox(height: 24),
                   _buildTextField(
+                    isDark: isDark,
                     controller: _emailController,
                     label: 'Email (optional)',
                     icon: Icons.email_rounded,
@@ -499,24 +548,30 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
+                    isDark: isDark,
                     controller: _phoneController,
                     label: 'Phone (optional)',
                     icon: Icons.phone_rounded,
-                    hint: '+1 (555) 123-4567',
+                    hint: '59123456',
                   ),
                   const SizedBox(height: 16),
-                  _buildPermissionDropdown(),
+                  _buildPermissionDropdown(isDark, dialogSetState),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _isLoading
                           ? null
-                          : () => _sendInvite(context, setState),
+                          : () => _sendInvite(context, dialogSetState),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5CF6),
+                        backgroundColor: _accent,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        disabledBackgroundColor: _accent.withValues(alpha: 0.5),
+                        disabledForegroundColor: Colors.white.withValues(
+                          alpha: 0.8,
+                        ),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -530,37 +585,61 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Send Invite'),
+                          : Text(
+                              'Send Invite',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      'Or generate an invite code',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: border, height: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'or',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _dialogTextFaint(isDark),
+                          ),
+                        ),
                       ),
-                    ),
+                      Expanded(child: Divider(color: border, height: 1)),
+                    ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => _generateQRCode(context, setState),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _generateQRCode(context, dialogSetState),
                       icon: const Icon(Icons.qr_code_2_rounded, size: 20),
-                      label: const Text('Generate Invite Code'),
+                      label: Text(
+                        'Generate Invite Code',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: _accent,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        side: BorderSide(
+                          color: _accent.withValues(alpha: 0.55),
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
@@ -570,7 +649,7 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade600,
+                          color: textMuted,
                         ),
                       ),
                     ),
@@ -585,11 +664,18 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
   }
 
   Widget _buildTextField({
+    required bool isDark,
     required TextEditingController controller,
     required String label,
     required IconData icon,
     required String hint,
   }) {
+    final fieldFill = _dialogFieldFill(isDark);
+    final textPrimary = _dialogTextPrimary(isDark);
+    final textMuted = _dialogTextMuted(isDark);
+    final textFaint = _dialogTextFaint(isDark);
+    final border = _dialogBorder(isDark);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -598,20 +684,31 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: textMuted,
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          cursorColor: _accent,
+          style: GoogleFonts.inter(fontSize: 14, color: textPrimary),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade400),
+            prefixIcon: Icon(icon, size: 20, color: textFaint),
             hintText: hint,
+            hintStyle: GoogleFonts.inter(fontSize: 14, color: textFaint),
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: fieldFill,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _accent, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -623,12 +720,20 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
     );
   }
 
-  Widget _buildPermissionDropdown() {
+  Widget _buildPermissionDropdown(
+    bool isDark,
+    void Function(void Function()) dialogSetState,
+  ) {
     final permissions = [
       ('viewOnly', 'View Only', 'Can view your readings'),
       ('viewAndExport', 'View & Export', 'Can view and share reports'),
       ('fullAccess', 'Full Access', 'Full access to your data'),
     ];
+
+    final fieldFill = _dialogFieldFill(isDark);
+    final textPrimary = _dialogTextPrimary(isDark);
+    final textMuted = _dialogTextMuted(isDark);
+    final border = _dialogBorder(isDark);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,41 +743,59 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: textMuted,
           ),
         ),
         const SizedBox(height: 8),
-        ...permissions.map(
-          (p) => GestureDetector(
-            onTap: () {
-              setState(() => _selectedPermission = p.$1);
-            },
-            child: Container(
+        ...permissions.map((p) {
+          final selected = _selectedPermission == p.$1;
+          return GestureDetector(
+            onTap: () => dialogSetState(() => _selectedPermission = p.$1),
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
               margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _selectedPermission == p.$1
-                    ? const Color(0xFF8B5CF6).withValues(alpha: 0.1)
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
+                color: selected
+                    ? _accent.withValues(alpha: isDark ? 0.16 : 0.09)
+                    : fieldFill,
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: _selectedPermission == p.$1
-                      ? const Color(0xFF8B5CF6)
-                      : Colors.transparent,
-                  width: _selectedPermission == p.$1 ? 1 : 0,
+                  color: selected ? _accent : border,
+                  width: selected ? 1.5 : 1,
                 ),
               ),
               child: Row(
                 children: [
-                  Radio<String>(
-                    value: p.$1,
-                    groupValue: _selectedPermission,
-                    onChanged: (value) {
-                      setState(() => _selectedPermission = value!);
-                    },
-                    activeColor: const Color(0xFF8B5CF6),
+                  // Custom selection indicator — replaces the Radio so it
+                  // is fully theme-controlled and never low-contrast.
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? _accent : Colors.transparent,
+                      border: Border.all(
+                        color: selected
+                            ? _accent
+                            : (isDark
+                                  ? Colors.white.withValues(alpha: 0.3)
+                                  : const Color(0xFFCBD5E1)),
+                        width: 2,
+                      ),
+                    ),
+                    child: selected
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -682,13 +805,15 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            color: selected ? _accent : textPrimary,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           p.$3,
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: textMuted,
                           ),
                         ),
                       ],
@@ -697,108 +822,656 @@ class _FamilyCircleCardState extends State<FamilyCircleCard> {
                 ],
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }
 
-  void _sendInvite(
-    BuildContext context,
-    void Function(void Function()) setState,
-  ) async {
-    if (_emailController.text.isEmpty && _phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email or phone')),
+  // ── Sending invites ─────────────────────────────────────────────────
+
+  bool _isValidEmail(String email) =>
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+
+  SharePermission _permissionFromString(String name) =>
+      SharePermission.values.firstWhere(
+        (e) => e.name == name,
+        orElse: () => SharePermission.viewOnly,
       );
-      return;
-    }
 
-    setState(() => _isLoading = true);
-
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-    final userName = userDoc.data()?['firstName'] ?? 'A family member';
-
-    final inviteId = const Uuid().v4();
-    final inviteCode =
-        'ART-${DateTime.now().millisecondsSinceEpoch.toRadixString(16).substring(0, 8).toUpperCase()}';
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('outgoingInvites')
-        .doc(inviteId)
-        .set({
-          'inviterUserId': userId,
-          'inviterName': userName,
-          'email': _emailController.text,
-          'phone': _phoneController.text,
-          'inviteCode': inviteCode,
-          'permission': _selectedPermission,
-          'status': 'pending',
-          'createdAt': DateTime.now().toIso8601String(),
-          'expiresAt': DateTime.now()
-              .add(const Duration(days: 7))
-              .toIso8601String(),
-        });
-
-    setState(() {
-      _isLoading = false;
-      _generatedInviteCode = inviteCode;
-    });
-
-    if (_emailController.text.isNotEmpty) {
-      if (!context.mounted) return;
-      // In a real app, you'd send an email here
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invite sent to ${_emailController.text}')),
-      );
+  /// Resolves the signed-in user's display name for the invite payload so
+  /// the recipient sees who invited them.
+  Future<String> _currentUserName(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      final data = doc.data() ?? {};
+      final first = ((data['firstName'] as String?) ?? '').trim();
+      final last = ((data['lastName'] as String?) ?? '').trim();
+      final full = [first, last].where((s) => s.isNotEmpty).join(' ');
+      return full.isEmpty ? 'A family member' : full;
+    } catch (_) {
+      return 'A family member';
     }
   }
 
-  void _generateQRCode(
+  /// Strips the `Exception: ` prefix so repository validation messages read
+  /// as plain sentences in the UI.
+  String _friendlyError(Object e) {
+    var msg = e.toString();
+    if (msg.startsWith('Exception: ')) msg = msg.substring(11);
+    return msg.trim().isEmpty
+        ? 'Something went wrong. Please try again.'
+        : msg.trim();
+  }
+
+  void _showSnack(
     BuildContext context,
-    void Function(void Function()) setState,
+    String message, {
+    bool success = false,
+  }) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: success
+            ? const Color(0xFF10B981)
+            : const Color(0xFF334155),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  String _composeInviteMessage(String inviterName, String code) {
+    return '$inviterName invited you to their Arteria family circle, so you '
+        'can follow blood-pressure readings together.\n\n'
+        'Invite code: $code\n\n'
+        'How to join:\n'
+        '1. Install or open the Arteria app.\n'
+        '2. On the Home screen, find the Family Circle card.\n'
+        '3. Tap "Have an invite code?" and enter the code above.\n\n'
+        'This invite expires in 7 days.';
+  }
+
+  String _encodeQueryParameters(Map<String, String> params) => params.entries
+      .map(
+        (e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
+      )
+      .join('&');
+
+  /// Hands the invite to the device mail / SMS app so it is genuinely
+  /// delivered — there is no server-side mailer. Returns true when a
+  /// compose window opens; the code is still shown on the card as a
+  /// fallback when no app can be launched.
+  Future<bool> _deliverInvite({
+    required String email,
+    required String phone,
+    required String inviterName,
+    required String code,
+  }) async {
+    final body = _composeInviteMessage(inviterName, code);
+    try {
+      if (email.isNotEmpty) {
+        final uri = Uri(
+          scheme: 'mailto',
+          path: email,
+          query: _encodeQueryParameters({
+            'subject': 'Join my Arteria family circle',
+            'body': body,
+          }),
+        );
+        if (await canLaunchUrl(uri)) {
+          return await launchUrl(uri);
+        }
+      }
+      if (phone.isNotEmpty) {
+        final uri = Uri(
+          scheme: 'sms',
+          path: phone,
+          query: _encodeQueryParameters({'body': body}),
+        );
+        if (await canLaunchUrl(uri)) {
+          return await launchUrl(uri);
+        }
+      }
+    } catch (_) {
+      // Ignored — fall back to showing the code on the card.
+    }
+    return false;
+  }
+
+  Future<void> _sendInvite(
+    BuildContext context,
+    void Function(void Function()) dialogSetState,
   ) async {
-    setState(() => _isLoading = true);
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
 
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-    final userName = userDoc.data()?['firstName'] ?? 'A family member';
+    if (email.isEmpty && phone.isEmpty) {
+      _showSnack(context, 'Enter an email or phone number to send the invite.');
+      return;
+    }
+    if (email.isNotEmpty && !_isValidEmail(email)) {
+      _showSnack(context, "That email address doesn't look right.");
+      return;
+    }
 
-    final inviteId = const Uuid().v4();
-    final inviteCode =
-        'ART-${DateTime.now().millisecondsSinceEpoch.toRadixString(16).substring(0, 8).toUpperCase()}';
+    dialogSetState(() => _isLoading = true);
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        throw Exception('You need to be signed in to invite family.');
+      }
+      final inviterName = await _currentUserName(userId);
+      final code = await _repo.sendInvite(
+        userId,
+        inviterName,
+        email.isEmpty ? null : email,
+        phone.isEmpty ? null : phone,
+        _permissionFromString(_selectedPermission),
+      );
+      final delivered = await _deliverInvite(
+        email: email,
+        phone: phone,
+        inviterName: inviterName,
+        code: code,
+      );
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('outgoingInvites')
-        .doc(inviteId)
-        .set({
-          'inviterUserId': userId,
-          'inviterName': userName,
-          'email': null,
-          'phone': null,
-          'inviteCode': inviteCode,
-          'permission': _selectedPermission,
-          'status': 'pending',
-          'createdAt': DateTime.now().toIso8601String(),
-          'expiresAt': DateTime.now()
-              .add(const Duration(days: 7))
-              .toIso8601String(),
-        });
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      setState(() {
+        _generatedInviteCode = code;
+        _isLoading = false;
+        _emailController.clear();
+        _phoneController.clear();
+      });
+      _showSnack(
+        context,
+        delivered
+            ? 'Invite ready — finish sending it in the app that just opened.'
+            : 'Invite created. Share code $code with your family member.',
+        success: true,
+      );
+    } catch (e) {
+      dialogSetState(() => _isLoading = false);
+      _showSnack(context, _friendlyError(e));
+    }
+  }
 
-    setState(() {
-      _isLoading = false;
-      _generatedInviteCode = inviteCode;
-    });
+  Future<void> _generateQRCode(
+    BuildContext context,
+    void Function(void Function()) dialogSetState,
+  ) async {
+    dialogSetState(() => _isLoading = true);
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        throw Exception('You need to be signed in to create an invite.');
+      }
+      final inviterName = await _currentUserName(userId);
+      final code = await _repo.sendInvite(
+        userId,
+        inviterName,
+        null,
+        null,
+        _permissionFromString(_selectedPermission),
+      );
+
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      setState(() {
+        _generatedInviteCode = code;
+        _isLoading = false;
+      });
+      _showSnack(
+        context,
+        'Invite code created. Share it with your family member.',
+        success: true,
+      );
+    } catch (e) {
+      dialogSetState(() => _isLoading = false);
+      _showSnack(context, _friendlyError(e));
+    }
+  }
+
+  // ── Redeeming invites ───────────────────────────────────────────────
+
+  Widget _buildJoinAction(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: InkWell(
+        onTap: () => _showRedeemDialog(context),
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.vpn_key_rounded,
+                size: 16,
+                color: Color(0xFFF76C5E),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Have an invite code?',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFF76C5E),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Two-step redeem flow: enter a code → preview the invite (who sent it,
+  /// what they're sharing) → accept and connect.
+  void _showRedeemDialog(BuildContext rootContext) {
+    final isDark = Theme.of(rootContext).brightness == Brightness.dark;
+    final surface = _dialogSurface(isDark);
+    final textPrimary = _dialogTextPrimary(isDark);
+    final textMuted = _dialogTextMuted(isDark);
+    final textFaint = _dialogTextFaint(isDark);
+    final fieldFill = _dialogFieldFill(isDark);
+    final border = _dialogBorder(isDark);
+
+    _redeemController.clear();
+    FamilyInvite? preview;
+    bool busy = false;
+    String? error;
+
+    showDialog(
+      context: rootContext,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: StatefulBuilder(
+          builder: (dialogContext, dialogSetState) {
+            Future<void> findInvite() async {
+              final code = _redeemController.text.trim().toUpperCase();
+              if (code.isEmpty) {
+                dialogSetState(
+                  () => error = 'Enter the invite code you received.',
+                );
+                return;
+              }
+              dialogSetState(() {
+                busy = true;
+                error = null;
+              });
+              try {
+                final invite = await _repo.getInviteByCode(code);
+                final myId = FirebaseAuth.instance.currentUser?.uid;
+                String? problem;
+                if (invite == null) {
+                  problem =
+                      'No invite matches that code. Check it and try again.';
+                } else if (invite.status == FamilyInviteStatus.accepted) {
+                  problem = 'This invite has already been used.';
+                } else if (invite.status != FamilyInviteStatus.pending ||
+                    invite.isExpired) {
+                  problem = 'This invite is no longer valid.';
+                } else if (myId != null && invite.inviterUserId == myId) {
+                  problem = "That's your own invite code.";
+                }
+                dialogSetState(() {
+                  busy = false;
+                  if (problem != null) {
+                    error = problem;
+                  } else {
+                    preview = invite;
+                  }
+                });
+              } catch (e) {
+                dialogSetState(() {
+                  busy = false;
+                  error = _friendlyError(e);
+                });
+              }
+            }
+
+            Future<void> acceptInvite() async {
+              dialogSetState(() {
+                busy = true;
+                error = null;
+              });
+              try {
+                final myId = FirebaseAuth.instance.currentUser?.uid;
+                if (myId == null) {
+                  throw Exception('You need to be signed in to join a family.');
+                }
+                await _repo.acceptInvite(myId, preview!.inviteCode);
+                final name = preview!.inviterName;
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                _showSnack(
+                  rootContext,
+                  "Connected with $name's family circle.",
+                  success: true,
+                );
+              } catch (e) {
+                dialogSetState(() {
+                  busy = false;
+                  error = _friendlyError(e);
+                });
+              }
+            }
+
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _accent.withValues(
+                              alpha: isDark ? 0.18 : 0.10,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.group_add_rounded,
+                            color: _accent,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Join a Family Circle',
+                            style: GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      preview == null
+                          ? 'Enter the invite code a family member shared '
+                                'with you.'
+                          : 'Review the invite below before connecting.',
+                      style: GoogleFonts.inter(fontSize: 14, color: textMuted),
+                    ),
+                    const SizedBox(height: 20),
+                    if (preview == null)
+                      TextField(
+                        controller: _redeemController,
+                        cursorColor: _accent,
+                        textCapitalization: TextCapitalization.characters,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.5,
+                          color: textPrimary,
+                        ),
+                        onSubmitted: (_) => busy ? null : findInvite(),
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(
+                            Icons.vpn_key_rounded,
+                            size: 20,
+                            color: textFaint,
+                          ),
+                          hintText: 'ART-XXXXXXXX',
+                          hintStyle: GoogleFonts.inter(
+                            fontSize: 16,
+                            color: textFaint,
+                          ),
+                          filled: true,
+                          fillColor: fieldFill,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: _accent,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                      )
+                    else
+                      _buildInvitePreview(isDark, preview!),
+                    if (error != null) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            size: 16,
+                            color: Color(0xFFEF4444),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              error!,
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFFEF4444),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: busy
+                            ? null
+                            : (preview == null ? findInvite : acceptInvite),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: _accent.withValues(
+                            alpha: 0.5,
+                          ),
+                          disabledForegroundColor: Colors.white.withValues(
+                            alpha: 0.8,
+                          ),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: busy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                preview == null
+                                    ? 'Find Invite'
+                                    : 'Accept & Connect',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: busy
+                            ? null
+                            : () {
+                                if (preview == null) {
+                                  Navigator.pop(dialogContext);
+                                } else {
+                                  dialogSetState(() {
+                                    preview = null;
+                                    error = null;
+                                  });
+                                }
+                              },
+                        child: Text(
+                          preview == null ? 'Cancel' : 'Use a different code',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: textMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvitePreview(bool isDark, FamilyInvite invite) {
+    final textPrimary = _dialogTextPrimary(isDark);
+    final textMuted = _dialogTextMuted(isDark);
+    final fieldFill = _dialogFieldFill(isDark);
+    final border = _dialogBorder(isDark);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: fieldFill,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFF76C5E), Color(0xFFF98E82)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Text(
+                    _getInitials(invite.inviterName),
+                    style: GoogleFonts.inter(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invite.inviterName,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'invited you to their family circle',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        color: textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _accent.withValues(alpha: isDark ? 0.16 : 0.09),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.shield_rounded, size: 18, color: _accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        invite.permission.displayName,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
+                      ),
+                      Text(
+                        invite.permission.description,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          color: textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

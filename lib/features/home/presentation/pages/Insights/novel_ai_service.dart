@@ -34,6 +34,10 @@ class NovelAIService {
           'user_id': _userId,
           'language': 'en',
           'analyze_stress': true,
+          // The conversational response comes from /hybrid/audio, called in
+          // parallel by InsightsScreen. Suppress LLM here so we don't get
+          // two competing classifiers fighting over the same utterance.
+          'skip_llm_response': true,
         }),
       );
 

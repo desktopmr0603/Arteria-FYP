@@ -80,6 +80,8 @@ dependencies:
   uuid: ^4.5.1
   url_launcher: ^6.3.1
   http_parser: ^4.1.2
+  flutter_svg: ^2.0.17
+  flutter_native_splash: ^2.4.6
 
 dev_dependencies:
   flutter_test:
@@ -109,11 +111,13 @@ flutter:
   assets:
     - assets/google.png
     - assets/illustrations/bloodpressure.png
+    - assets/illustrations/ai_icon.png
     - assets/models/model.glb
     - assets/models/doctor_model.glb
     - assets/models/bp_predictor.tflite
     - assets/models/model_metadata.json
     - assets/animations/mic-record-button.riv
+    - assets/illustrations/Arteria_Logo.svg
     - .env
     
 
@@ -142,3 +146,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  color_dark: "#121212"
+  image: assets/illustrations/Arteria_Logo.png
+  android: true
+  ios: true
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#121212"
+    image: assets/illustrations/Arteria_Logo.png
+  fullscreen: true

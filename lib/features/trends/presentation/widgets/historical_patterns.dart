@@ -253,9 +253,17 @@ class _HistoricalPatternsState extends State<HistoricalPatterns>
           : AnomalyType.heartRateVariability;
 
       final data = <String, dynamic>{};
-      if (result.deviationValue != null)
+      if (result.deviationValue != null) {
         data['deviation'] = result.deviationValue;
+      }
       if (result.changeValue != null) data['change'] = result.changeValue;
+
+      // An anomaly is "resolved" only if a later reading returned to the
+      // normal range (systolic <130 and diastolic <85). If no such later
+      // reading exists, the anomaly is still pending.
+      final bool resolved = sorted
+          .skip(i + 1)
+          .any((later) => later.systolic < 130 && later.diastolic < 85);
 
       anomalies.add(
         AnomalyEvent(
@@ -263,7 +271,7 @@ class _HistoricalPatternsState extends State<HistoricalPatterns>
           type: type,
           severity: severity,
           reading: '${current.systolic}/${current.diastolic} mmHg',
-          resolved: true,
+          resolved: resolved,
           data: data,
         ),
       );
@@ -283,12 +291,12 @@ class _HistoricalPatternsState extends State<HistoricalPatterns>
           end: Alignment.bottomRight,
           colors: widget.isDark
               ? [
-                  const Color(0xFF1A1F36).withOpacity(0.8),
-                  const Color(0xFF0E1225).withOpacity(0.8),
+                  const Color(0xFF1A1F36).withValues(alpha: 0.8),
+                  const Color(0xFF0E1225).withValues(alpha: 0.8),
                 ]
               : [
-                  Colors.white.withOpacity(0.9),
-                  const Color(0xFFF8FAFF).withOpacity(0.9),
+                  Colors.white.withValues(alpha: 0.9),
+                  const Color(0xFFF8FAFF).withValues(alpha: 0.9),
                 ],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -307,6 +315,8 @@ class _HistoricalPatternsState extends State<HistoricalPatterns>
             const SizedBox(height: 24),
             if (_isLoading) ...[
               _buildLoadingState(),
+            ] else if (widget.trendData.length < 5) ...[
+              _buildInsufficientDataState(),
             ] else ...[
               _buildPatternsOverview(),
               const SizedBox(height: 24),
@@ -358,6 +368,63 @@ class _HistoricalPatternsState extends State<HistoricalPatterns>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInsufficientDataState() {
+    final need = 5 - widget.trendData.length;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: widget.isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.lock_outline,
+                  size: 20,
+                  color: Color(0xFF8B5CF6),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Pattern detection locked',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            need > 0
+                ? 'Log $need more reading${need == 1 ? '' : 's'} to unlock '
+                      'morning spike, weekend relief and variability analysis.'
+                : 'Keep logging — patterns appear once we have enough data.',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              height: 1.5,
+              color: widget.isDark ? Colors.white70 : Colors.black54,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

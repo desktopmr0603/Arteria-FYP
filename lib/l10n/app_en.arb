@@ -573,6 +573,79 @@
     "description": "Error when microphone permission is denied"
   },
 
+  "micProcessingReading": "Processing your reading…",
+  "@micProcessingReading": {
+    "description": "Shown while the spoken reading is being analyzed"
+  },
+  "micCouldNotDetectReading": "I couldn't catch a blood pressure reading. Tap the mic and say it clearly, for example \"120 over 80\".",
+  "@micCouldNotDetectReading": {
+    "description": "Shown when no blood pressure reading could be parsed from speech"
+  },
+  "micReadingOutOfRange": "I heard {systolic}/{diastolic} mmHg, which is outside the measurable range. Tap the mic and say your reading again clearly.",
+  "@micReadingOutOfRange": {
+    "description": "Shown when a parsed reading is physiologically implausible",
+    "placeholders": {
+      "systolic": { "type": "int" },
+      "diastolic": { "type": "int" }
+    }
+  },
+  "micNoSpeechDetected": "No speech detected. Tap the mic and try again.",
+  "@micNoSpeechDetected": {
+    "description": "Shown when the recording contained no recognizable speech"
+  },
+  "micRecordingError": "Recording error. Please try again.",
+  "@micRecordingError": {
+    "description": "Generic recording failure message"
+  },
+  "micNoAudioRecorded": "No audio recorded. Please try again.",
+  "@micNoAudioRecorded": {
+    "description": "Shown when stopping the recorder produced no audio file"
+  },
+  "micTranscriptionError": "Couldn't transcribe your voice. Please try again.",
+  "@micTranscriptionError": {
+    "description": "Generic transcription failure message"
+  },
+  "micNetworkError": "Network error — please check your internet connection.",
+  "@micNetworkError": {
+    "description": "Shown when a network/socket error occurs during analysis"
+  },
+  "micServerTimeout": "The server took too long to respond. Please try again.",
+  "@micServerTimeout": {
+    "description": "Shown when an API request times out"
+  },
+  "micUnexpectedError": "An unexpected error occurred. Please try again.",
+  "@micUnexpectedError": {
+    "description": "Generic fallback error message during analysis"
+  },
+  "micTtsError": "Couldn't play the audio response.",
+  "@micTtsError": {
+    "description": "Shown when text-to-speech playback fails"
+  },
+  "bpCategoryNormal": "Normal",
+  "@bpCategoryNormal": {
+    "description": "Blood pressure category label"
+  },
+  "bpCategoryElevated": "Elevated",
+  "@bpCategoryElevated": {
+    "description": "Blood pressure category label"
+  },
+  "bpCategoryStage1": "Stage 1 Hypertension",
+  "@bpCategoryStage1": {
+    "description": "Blood pressure category label"
+  },
+  "bpCategoryStage2": "Stage 2 Hypertension",
+  "@bpCategoryStage2": {
+    "description": "Blood pressure category label"
+  },
+  "bpCategoryCrisis": "Hypertensive Crisis",
+  "@bpCategoryCrisis": {
+    "description": "Blood pressure category label"
+  },
+  "bpCategoryLow": "Low (Hypotension)",
+  "@bpCategoryLow": {
+    "description": "Blood pressure category label for hypotension"
+  },
+
   "addReminder": "Add Reminder",
   "@addReminder": {
     "description": "Add reminder button and dialog title"
@@ -838,7 +911,7 @@
     "description": "Button to confirm opening simulator"
   },
   "predictiveTimelineTitle": "Predictive Health Timeline",
-  "predictiveTimelineSubtitle": "AI-powered 30-day health projections",
+  "predictiveTimelineSubtitle": "Your 7-day health outlook",
   "predictiveTimelineAnalyzing": "Analyzing health patterns...",
   "predictiveTimelineDay": "Day",
   "predictiveTimelineRisk": "Risk",
@@ -852,7 +925,112 @@
   "predictiveTimelineFactorLifestyle": "Lifestyle",
   "predictiveTimelineFactorStress": "Stress",
   "predictiveTimelineFactorMedication": "Medication",
-  
+  "predictiveTimelineMethodBadge": "Linear regression · 7-day projection · 95% CI",
+  "predictiveTimelineProjectionUnlocksSoon": "Projection unlocks soon",
+  "predictiveTimelineNeedMoreDays": "{needed, plural, =1{We need 1 more day of risk history ({available} of {required}). Continue logging daily readings — projections are built from your own data, not a generic baseline.} other{We need {needed} more days of risk history ({available} of {required}). Continue logging daily readings — projections are built from your own data, not a generic baseline.}}",
+  "@predictiveTimelineNeedMoreDays": {
+    "placeholders": {
+      "needed": {"type": "int"},
+      "available": {"type": "int"},
+      "required": {"type": "int"}
+    }
+  },
+  "predictiveTimelineProcessingHistory": "Processing recent risk history — pull to refresh.",
+  "predictiveTimelineTooltipProjected": "Projected",
+  "predictiveTimelineTooltipObserved": "Observed",
+  "predictiveTimelineTooltipRiskValue": "{value}% risk",
+  "@predictiveTimelineTooltipRiskValue": {
+    "placeholders": {
+      "value": {"type": "int"}
+    }
+  },
+  "predictiveTimelineTooltipCI": "95% CI: {lower}–{upper}%",
+  "@predictiveTimelineTooltipCI": {
+    "placeholders": {
+      "lower": {"type": "int"},
+      "upper": {"type": "int"}
+    }
+  },
+  "predictiveTimelineInsightCurrentRisk": "Where you are today",
+  "predictiveTimelineInsight7DayProjection": "Where you're heading",
+  "predictiveTimelineInsightWeeklyTrend": "How it changed this week",
+  "predictiveTimelineInsightPerWeek": "{value}% / week",
+  "@predictiveTimelineInsightPerWeek": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "predictiveTimelineInsightProjectionUncertainty": "How sure we are",
+  "predictiveTimelineLevelLow": "Low",
+  "predictiveTimelineLevelModerate": "Moderate",
+  "predictiveTimelineLevelElevated": "Elevated",
+  "predictiveTimelineLevelHigh": "High",
+  "predictiveTimelineSummaryHeadline": "Your risk is {level}",
+  "@predictiveTimelineSummaryHeadline": {
+    "placeholders": {
+      "level": {"type": "String"}
+    }
+  },
+  "predictiveTimelineSummarySteady": "It should stay about the same over the next 7 days.",
+  "predictiveTimelineSummaryRising": "It may rise a little over the next 7 days.",
+  "predictiveTimelineSummaryFalling": "It should keep improving over the next 7 days.",
+  "predictiveTimelineAxisToday": "Today",
+  "predictiveTimelineAxisInDays": "In {days} days",
+  "@predictiveTimelineAxisInDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "predictiveTimelineAxisWeeksAgo": "{weeks, plural, =1{1 week ago} other{{weeks} weeks ago}}",
+  "@predictiveTimelineAxisWeeksAgo": {
+    "placeholders": {
+      "weeks": {"type": "int"}
+    }
+  },
+  "predictiveTimelineLegendRecorded": "Recorded",
+  "predictiveTimelineLegendPredicted": "Predicted",
+  "predictiveTimelineLegendRange": "Likely range",
+
+  "trendHeadlineTagline": "This week at a glance",
+  "trendHeadlineLoading": "Reading your trends…",
+  "trendHeadlineLabelSystolic": "Systolic",
+  "trendHeadlineLabelDiastolic": "Diastolic",
+  "trendHeadlineLabelRisk": "Risk score",
+  "trendHeadlineDeltaStable": "stable this week",
+  "trendHeadlineDeltaUp": "up {value} vs last week",
+  "@trendHeadlineDeltaUp": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "trendHeadlineDeltaDown": "down {value} vs last week",
+  "@trendHeadlineDeltaDown": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "trendHeadlineFallbackHeld": "Your systolic average held steady at {value} mmHg this week, with {missed} missed doses logged.",
+  "@trendHeadlineFallbackHeld": {
+    "placeholders": {
+      "value": {"type": "int"},
+      "missed": {"type": "int"}
+    }
+  },
+  "trendHeadlineFallbackDropped": "Your systolic average dropped {delta} mmHg this week to {value}, with {missed} missed doses logged.",
+  "@trendHeadlineFallbackDropped": {
+    "placeholders": {
+      "delta": {"type": "int"},
+      "value": {"type": "int"},
+      "missed": {"type": "int"}
+    }
+  },
+  "trendHeadlineFallbackRose": "Your systolic average rose {delta} mmHg this week to {value}, with {missed} missed doses logged.",
+  "@trendHeadlineFallbackRose": {
+    "placeholders": {
+      "delta": {"type": "int"},
+      "value": {"type": "int"},
+      "missed": {"type": "int"}
+    }
+  },
+
+  "riskTrendAnalysisExplainer": "Your overall hypertension risk over the last 90 days, with the factors driving it underneath.",
+
   "riskTrendAnalysisTitle": "Risk Trend Analysis",
   "riskTrendAnalysisSubtitle": "90-day historical analysis with feature impact",
   "riskTrendAnalysisAnalyzing": "Analyzing risk patterns...",
@@ -980,5 +1158,49 @@
   "insightsHeroPrompt": "How are you feeling today?",
   "@insightsHeroPrompt": {
     "description": "Primary hero prompt shown above the avatar on the Insights screen"
+  },
+  "insightsGreetingDefault": "How can I help you today?",
+  "@insightsGreetingDefault": {
+    "description": "Default greeting prompt on the Insights screen"
+  },
+  "insightsSuggestionLatest": "How was my latest reading?",
+  "@insightsSuggestionLatest": {
+    "description": "Suggestion chip for asking about latest BP reading"
+  },
+  "insightsSuggestionTrend": "Show my weekly trend",
+  "@insightsSuggestionTrend": {
+    "description": "Suggestion chip for asking about weekly BP trend"
+  },
+  "insightsSuggestionRisk": "Any hypertension risk signs?",
+  "@insightsSuggestionRisk": {
+    "description": "Suggestion chip for asking about hypertension risk"
+  },
+  "insightsSuggestionMedication": "Did I log medication today?",
+  "@insightsSuggestionMedication": {
+    "description": "Suggestion chip for asking about medication logging"
+  },
+  "insightsHeaderTitle": "Your health insights",
+  "@insightsHeaderTitle": {
+    "description": "Heading title on Insights screen"
+  },
+  "insightsHeaderSubtitle": "Ask about your latest readings",
+  "@insightsHeaderSubtitle": {
+    "description": "Heading subtitle on Insights screen"
+  },
+  "medicationFeedbackAdded": "Medication added",
+  "@medicationFeedbackAdded": {
+    "description": "Title of the toast shown after a medication is added by voice"
+  },
+  "medicationFeedbackUpdated": "Medication updated",
+  "@medicationFeedbackUpdated": {
+    "description": "Title of the toast shown after a medication is updated by voice"
+  },
+  "medicationFeedbackSwitched": "Medication switched",
+  "@medicationFeedbackSwitched": {
+    "description": "Title of the toast shown after a medication is switched by voice"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Label/title for the in-app notifications screen and bell"
   }
 }

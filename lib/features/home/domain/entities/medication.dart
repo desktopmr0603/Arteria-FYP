@@ -84,7 +84,7 @@ class Medication extends Equatable {
       instructions: map['instructions'],
       color: map['color'] != null
           ? Color(map['color'])
-          : const Color(0xFF6366F1),
+          : const Color(0xFFF76C5E),
     );
   }
 
@@ -100,7 +100,7 @@ class Medication extends Equatable {
       'takenToday': takenToday,
       'createdAt': createdAt.toIso8601String(),
       'instructions': instructions,
-      'color': color?.value,
+      'color': color?.toARGB32(),
     };
   }
 

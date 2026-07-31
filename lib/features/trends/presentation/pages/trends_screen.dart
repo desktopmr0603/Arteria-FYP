@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:arteria/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:arteria/features/trends/presentation/bloc/trends_event.dart';
 import 'package:arteria/features/trends/presentation/bloc/trends_state.dart';
@@ -12,11 +15,13 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import '../../../home/data/data_sources/health_risk_score_service.dart';
+import '../../../home/data/data_sources/daily_risk_score_service.dart';
 import '../../../home/data/data_sources/bp_anomaly_remote_data_source.dart';
+import '../../data/data_sources/trend_summary_service.dart';
+import '../widgets/trend_headline_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/predictive_timeline.dart';
 import '../widgets/risk_trend_analysis.dart';
-import '../widgets/historical_patterns.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -33,10 +38,11 @@ class _TrendsScreenState extends State<TrendsScreen>
 
   // Enhanced services for advanced visualizations
   final HealthRiskScoreService _riskScoreService = HealthRiskScoreService();
+  final DailyRiskScoreService _dailyRiskScoreService = DailyRiskScoreService();
+  final TrendSummaryService _trendSummaryService = TrendSummaryService();
   final BPAnomalyRemoteDataSource _anomalyService = BPAnomalyRemoteDataSource();
 
-  String get _userId =>
-      FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
+  String? _activeUserId;
 
   @override
   void initState() {
@@ -50,25 +56,27 @@ class _TrendsScreenState extends State<TrendsScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-
-    // Initialize enhanced services
-    _initializeEnhancedServices();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fadeController.forward();
-      context.read<TrendsBloc>().add(
-        LoadTrendsData(
-          timeRange: _selectedTimeRange,
-          viewMode: ViewMode.simple,
-        ),
-      );
-    });
   }
 
-  Future<void> _initializeEnhancedServices() async {
+  void _bootstrapForUser(String userId) {
+    if (_activeUserId == userId) return;
+    _activeUserId = userId;
+
+    _initializeEnhancedServices(userId);
+
+    _fadeController.forward();
+    context.read<TrendsBloc>().add(
+      LoadTrendsData(
+        timeRange: _selectedTimeRange,
+        viewMode: ViewMode.simple,
+      ),
+    );
+  }
+
+  Future<void> _initializeEnhancedServices(String userId) async {
     try {
       await _riskScoreService.initialize();
-      await _anomalyService.initialize(_userId);
+      await _anomalyService.initialize(userId);
       debugPrint('✅ Enhanced trends services initialized');
     } catch (e) {
       debugPrint('⚠️ Error initializing enhanced services: $e');
@@ -86,18 +94,49 @@ class _TrendsScreenState extends State<TrendsScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark
+        ? const Color(0xFF090909)
+        : const Color(0xFFF8FAFB);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF0A0A0F)
-          : const Color(0xFFF8FAFB),
-      body: BlocConsumer<TrendsBloc, TrendsState>(
+      backgroundColor: bgColor,
+      body: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        initialData: FirebaseAuth.instance.currentUser,
+        builder: (context, authSnapshot) {
+          if (authSnapshot.connectionState == ConnectionState.waiting &&
+              !authSnapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00CED1)),
+            );
+          }
+
+          final user = authSnapshot.data;
+          if (user == null) {
+            // Reset so re-login triggers a fresh bootstrap.
+            _activeUserId = null;
+            return _buildLoggedOutView(isDark);
+          }
+
+          // Bootstrap once per user after frame to avoid setState-in-build.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _bootstrapForUser(user.uid);
+          });
+
+          return _buildAuthenticatedBody(user.uid, isDark);
+        },
+      ),
+    );
+  }
+
+  Widget _buildAuthenticatedBody(String userId, bool isDark) {
+    return BlocConsumer<TrendsBloc, TrendsState>(
         listener: (context, state) {
           if (state.hasError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage),
-                backgroundColor: const Color(0xFFEF4444),
+                backgroundColor: const Color(0xFFFFA54A),
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -118,15 +157,39 @@ class _TrendsScreenState extends State<TrendsScreen>
                     Expanded(
                       child: FadeTransition(
                         opacity: _fadeController,
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Column(
+                        child: RefreshIndicator(
+                          color: const Color(0xFF00CED1),
+                          onRefresh: () async {
+                            context.read<TrendsBloc>().add(
+                              LoadTrendsData(
+                                timeRange: _selectedTimeRange,
+                                viewMode: ViewMode.simple,
+                              ),
+                            );
+                            // Give the bloc a chance to emit loaded state.
+                            await Future.delayed(
+                              const Duration(milliseconds: 600),
+                            );
+                          },
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 16),
                               _buildTimeRangeSelector(),
                               if (state.isLoaded) ...[
+                                const SizedBox(height: 16),
+                                TrendHeadlineCard(
+                                  userId: userId,
+                                  dailyRiskScoreService:
+                                      _dailyRiskScoreService,
+                                  trendSummaryService: _trendSummaryService,
+                                  isDark: isDark,
+                                ),
                                 const SizedBox(height: 20),
                                 _buildChartCard(state, isDark),
                                 const SizedBox(height: 20),
@@ -134,14 +197,12 @@ class _TrendsScreenState extends State<TrendsScreen>
                                 const SizedBox(height: 20),
                                 _buildReadingsSection(state.asLoaded!, isDark),
                                 const SizedBox(height: 30),
-                                _buildPredictiveTimeline(isDark),
+                                _buildPredictiveTimeline(userId, isDark),
                                 const SizedBox(height: 30),
+                                _buildRiskExplainer(context, isDark),
+                                const SizedBox(height: 8),
                                 _buildRiskTrendAnalysis(
-                                  state.asLoaded!,
-                                  isDark,
-                                ),
-                                const SizedBox(height: 30),
-                                _buildHistoricalPatterns(
+                                  userId,
                                   state.asLoaded!,
                                   isDark,
                                 ),
@@ -157,6 +218,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                               const SizedBox(height: 100),
                             ],
                           ),
+                          ),
                         ),
                       ),
                     ),
@@ -166,6 +228,62 @@ class _TrendsScreenState extends State<TrendsScreen>
             ],
           );
         },
+    );
+  }
+
+  Widget _buildLoggedOutView(bool isDark) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF00CED1).withValues(alpha: 0.1),
+                      const Color(0xFF4C7F80).withValues(alpha: 0.1),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_outline_rounded,
+                  size: 48,
+                  color: Color(0xFF00CED1),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Sign in to view trends',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your blood pressure history, patterns and projections are private to your account.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.6)
+                      : const Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -183,7 +301,7 @@ class _TrendsScreenState extends State<TrendsScreen>
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF6366F1).withValues(alpha: 0.15),
+                    const Color(0xFF00CED1).withValues(alpha: 0.15),
                     Colors.transparent,
                   ],
                 ),
@@ -199,7 +317,7 @@ class _TrendsScreenState extends State<TrendsScreen>
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                    const Color(0xFF4C7F80).withValues(alpha: 0.1),
                     Colors.transparent,
                   ],
                 ),
@@ -256,7 +374,7 @@ class _TrendsScreenState extends State<TrendsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [const Color(0xFF2D2D3A), const Color(0xFF1A1A24)]
+              ? [const Color(0xFF262626), const Color(0xFF1A1A1A)]
               : [Colors.white, const Color(0xFFF1F5F9)],
         ),
         borderRadius: BorderRadius.circular(16),
@@ -309,7 +427,7 @@ class _TrendsScreenState extends State<TrendsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [const Color(0xFF1A1A24), const Color(0xFF12121A)]
+              ? [const Color(0xFF1A1A1A), const Color(0xFF121212)]
               : [Colors.white, const Color(0xFFF8FAFB)],
         ),
         borderRadius: BorderRadius.circular(28),
@@ -351,7 +469,7 @@ class _TrendsScreenState extends State<TrendsScreen>
             height: 40,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              color: const Color(0xFF6366F1),
+              color: const Color(0xFF00CED1),
               backgroundColor: isDark
                   ? Colors.white.withValues(alpha: 0.1)
                   : const Color(0xFFE2E8F0),
@@ -386,8 +504,8 @@ class _TrendsScreenState extends State<TrendsScreen>
             child: BPLineChart(
               data: loadedState.trendData,
               isSimpleView: false,
-              primaryColor: const Color(0xFFEF4444),
-              secondaryColor: const Color(0xFF3B82F6),
+              primaryColor: const Color(0xFFFFA54A),
+              secondaryColor: const Color(0xFF00CED1),
             ),
           ),
         ],
@@ -440,9 +558,9 @@ class _TrendsScreenState extends State<TrendsScreen>
   Widget _buildLegend(bool isDark) {
     return Row(
       children: [
-        _buildLegendItem(const Color(0xFFEF4444), 'SYS', isDark),
+        _buildLegendItem(const Color(0xFFFFA54A), 'SYS', isDark),
         const SizedBox(width: 16),
-        _buildLegendItem(const Color(0xFF3B82F6), 'DIA', isDark),
+        _buildLegendItem(const Color(0xFF00CED1), 'DIA', isDark),
       ],
     );
   }
@@ -509,7 +627,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 AppLocalizations.of(context)!.trendsReadings,
                 '${state.trendData.length}',
                 Icons.stacked_line_chart_outlined,
-                const Color(0xFF6366F1),
+                const Color(0xFF00CED1),
                 isDark,
               ),
             ),
@@ -519,7 +637,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 AppLocalizations.of(context)!.trendsSysAvg,
                 '$avgSystolic',
                 Icons.trending_up_outlined,
-                const Color(0xFFEF4444),
+                const Color(0xFFFFA54A),
                 isDark,
               ),
             ),
@@ -529,7 +647,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 AppLocalizations.of(context)!.trendsDiaAvg,
                 '$avgDiastolic',
                 Icons.trending_down_outlined,
-                const Color(0xFF3B82F6),
+                const Color(0xFF00CED1),
                 isDark,
               ),
             ),
@@ -554,7 +672,7 @@ class _TrendsScreenState extends State<TrendsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [const Color(0xFF1A1A24), const Color(0xFF12121A)]
+              ? [const Color(0xFF1A1A1A), const Color(0xFF121212)]
               : [Colors.white, const Color(0xFFF8FAFB)],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -621,7 +739,7 @@ class _TrendsScreenState extends State<TrendsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [const Color(0xFF1A1A24), const Color(0xFF12121A)]
+              ? [const Color(0xFF1A1A1A), const Color(0xFF121212)]
               : [Colors.white, const Color(0xFFF8FAFB)],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -650,13 +768,13 @@ class _TrendsScreenState extends State<TrendsScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    color: const Color(0xFF00CED1).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.info_outline_rounded,
                     size: 18,
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF00CED1),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -674,31 +792,31 @@ class _TrendsScreenState extends State<TrendsScreen>
             _buildBPGuideRow(
               AppLocalizations.of(context)!.trendsBpNormal,
               '≤ 120/80',
-              const Color(0xFF10B981),
+              const Color(0xFF00CED1),
               isDark,
             ),
             _buildBPGuideRow(
               AppLocalizations.of(context)!.trendsBpElevated,
               '120‑129/< 80',
-              const Color(0xFFF59E0B),
+              const Color(0xFFFFA54A),
               isDark,
             ),
             _buildBPGuideRow(
               AppLocalizations.of(context)!.trendsBpHighStage1,
               '130‑139/80‑89',
-              const Color(0xFFF97316),
+              const Color(0xFF4C7F80),
               isDark,
             ),
             _buildBPGuideRow(
               AppLocalizations.of(context)!.trendsBpHighStage2,
               '≥ 140/≥ 90',
-              const Color(0xFFEF4444),
+              const Color(0xFFFFA54A),
               isDark,
             ),
             _buildBPGuideRow(
               AppLocalizations.of(context)!.trendsBpCrisis,
               '≥ 180/≥ 120',
-              const Color(0xFFDC2626),
+              const Color(0xFFFFA54A),
               isDark,
             ),
           ],
@@ -783,7 +901,7 @@ class _TrendsScreenState extends State<TrendsScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                color: const Color(0xFF00CED1).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -791,7 +909,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF6366F1),
+                  color: const Color(0xFF00CED1),
                 ),
               ),
             ),
@@ -804,7 +922,7 @@ class _TrendsScreenState extends State<TrendsScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isDark
-                  ? [const Color(0xFF1A1A24), const Color(0xFF12121A)]
+                  ? [const Color(0xFF1A1A1A), const Color(0xFF121212)]
                   : [Colors.white, const Color(0xFFF8FAFB)],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -843,16 +961,18 @@ class _TrendsScreenState extends State<TrendsScreen>
     final category = reading.category;
     Color indicatorColor;
     switch (category) {
+      case BPCategory.hypotension:
+        indicatorColor = const Color(0xFF2196F3);
       case BPCategory.normal:
-        indicatorColor = const Color(0xFF10B981);
+        indicatorColor = const Color(0xFF00CED1);
       case BPCategory.elevated:
-        indicatorColor = const Color(0xFFF59E0B);
+        indicatorColor = const Color(0xFFFFA54A);
       case BPCategory.hypertensionStage1:
-        indicatorColor = const Color(0xFFF97316);
+        indicatorColor = const Color(0xFF4C7F80);
       case BPCategory.hypertensionStage2:
-        indicatorColor = const Color(0xFFEF4444);
+        indicatorColor = const Color(0xFFFFA54A);
       case BPCategory.hypertensiveCrisis:
-        indicatorColor = const Color(0xFFDC2626);
+        indicatorColor = const Color(0xFFFFA54A);
     }
 
     final isLast = reading == reading;
@@ -1018,7 +1138,7 @@ class _TrendsScreenState extends State<TrendsScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [const Color(0xFF1A1A24), const Color(0xFF12121A)]
+                ? [const Color(0xFF1A1A1A), const Color(0xFF121212)]
                 : [Colors.white, const Color(0xFFF8FAFB)],
           ),
           borderRadius: BorderRadius.circular(28),
@@ -1038,8 +1158,8 @@ class _TrendsScreenState extends State<TrendsScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF6366F1).withValues(alpha: 0.1),
-                    const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                    const Color(0xFF00CED1).withValues(alpha: 0.1),
+                    const Color(0xFF4C7F80).withValues(alpha: 0.1),
                   ],
                 ),
                 shape: BoxShape.circle,
@@ -1047,7 +1167,7 @@ class _TrendsScreenState extends State<TrendsScreen>
               child: Icon(
                 Icons.show_chart_rounded,
                 size: 48,
-                color: const Color(0xFF6366F1).withValues(alpha: 0.6),
+                color: const Color(0xFF00CED1).withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),
@@ -1118,12 +1238,12 @@ class _TrendsScreenState extends State<TrendsScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                  color: const Color(0xFF00CED1).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
                   Icons.share_rounded,
-                  color: Color(0xFF6366F1),
+                  color: Color(0xFF00CED1),
                   size: 28,
                 ),
               ),
@@ -1157,7 +1277,27 @@ class _TrendsScreenState extends State<TrendsScreen>
                   icon: const Icon(Icons.description_rounded, size: 20),
                   label: const Text('View Text Report'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
+                    backgroundColor: const Color(0xFF00CED1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _exportPdfReport(state);
+                  },
+                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                  label: const Text('Save as PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFA54A),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -1171,12 +1311,12 @@ class _TrendsScreenState extends State<TrendsScreen>
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => _generateSimpleReport(context, state),
-                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                  icon: const Icon(Icons.health_and_safety_rounded, size: 20),
                   label: const Text('View Summary'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF2D2D3A)
+                        ? const Color(0xFF262626)
                         : const Color(0xFFF1F5F9),
                     foregroundColor:
                         Theme.of(context).brightness == Brightness.dark
@@ -1272,7 +1412,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
+                    backgroundColor: const Color(0xFF00CED1),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -1313,7 +1453,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+                    colors: [Color(0xFF00CED1), Color(0xFF00CED1)],
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -1347,7 +1487,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 style: GoogleFonts.inter(
                   fontSize: 48,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF6366F1),
+                  color: const Color(0xFF00CED1),
                 ),
               ),
               Text(
@@ -1367,7 +1507,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                  color: const Color(0xFF00CED1).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -1378,7 +1518,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6366F1),
+                    color: const Color(0xFF00CED1),
                   ),
                 ),
               ),
@@ -1388,7 +1528,7 @@ class _TrendsScreenState extends State<TrendsScreen>
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
+                    backgroundColor: const Color(0xFF00CED1),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -1405,33 +1545,192 @@ class _TrendsScreenState extends State<TrendsScreen>
     );
   }
 
+  Future<void> _exportPdfReport(TrendsLoaded state) async {
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final avgSys = _calculateAverage(state.trendData.map((d) => d.systolic));
+    final avgDia = _calculateAverage(state.trendData.map((d) => d.diastolic));
+    final stats = state.analysis.statistics;
+    final sortedReadings = [...state.trendData]
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    final doc = pw.Document();
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        header: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'Arteria · Blood Pressure Report',
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Period: ${_selectedTimeRange.displayName}   '
+              'Generated: ${dateFormat.format(DateTime.now())}',
+              style: const pw.TextStyle(
+                fontSize: 11,
+                color: PdfColors.grey700,
+              ),
+            ),
+            pw.Divider(color: PdfColors.grey400),
+          ],
+        ),
+        footer: (ctx) => pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+            style: const pw.TextStyle(
+              fontSize: 10,
+              color: PdfColors.grey600,
+            ),
+          ),
+        ),
+        build: (_) => [
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'Summary',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: ['Metric', 'Value'],
+            cellAlignment: pw.Alignment.centerLeft,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            data: [
+              ['Total readings', '${stats.totalReadings}'],
+              ['Average BP', '$avgSys / $avgDia mmHg'],
+              [
+                'Systolic range',
+                '${stats.systolicMin}–${stats.systolicMax} mmHg',
+              ],
+              [
+                'Diastolic range',
+                '${stats.diastolicMin}–${stats.diastolicMax} mmHg',
+              ],
+              [
+                'Systolic SD',
+                stats.standardDeviationSystolic.toStringAsFixed(1),
+              ],
+              [
+                'Diastolic SD',
+                stats.standardDeviationDiastolic.toStringAsFixed(1),
+              ],
+              ['Trend', state.analysis.direction.displayName],
+            ],
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text(
+            'Interpretation',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            state.analysis.summary,
+            style: const pw.TextStyle(fontSize: 11),
+          ),
+          pw.SizedBox(height: 18),
+          pw.Text(
+            'Readings',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: ['Date', 'Systolic', 'Diastolic', 'Category'],
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            cellAlignment: pw.Alignment.centerLeft,
+            data: sortedReadings
+                .map(
+                  (r) => [
+                    dateFormat.format(r.timestamp),
+                    '${r.systolic}',
+                    '${r.diastolic}',
+                    r.category.displayName,
+                  ],
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+
+    try {
+      await Printing.layoutPdf(
+        onLayout: (_) async => doc.save(),
+        name:
+            'arteria_trends_${_selectedTimeRange.type.name}_'
+            '${DateTime.now().millisecondsSinceEpoch}.pdf',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to export PDF: $e'),
+          backgroundColor: const Color(0xFFFFA54A),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   // ─────────────── Enhanced Visualizations ───────────────
 
-  Widget _buildPredictiveTimeline(bool isDark) {
+  Widget _buildPredictiveTimeline(String userId, bool isDark) {
     return PredictiveTimeline(
-      userId: _userId,
-      riskScoreService: _riskScoreService,
+      userId: userId,
+      dailyRiskScoreService: _dailyRiskScoreService,
       isDark: isDark,
     );
   }
 
-  Widget _buildRiskTrendAnalysis(TrendsLoaded loaded, bool isDark) {
+  /// One-sentence plain-language preamble above the 90-day risk chart,
+  /// so a layman knows what they're about to look at before the title
+  /// "Risk Trend Analysis" lands. Localized.
+  Widget _buildRiskExplainer(BuildContext context, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 14,
+            color: isDark ? Colors.white54 : const Color(0xFF64748B),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.riskTrendAnalysisExplainer,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                height: 1.4,
+                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRiskTrendAnalysis(
+    String userId,
+    TrendsLoaded loaded,
+    bool isDark,
+  ) {
     return RiskTrendAnalysis(
-      userId: _userId,
+      userId: userId,
       riskScoreService: _riskScoreService,
       isDark: isDark,
       trendData: loaded.trendData,
     );
   }
 
-  Widget _buildHistoricalPatterns(TrendsLoaded loaded, bool isDark) {
-    return HistoricalPatterns(
-      userId: _userId,
-      anomalyService: _anomalyService,
-      isDark: isDark,
-      trendData: loaded.trendData,
-    );
-  }
 }
 
 String _getLocalizedTimeRange(BuildContext context, TimeRange range) {
@@ -1500,7 +1799,7 @@ class _TimeRangeChipsModernState extends State<TimeRangeChipsModern> {
                   ? const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      colors: [Color(0xFF00CED1), Color(0xFF4C7F80)],
                     )
                   : null,
               borderRadius: BorderRadius.circular(14),
@@ -1514,7 +1813,7 @@ class _TimeRangeChipsModernState extends State<TimeRangeChipsModern> {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                        color: const Color(0xFF00CED1).withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -1526,6 +1825,10 @@ class _TimeRangeChipsModernState extends State<TimeRangeChipsModern> {
               child: InkWell(
                 onTap: () => widget.onRangeChanged(range),
                 borderRadius: BorderRadius.circular(14),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                focusColor: Colors.transparent,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,

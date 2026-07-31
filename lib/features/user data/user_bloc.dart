@@ -6,6 +6,7 @@ import 'user_event.dart';
 import 'user_state.dart';
 import 'package:arteria/features/home/data/data_sources/health_risk_score_service.dart';
 import 'package:arteria/features/home/data/data_sources/insight_generator_service.dart';
+import 'package:arteria/services/health_notification_service.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
   UserBloc() : super(UserLoading()) {
@@ -86,6 +87,11 @@ class UserBloc extends Bloc<UserEvent, UserState> {
           isFirstTimeUser: isFirstTime,
         ),
       );
+
+      // Evaluate push notifications on app open / data refresh (and, since a
+      // save triggers LoadUserData, right after a new reading is recorded).
+      // Fire-and-forget so it never blocks the UI; it de-duplicates internally.
+      HealthNotificationService.runChecksForCurrentUser();
     } catch (e) {
       emit(UserError('Failed to load user data.'));
     }
@@ -102,16 +108,20 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         return;
       }
 
-      // Store inside the user's bp readings database
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('readings')
-          .add({
-            'systolic': event.systolic,
-            'diastolic': event.diastolic,
-            'date': FieldValue.serverTimestamp(),
-          });
+      // Store inside the user's bp readings database — unless the caller has
+      // already persisted it (the voice-entry flow writes the raw spoken value
+      // itself). Writing again here is what produced duplicate daily readings.
+      if (!event.alreadyPersisted) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('readings')
+            .add({
+              'systolic': event.systolic,
+              'diastolic': event.diastolic,
+              'date': FieldValue.serverTimestamp(),
+            });
+      }
 
       // Auto-compute and store risk score after saving BP reading
       // This populates the risk_scores collection so the Risk Trend chart

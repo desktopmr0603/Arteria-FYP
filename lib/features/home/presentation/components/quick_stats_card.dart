@@ -225,44 +225,11 @@ class QuickStatsCard extends StatelessWidget {
     final sys = systolic ?? 0;
     final dia = diastolic ?? 0;
     final l10n = AppLocalizations.of(context)!;
-
-    if (sys >= 180 || dia >= 120) {
-      return {
-        'statusText': 'Critical Level',
-        'label': l10n.statusHypertensiveCrisis,
-        'color': const Color(
-          0xFFC026D3,
-        ), // Deep Magenta - distinct for high alert
-        'icon': Icons.warning_amber_rounded,
-        'description': 'Emergency! Seek medical attention immediately.',
-      };
-    } else if (sys >= 140 || dia >= 90) {
-      return {
-        'statusText': 'High Blood Pressure',
-        'label': l10n.statusStage2Hypertension,
-        'color': const Color(0xFFEF4444), // Red
-        'icon': Icons.arrow_upward_rounded,
-        'description': 'Your readings are high. Consult your doctor.',
-      };
-    } else if (sys >= 130 || dia > 80) {
-      return {
-        'statusText': 'Slightly Elevated',
-        'label': l10n.statusStage1Hypertension,
-        'color': const Color(0xFFF97316), // Orange
-        'icon': Icons.trending_up_rounded,
-        'description': 'You are in the Stage 1 hypertension range.',
-      };
-    } else if (sys > 120 && dia <= 80) {
-      return {
-        'statusText': 'Elevated',
-        'label': l10n.statusElevated,
-        'color': const Color(
-          0xFFFACC15,
-        ), // Vibrant Yellow - colorblind safe against red
-        'icon': Icons.info_outline_rounded,
-        'description': 'Blood pressure is slightly high but not hypertensive.',
-      };
-    } else if (sys == 0) {
+    
+    final age = latestReading?['age'] as int?;
+    final isElderly = age != null && age >= 65;
+    
+    if (sys == 0) {
       return {
         'statusText': 'No Data',
         'label': l10n.statusPending,
@@ -270,13 +237,71 @@ class QuickStatsCard extends StatelessWidget {
         'icon': Icons.history_rounded,
         'description': 'Take your first reading to see your health status.',
       };
+    }
+
+    if (sys >= 180 || dia >= 120) {
+      return {
+        'statusText': 'Critical Level',
+        'label': l10n.statusHypertensiveCrisis,
+        'color': const Color(0xFF9B2226), // Critical
+        'icon': Icons.warning_amber_rounded,
+        'description': 'Emergency! Seek medical attention immediately.',
+      };
+    } else if (sys >= 140 || dia >= 90) {
+      return {
+        'statusText': 'High Blood Pressure',
+        'label': l10n.statusStage2Hypertension,
+        'color': const Color(0xFFAE2012), // Stage 2
+        'icon': Icons.arrow_upward_rounded,
+        'description': 'Your readings are high. Consult your doctor.',
+      };
+    } else if (sys == 120 && dia == 80) {
+       if (isElderly) {
+         return {
+           'statusText': 'Elevated',
+           'label': l10n.statusElevated,
+           'color': const Color(0xFFCA6702), // Elevated
+           'icon': Icons.info_outline_rounded,
+           'description': 'Blood pressure is considered elevated for your age.',
+         };
+       } else {
+         return {
+           'statusText': 'Normal Range',
+           'label': l10n.statusNormal,
+           'color': Colors.green, // Normal
+           'icon': Icons.check_circle_rounded,
+           'description': 'Your blood pressure is within the healthy range.',
+         };
+       }
+    } else if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) {
+      return {
+        'statusText': 'Slightly Elevated',
+        'label': l10n.statusStage1Hypertension,
+        'color': const Color(0xFFE85D04), // Stage 1
+        'icon': Icons.trending_up_rounded,
+        'description': 'You are in the Stage 1 hypertension range.',
+      };
+    } else if (sys >= 121 && sys <= 129 && dia < 80) { // Elevated (sys 121-129; 120 is Normal)
+      return {
+        'statusText': 'Elevated',
+        'label': l10n.statusElevated,
+        'color': const Color(0xFFCA6702), // Elevated
+        'icon': Icons.info_outline_rounded,
+        'description': 'Blood pressure is slightly high but not hypertensive.',
+      };
+    } else if (sys < 90 || dia < 60) { // Hypotension (Low): below 90/60
+      return {
+        'statusText': 'Low Blood Pressure',
+        'label': l10n.bpCategoryLow,
+        'color': const Color(0xFF2196F3), // Low (Hypotension) — blue
+        'icon': Icons.arrow_downward_rounded,
+        'description': 'Your blood pressure is low. Stay hydrated, stand up slowly, and consult your doctor if you feel dizzy or faint.',
+      };
     } else {
       return {
         'statusText': 'Normal Range',
         'label': l10n.statusNormal,
-        'color': const Color(
-          0xFF2DD4BF,
-        ), // Teal - more modern and colorblind safe than pure green
+        'color': Colors.green, // Normal
         'icon': Icons.check_circle_rounded,
         'description': 'Your blood pressure is within the healthy range.',
       };

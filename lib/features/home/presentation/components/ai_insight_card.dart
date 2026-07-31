@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:arteria/features/home/presentation/components/bp_color_extension.dart';
 
 /// AI-generated insights card component
 class AIInsightCard extends StatelessWidget {
@@ -20,6 +21,7 @@ class AIInsightCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final bpColor = context.bpStatusColor;
 
     return Container(
       width: double.infinity,
@@ -28,7 +30,7 @@ class AIInsightCard extends StatelessWidget {
         gradient: LinearGradient(
           colors: isDark
               ? [
-                  const Color(0xFF1E3A5F),
+                  const Color(0xFF1E3A5F).withAlpha(150),
                   const Color(0xFF2C2C2C),
                 ]
               : [
@@ -40,7 +42,7 @@ class AIInsightCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.blue.shade800 : Colors.blue.shade100,
+          color: bpColor.withValues(alpha: 0.6),
           width: 1.5,
         ),
       ),

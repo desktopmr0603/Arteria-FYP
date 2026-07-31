@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 /// Blood Pressure category based on AHA guidelines
 enum BPCategory {
+  hypotension,
   normal,
   elevated,
   hypertensionStage1,
@@ -33,6 +34,8 @@ class BPClassification {
 
   String get categoryName {
     switch (category) {
+      case BPCategory.hypotension:
+        return 'Low (Hypotension)';
       case BPCategory.normal:
         return 'Normal';
       case BPCategory.elevated:
@@ -193,6 +196,13 @@ class BPDataService {
       severity = 1;
       description =
           'Your blood pressure is elevated. Lifestyle changes are recommended to prevent progression to hypertension.';
+    }
+    // Hypotension (Low): systolic <90 OR diastolic <60 — checked before Normal
+    else if (systolic < 90 || diastolic < 60) {
+      category = BPCategory.hypotension;
+      severity = 2;
+      description =
+          'Your blood pressure is low (hypotension). If you feel dizzy, lightheaded, faint, nauseous, or unusually tired, sit or lie down and consult your doctor. Stay hydrated and stand up slowly.';
     }
     // Normal: systolic <120 AND diastolic <80
     else {
@@ -505,6 +515,16 @@ class BPDataService {
   /// Get recommendations based on classification
   List<String> getRecommendations(BPClassification classification) {
     switch (classification.category) {
+      case BPCategory.hypotension:
+        return [
+          'Stand up slowly from sitting or lying positions',
+          'Stay well hydrated and drink plenty of water',
+          'Eat small, frequent meals to avoid post-meal drops',
+          'Avoid alcohol, which can lower blood pressure further',
+          'If you feel dizzy or faint, sit or lie down immediately',
+          'Consult your doctor, especially if you take BP medication',
+        ];
+
       case BPCategory.normal:
         return [
           'Maintain a healthy lifestyle with regular exercise',

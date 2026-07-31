@@ -1,9 +1,11 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
 import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
+import 'package:arteria/features/auth/presentation/cubits/auth_cubits.dart';
 import 'package:arteria/features/auth/presentation/components/custom_confirmdialog.dart';
 import 'package:arteria/features/auth/presentation/components/custom_loading_dialog.dart';
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -60,39 +62,54 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => const CustomLoadingDialog(
-          message: '...',
+    if (confirmed != true || !mounted) return;
+
+    final authCubit = context.read<AuthCubits>();
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => const CustomLoadingDialog(message: '...'),
+    );
+
+    try {
+      await _authRepo.deleteAccount();
+    } catch (e) {
+      // Deletion failed — the account still exists and the user is still
+      // authenticated, so leave AuthCubits untouched and stay on this screen.
+      if (!mounted) return;
+      rootNav.pop(); // dismiss loading
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete account: $e'),
+          backgroundColor: Colors.redAccent,
         ),
       );
-
-      try {
-        await _authRepo.deleteAccount();
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)?.accountDeleted ?? 'Account deleted successfully.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-        }
-      } catch (e) {
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete account: $e'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
-      }
+      return;
     }
+
+    // Account is deleted and signed out. Sync AuthCubits — the app's single
+    // auth gate — to Unauthenticated so _AuthWrapper can no longer render the
+    // homepage. Without this the cubit stayed Authenticated and the homepage
+    // was reachable again via the back button from the login screen.
+    await authCubit.logout();
+    if (!mounted) return;
+
+    rootNav.pop(); // dismiss loading
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          l10n?.accountDeleted ?? 'Account deleted successfully.',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
+    // Reset the stack to the auth gate ('/'). _AuthWrapper renders Onboarding
+    // while unauthenticated, so the homepage cannot be re-entered.
+    rootNav.pushNamedAndRemoveUntil('/', (route) => false);
   }
 
   @override

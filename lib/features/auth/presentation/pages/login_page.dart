@@ -1,3 +1,4 @@
+import 'package:arteria/features/auth/presentation/components/custom_confirmdialog.dart';
 import 'package:arteria/features/auth/presentation/components/custom_textfield.dart';
 import 'package:arteria/features/auth/presentation/cubits/auth_cubits.dart';
 import 'package:arteria/features/auth/presentation/cubits/auth_states.dart';
@@ -254,7 +255,25 @@ class _LoginPageState extends State<LoginPage> {
             );
           }
         },
-        child: Scaffold(
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (bool didPop, dynamic result) async {
+            if (didPop) return;
+            final bool shouldPop =
+                await showDialog<bool>(
+                  context: context,
+                  builder: (context) => const CustomConfirmDialog(
+                    title: 'Go back?',
+                    content: 'Are you sure you want to go back?',
+                    confirmText: 'GO BACK',
+                  ),
+                ) ??
+                false;
+            if (shouldPop && context.mounted) {
+              Navigator.of(context).pushReplacementNamed('/');
+            }
+          },
+          child: Scaffold(
           body: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -433,6 +452,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );

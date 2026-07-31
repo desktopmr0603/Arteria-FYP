@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -91,10 +90,14 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          // Slightly more opaque than before (was 0.8/0.9) because the
+          // BackdropFilter that used to soften the see-through area was
+          // forcing a full gaussian re-blur every scroll frame and was
+          // contributing to homepage scroll stutter.
           colors: isDark
               ? [
-                  const Color(0xFF2D1111).withValues(alpha: 0.8),
-                  const Color(0xFF1A0A0A).withValues(alpha: 0.9),
+                  const Color(0xFF2D1111).withValues(alpha: 0.96),
+                  const Color(0xFF1A0A0A).withValues(alpha: 0.98),
                 ]
               : [const Color(0xFFFFEBEB), const Color(0xFFFFF5F5)],
         ),
@@ -110,164 +113,157 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: borderColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: borderColor.withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        isCritical
-                            ? Icons.warning_rounded
-                            : Icons.warning_amber_rounded,
-                        size: 28,
-                        color: borderColor,
-                      ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: borderColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: borderColor.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isCritical
-                                ? AppLocalizations.of(
-                                    context,
-                                  )!.emergencyHypertensiveCrisis
-                                : AppLocalizations.of(
-                                    context,
-                                  )!.emergencyHighBloodPressure,
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF1E293B),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_latestReading?['systolic'] ?? '--'}/${_latestReading?['diastolic'] ?? '--'} mmHg',
-                            style: GoogleFonts.inter(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: borderColor,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: borderColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    isCritical
-                        ? AppLocalizations.of(context)!.emergencySeekImmediate
-                        : AppLocalizations.of(
-                            context,
-                          )!.emergencyContactProvider,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    child: Icon(
+                      isCritical
+                          ? Icons.warning_rounded
+                          : Icons.warning_amber_rounded,
+                      size: 28,
                       color: borderColor,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        label: AppLocalizations.of(context)!.emergencyCall911,
-                        icon: Icons.call_rounded,
-                        isEmergency: true,
-                        onTap: () => launchUrl(Uri.parse('tel:114')),
-                      ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isCritical
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.emergencyHypertensiveCrisis
+                              : AppLocalizations.of(
+                                  context,
+                                )!.emergencyHighBloodPressure,
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_latestReading?['systolic'] ?? '--'}/${_latestReading?['diastolic'] ?? '--'} mmHg',
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: borderColor,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        label: AppLocalizations.of(
-                          context,
-                        )!.emergencyCallContact,
-                        icon: Icons.person_rounded,
-                        isEmergency: false,
-                        onTap: _primaryContact != null
-                            ? () => launchUrl(
-                                Uri.parse('tel:${_primaryContact!['phone']}'),
-                              )
-                            : null,
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
-                if (_primaryContact == null) ...[
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => _showAddContactDialog(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_rounded,
-                            size: 18,
+                decoration: BoxDecoration(
+                  color: borderColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isCritical
+                      ? AppLocalizations.of(context)!.emergencySeekImmediate
+                      : AppLocalizations.of(context)!.emergencyContactProvider,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: borderColor,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionButton(
+                      context,
+                      label: AppLocalizations.of(context)!.emergencyCall911,
+                      icon: Icons.call_rounded,
+                      isEmergency: true,
+                      onTap: () => launchUrl(Uri.parse('tel:114')),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionButton(
+                      context,
+                      label: AppLocalizations.of(context)!.emergencyCallContact,
+                      icon: Icons.person_rounded,
+                      isEmergency: false,
+                      onTap: _primaryContact != null
+                          ? () => launchUrl(
+                              Uri.parse('tel:${_primaryContact!['phone']}'),
+                            )
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+              if (_primaryContact == null) ...[
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () => _showAddContactDialog(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_rounded,
+                          size: 18,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.6)
+                              : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          AppLocalizations.of(context)!.emergencyAddContact,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                             color: isDark
                                 ? Colors.white.withValues(alpha: 0.6)
                                 : const Color(0xFF64748B),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            AppLocalizations.of(context)!.emergencyAddContact,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.6)
-                                  : const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -432,7 +428,9 @@ class _EmergencyAlertCardState extends State<EmergencyAlertCard> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: Text(AppLocalizations.of(context)!.emergencySaveContact),
+                    child: Text(
+                      AppLocalizations.of(context)!.emergencySaveContact,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),

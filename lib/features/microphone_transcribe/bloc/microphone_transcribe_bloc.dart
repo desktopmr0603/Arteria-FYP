@@ -12,6 +12,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:arteria/env/env.dart';
+import 'package:arteria/services/health_notification_service.dart';
+import 'package:arteria/l10n/app_localizations.dart';
 import 'microphone_transcribe_event.dart';
 import 'microphone_transcribe_state.dart';
 
@@ -33,8 +35,31 @@ class MicrophoneTranscribeBloc
   String _selectedLanguage = 'en';
   Map<String, dynamic>? _userProfile;
 
+  /// Readings taken within this window of one another are treated as a single
+  /// measurement session and averaged, following AHA guidance (take at least
+  /// two readings 1–2 minutes apart and average them for an accurate number).
+  static const Duration _sessionWindow = Duration(minutes: 10);
 
-  MicrophoneTranscribeBloc({String language = 'en'}) : _selectedLanguage = language, super(const MicrophoneTranscribeInitialState()) {
+  /// The verbatim reading the user just spoke. Stored separately from the
+  /// session average so history keeps every real measurement and a later
+  /// re-aggregation never double-counts an average.
+  int? _pendingRawSys;
+  int? _pendingRawDia;
+
+  /// Number of readings (including the new one) folded into the current
+  /// analysis. 1 means a lone reading was used exactly as spoken.
+  int _sessionCount = 1;
+
+  /// Localizations for user-facing messages (errors, category labels).
+  /// Injected from the page where a BuildContext is available.
+  final AppLocalizations _l10n;
+
+  MicrophoneTranscribeBloc({
+    required AppLocalizations l10n,
+    String language = 'en',
+  }) : _l10n = l10n,
+       _selectedLanguage = language,
+       super(const MicrophoneTranscribeInitialState()) {
     on<StartRecordingEvent>(_onStartRecording);
     on<StopRecordingEvent>(_onStopRecording);
     on<RecordingTickEvent>(_onRecordingTick);
@@ -115,7 +140,7 @@ class MicrophoneTranscribeBloc
       emit(
         ErrorState(
           errorMessage: e.toString(),
-          displayText: 'Recording error: ${e.toString()}',
+          displayText: _l10n.micRecordingError,
         ),
       );
     }
@@ -143,9 +168,9 @@ class MicrophoneTranscribeBloc
         await _transcribeAudio();
       } else {
         emit(
-          const ErrorState(
+          ErrorState(
             errorMessage: 'No audio recorded',
-            displayText: 'No audio recorded.',
+            displayText: _l10n.micNoAudioRecorded,
           ),
         );
       }
@@ -153,7 +178,7 @@ class MicrophoneTranscribeBloc
       emit(
         ErrorState(
           errorMessage: e.toString(),
-          displayText: 'Error stopping recording: ${e.toString()}',
+          displayText: _l10n.micRecordingError,
         ),
       );
     }
@@ -181,12 +206,12 @@ class MicrophoneTranscribeBloc
         'POST',
         Uri.parse('https://api.openai.com/v1/audio/transcriptions'),
       );
-      
+
       request.headers['Authorization'] = 'Bearer $openaiKey';
       request.fields['model'] = _whisperModel;
       request.fields['language'] = _selectedLanguage;
       request.fields['response_format'] = 'text';
-      
+
       // CRITICAL: Include contentType for OpenAI to accept the file
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -197,21 +222,23 @@ class MicrophoneTranscribeBloc
         ),
       );
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 60),
+      );
       final response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint('📝 OpenAI Whisper response: ${response.statusCode}');
-      
+      debugPrint('OpenAI Whisper response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final text = response.body.trim();
         if (text.isEmpty) {
           add(const TranscriptionFailedEvent('No speech detected'));
         } else {
-          debugPrint('✅ Transcription: $text');
+          debugPrint('Transcription: $text');
           add(TranscriptionCompletedEvent(text));
         }
       } else {
-        debugPrint('❌ OpenAI Whisper error: ${response.body}');
+        debugPrint('OpenAI Whisper error: ${response.body}');
         add(
           TranscriptionFailedEvent(
             'Transcription failed (${response.statusCode}): ${response.body}',
@@ -219,7 +246,7 @@ class MicrophoneTranscribeBloc
         );
       }
     } catch (e) {
-      debugPrint('❌ Transcription exception: $e');
+      debugPrint('Transcription exception: $e');
       add(TranscriptionFailedEvent('Transcription error: ${e.toString()}'));
     } finally {
       // Clean up audio file
@@ -243,30 +270,104 @@ class MicrophoneTranscribeBloc
     TranscriptionFailedEvent event,
     Emitter<MicrophoneTranscribeState> emit,
   ) {
-    emit(ErrorState(errorMessage: event.error, displayText: event.error));
+    // Map technical failures to a localized, user-friendly message while
+    // keeping the raw error for debugging.
+    final bool noSpeech =
+        event.error.toLowerCase().contains('no speech') ||
+        event.error.toLowerCase().contains('empty audio');
+    emit(
+      ErrorState(
+        errorMessage: event.error,
+        displayText: noSpeech
+            ? _l10n.micNoSpeechDetected
+            : _l10n.micTranscriptionError,
+      ),
+    );
   }
 
   Future<void> _parseAndAnalyze(
     String text,
     Emitter<MicrophoneTranscribeState> emit,
   ) async {
-    // First, parse BP values
-    Map<String, int> parsedBP = await _parseBloodPressure(text);
+    // Parse + validate the spoken reading. We never fabricate a value:
+    // if nothing parseable was said, or the value is physiologically
+    // implausible, we surface a clear "please repeat" message instead of
+    // silently defaulting to 120/80 or clamping to a range — which would
+    // otherwise be analyzed, spoken aloud, and auto-saved as if it were real.
+    final BPParseResult result = await _parseBloodPressure(text);
 
-    // Emit reasoning state
-    emit(
-      ReasoningState(
-        systolic: parsedBP['systolic'],
-        diastolic: parsedBP['diastolic'],
-      ),
-    );
+    if (result.status != BPParseStatus.success) {
+      emit(
+        ErrorState(errorMessage: result.message, displayText: result.message),
+      );
+      return;
+    }
+
+    final int rawSys = result.systolic!;
+    final int rawDia = result.diastolic!;
+
+    // Persist the verbatim measurement; the analysis below may instead use
+    // the session average, but storage always keeps the real reading.
+    _pendingRawSys = rawSys;
+    _pendingRawDia = rawDia;
+
+    // Average this reading with any others from the current sitting. A lone
+    // reading is returned unchanged (count 1).
+    final session = await _sessionAverage(rawSys, rawDia);
+    _sessionCount = session.count;
+    final int sys = session.systolic;
+    final int dia = session.diastolic;
+
+    // Emit reasoning state (reflects the value we actually analyze)
+    emit(ReasoningState(systolic: sys, diastolic: dia));
 
     // Start LLM analysis
     add(const LLMAnalysisStartedEvent());
-    await _analyzeWithLLM(parsedBP);
+    await _analyzeWithLLM({'systolic': sys, 'diastolic': dia});
   }
 
-  Future<Map<String, int>> _parseBloodPressure(String text) async {
+  /// Averages [newSys]/[newDia] with readings already saved within
+  /// [_sessionWindow]. Returns the new reading untouched (count 1) when there
+  /// are no recent readings, or on any error — averaging never blocks
+  /// analysis. The new reading is not yet persisted when this runs, so it is
+  /// seeded into the lists explicitly.
+  Future<_SessionAverage> _sessionAverage(int newSys, int newDia) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return _SessionAverage(newSys, newDia, 1);
+
+      final since = DateTime.now().subtract(_sessionWindow);
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('readings')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+          .orderBy('date', descending: true)
+          .get();
+
+      final sys = <int>[newSys];
+      final dia = <int>[newDia];
+      for (final doc in snap.docs) {
+        final s = (doc.data()['systolic'] as num?)?.toInt();
+        final d = (doc.data()['diastolic'] as num?)?.toInt();
+        if (s != null && d != null) {
+          sys.add(s);
+          dia.add(d);
+        }
+      }
+
+      if (sys.length == 1) return _SessionAverage(newSys, newDia, 1);
+
+      final avgSys = (sys.reduce((a, b) => a + b) / sys.length).round();
+      final avgDia = (dia.reduce((a, b) => a + b) / dia.length).round();
+      return _SessionAverage(avgSys, avgDia, sys.length);
+    } catch (e) {
+      debugPrint('⚠️ Session averaging failed, using single reading: $e');
+      return _SessionAverage(newSys, newDia, 1);
+    }
+  }
+
+  Future<BPParseResult> _parseBloodPressure(String text) async {
     final openaiKey = Env.openaiApiKey;
     if (openaiKey.isEmpty) {
       return _manualParse(text);
@@ -284,7 +385,10 @@ class MicrophoneTranscribeBloc
             role: OpenAIChatMessageRole.system,
             content: [
               OpenAIChatCompletionChoiceMessageContentItemModel.text(
-                'Extract systolic and diastolic from text. Respond only with JSON: {"systolic":120,"diastolic":80}.',
+                'Extract the systolic and diastolic blood pressure values from the text. '
+                'If the text does NOT contain a blood pressure reading, respond with '
+                '{"systolic":null,"diastolic":null}. '
+                'Never guess or invent values. Respond ONLY with JSON, e.g. {"systolic":120,"diastolic":80}.',
               ),
             ],
           ),
@@ -309,27 +413,65 @@ class MicrophoneTranscribeBloc
         return _manualParse(text);
       }
 
-      int sys = (parsed['systolic'] as num?)?.toInt() ?? 120;
-      int dia = (parsed['diastolic'] as num?)?.toInt() ?? 80;
-      sys = sys.clamp(70, 250);
-      dia = dia.clamp(40, 150);
+      final num? sysNum = parsed['systolic'] as num?;
+      final num? diaNum = parsed['diastolic'] as num?;
 
-      return {'systolic': sys, 'diastolic': dia};
+      // Model reported no reading present — fall back to a literal regex
+      // scan before giving up, then validate.
+      if (sysNum == null || diaNum == null) {
+        return _manualParse(text);
+      }
+
+      return _validateReading(sysNum.toInt(), diaNum.toInt());
     } catch (e) {
       return _manualParse(text);
     }
   }
 
-  Map<String, int> _manualParse(String text) {
+  BPParseResult _manualParse(String text) {
     final match = RegExp(r'(\d{2,3})\s*[\/-]\s*(\d{2,3})').firstMatch(text);
     if (match != null) {
-      int sys = int.tryParse(match.group(1)!) ?? 120;
-      int dia = int.tryParse(match.group(2)!) ?? 80;
-      sys = sys.clamp(70, 250);
-      dia = dia.clamp(40, 150);
-      return {'systolic': sys, 'diastolic': dia};
+      final int? sys = int.tryParse(match.group(1)!);
+      final int? dia = int.tryParse(match.group(2)!);
+      if (sys != null && dia != null) {
+        return _validateReading(sys, dia);
+      }
     }
-    return {'systolic': 120, 'diastolic': 80};
+    // No blood pressure reading could be found in the spoken text.
+    return BPParseResult(
+      status: BPParseStatus.notDetected,
+      message: _l10n.micCouldNotDetectReading,
+    );
+  }
+
+  /// Validates a parsed reading against plausible physiological limits.
+  /// Real human readings (including hypertensive crises and hypotension)
+  /// fall well within these bounds, so anything outside is almost certainly
+  /// a mis-transcription. Rather than silently clamping, we ask the user to
+  /// repeat so we never save an altered value.
+  BPParseResult _validateReading(int sys, int dia) {
+    const int sysMin = 60, sysMax = 260;
+    const int diaMin = 30, diaMax = 160;
+
+    final bool inRange =
+        sys >= sysMin && sys <= sysMax && dia >= diaMin && dia <= diaMax;
+
+    // Systolic must exceed diastolic; otherwise the two were likely swapped
+    // or mis-heard.
+    if (!inRange || sys <= dia) {
+      return BPParseResult(
+        status: BPParseStatus.outOfRange,
+        systolic: sys,
+        diastolic: dia,
+        message: _l10n.micReadingOutOfRange(sys, dia),
+      );
+    }
+
+    return BPParseResult(
+      status: BPParseStatus.success,
+      systolic: sys,
+      diastolic: dia,
+    );
   }
 
   Future<void> _onLLMAnalysisStarted(
@@ -345,7 +487,7 @@ class MicrophoneTranscribeBloc
     final openaiKey = Env.openaiApiKey;
 
     if (openaiKey.isEmpty) {
-      add(const LLMAnalysisFailedEvent('OpenAI API key missing'));
+      add(LLMAnalysisFailedEvent(_l10n.micUnexpectedError));
       return;
     }
 
@@ -354,12 +496,14 @@ class MicrophoneTranscribeBloc
       String userContext = '';
       if (_userProfile != null) {
         final parts = <String>[];
-        if (_userProfile!['age'] != null) parts.add('Age: ${_userProfile!['age']}');
-        if (_userProfile!['gender'] != null) parts.add('Gender: ${_userProfile!['gender']}');
+        if (_userProfile!['age'] != null)
+          parts.add('Age: ${_userProfile!['age']}');
+        if (_userProfile!['gender'] != null)
+          parts.add('Gender: ${_userProfile!['gender']}');
         if (_userProfile!['smoker'] == true) parts.add('Smoker');
         if (_userProfile!['has_diabetes'] == true) parts.add('Has diabetes');
         if (_userProfile!['is_pregnant'] == true) parts.add('Pregnant');
-        if (_userProfile!['medications'] != null && 
+        if (_userProfile!['medications'] != null &&
             _userProfile!['medications'].toString().isNotEmpty) {
           parts.add('Medications: ${_userProfile!['medications']}');
         }
@@ -367,9 +511,11 @@ class MicrophoneTranscribeBloc
       }
 
       // Build system prompt with AHA/ACC 2025 guidelines
-      final systemPrompt = '''You are Arteria, a compassionate medical assistant specializing in blood pressure.
+      final systemPrompt =
+          '''You are Arteria, a compassionate medical assistant specializing in blood pressure.
 
 BLOOD PRESSURE CLASSIFICATION (AHA/ACC 2025 Guidelines - applies uniformly to all adults 18+):
+- Low (Hypotension): Systolic <90 OR Diastolic <60 mmHg (e.g., 85/55). Treat as urgent if Systolic <80 or Diastolic <50, or if symptoms like dizziness, fainting, or confusion are present.
 - Normal: Systolic ≤120 AND Diastolic ≤80 mmHg (120/80 is Normal)
 - Elevated: Systolic 121-129 AND Diastolic ≤80 mmHg (e.g., 125/78)
 - Stage 1 Hypertension: Systolic 130-139 OR Diastolic 81-89 mmHg (e.g., 130/82, 135/85)
@@ -380,8 +526,8 @@ IMPORTANT: 120/80 mmHg is classified as NORMAL, not elevated or hypertensive.
 
 Respond in JSON format:
 {
-  "classification": "Normal/Elevated/Stage 1 Hypertension/Stage 2 Hypertension/Hypertensive Crisis",
-  "severity": "normal/elevated/high/critical",
+  "classification": "Low (Hypotension)/Normal/Elevated/Stage 1 Hypertension/Stage 2 Hypertension/Hypertensive Crisis",
+  "severity": "low/normal/elevated/high/critical",
   "analysis": "Brief, empathetic analysis (2-3 sentences)",
   "recommendations": ["Recommendation 1", "Recommendation 2"]
 }
@@ -399,24 +545,32 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
           OpenAIChatCompletionChoiceMessageModel(
             role: OpenAIChatMessageRole.system,
             content: [
-              OpenAIChatCompletionChoiceMessageContentItemModel.text(systemPrompt),
+              OpenAIChatCompletionChoiceMessageContentItemModel.text(
+                systemPrompt,
+              ),
             ],
           ),
           OpenAIChatCompletionChoiceMessageModel(
             role: OpenAIChatMessageRole.user,
             content: [
               OpenAIChatCompletionChoiceMessageContentItemModel.text(
-                'My blood pressure reading is $sys/$dia mmHg. Please analyze.',
+                _sessionCount > 1
+                    ? 'This is the average of $_sessionCount readings I took a '
+                          'few minutes apart in one sitting: $sys/$dia mmHg. '
+                          'Please analyze this averaged reading.'
+                    : 'My blood pressure reading is $sys/$dia mmHg. Please analyze.',
               ),
             ],
           ),
         ],
       );
 
-      final raw = completion.choices.first.message.content
-          ?.map((c) => c.text)
-          .join(' ')
-          .trim() ?? '';
+      final raw =
+          completion.choices.first.message.content
+              ?.map((c) => c.text)
+              .join(' ')
+              .trim() ??
+          '';
 
       // Parse JSON response
       Map<String, dynamic> parsed = {};
@@ -440,12 +594,25 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
       }
 
       final analysis = (parsed['analysis'] ?? raw).toString();
-      final category = (parsed['classification'] ?? _classifyBP(sys, dia)).toString();
-      final severity = (parsed['severity'] ?? _getSeverity(sys, dia)).toString();
+      // When we averaged a multi-reading session, tell the user up front so
+      // the spoken/displayed numbers aren't mistaken for a single reading.
+      final sessionNote = _sessionCount > 1
+          ? (_selectedLanguage == 'fr'
+                ? 'Ceci est la moyenne de $_sessionCount mesures prises à '
+                      'quelques minutes d\'intervalle. '
+                : 'This is the average of $_sessionCount readings taken a few '
+                      'minutes apart. ')
+          : '';
+      final analysisText = '$sessionNote$analysis';
+      // Derive the category label and severity locally so they are always
+      // correctly localized and guaranteed consistent with the numeric
+      // reading, regardless of how the LLM phrased its classification.
+      final category = _classifyBP(sys, dia);
+      final severity = _getSeverity(sys, dia);
 
       add(
         LLMAnalysisCompletedEvent(
-          analysisText: analysis,
+          analysisText: analysisText,
           systolic: sys,
           diastolic: dia,
           category: category,
@@ -454,38 +621,35 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
         ),
       );
     } on SocketException {
-      add(
-        const LLMAnalysisFailedEvent(
-          'Network error — please check your internet connection.',
-        ),
-      );
+      add(LLMAnalysisFailedEvent(_l10n.micNetworkError));
     } on TimeoutException {
-      add(
-        const LLMAnalysisFailedEvent(
-          'The server took too long to respond. Try again.',
-        ),
-      );
+      add(LLMAnalysisFailedEvent(_l10n.micServerTimeout));
     } catch (e) {
-      add(LLMAnalysisFailedEvent('An unexpected error occurred: $e'));
+      debugPrint('❌ LLM analysis error: $e');
+      add(LLMAnalysisFailedEvent(_l10n.micUnexpectedError));
     }
   }
 
   /// Classifies blood pressure according to AHA/ACC 2025 guidelines.
+  /// Low (Hypotension): <90 systolic OR <60 diastolic
   /// Normal: ≤120/≤80 (includes 120/80)
   /// Elevated: 121-129 AND ≤80
   /// Stage 1: ≥130 OR 81-89 diastolic
   /// Stage 2: ≥140 OR ≥90
   String _classifyBP(int sys, int dia) {
     // Hypertensive Crisis - EMERGENCY
-    if (sys > 180 || dia > 120) return 'Hypertensive Crisis';
+    if (sys > 180 || dia > 120) return _l10n.bpCategoryCrisis;
     // Stage 2 Hypertension
-    if (sys >= 140 || dia >= 90) return 'Stage 2 Hypertension';
+    if (sys >= 140 || dia >= 90) return _l10n.bpCategoryStage2;
     // Stage 1 Hypertension (sys ≥130 OR dia 81-89)
-    if (sys >= 130 || dia > 80) return 'Stage 1 Hypertension';
+    if (sys >= 130 || dia > 80) return _l10n.bpCategoryStage1;
+    // Low / Hypotension (sys <90 OR dia <60). Checked after the high tiers so
+    // a wide pulse pressure (e.g. 135/55) is still flagged as hypertension.
+    if (sys < 90 || dia < 60) return _l10n.bpCategoryLow;
     // Elevated (sys 121-129 AND dia ≤80)
-    if (sys > 120 && dia <= 80) return 'Elevated';
+    if (sys > 120 && dia <= 80) return _l10n.bpCategoryElevated;
     // Normal (sys ≤120 AND dia ≤80, includes 120/80)
-    return 'Normal';
+    return _l10n.bpCategoryNormal;
   }
 
   String _getSeverity(int sys, int dia) {
@@ -493,6 +657,10 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
     if (sys >= 140 || dia >= 90) return 'high';
     // Stage 1: sys ≥130 OR dia > 80
     if (sys >= 130 || dia > 80) return 'elevated';
+    // Severe hypotension can be an emergency (shock) — flag as critical.
+    if (sys < 80 || dia < 50) return 'critical';
+    // Mild hypotension
+    if (sys < 90 || dia < 60) return 'low';
     // Normal includes 120/80
     return 'normal';
   }
@@ -535,9 +703,8 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
     LLMAnalysisFailedEvent event,
     Emitter<MicrophoneTranscribeState> emit,
   ) {
-    emit(
-      ErrorState(errorMessage: event.error, displayText: '❌ ${event.error}'),
-    );
+    // event.error is already a localized, user-facing message.
+    emit(ErrorState(errorMessage: event.error, displayText: event.error));
   }
 
   Future<void> _fetchSpeakAndPlay(String text) async {
@@ -548,23 +715,52 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
     }
 
     try {
-      // Use OpenAI TTS API
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/audio/speech'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $openaiKey',
-        },
-        body: jsonEncode({
-          'model': _ttsModel,
-          'input': text,
-          'voice': _ttsVoice,
-          'response_format': 'mp3',
-          'speed': 1.0,
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final body = jsonEncode({
+        'model': _ttsModel,
+        'input': text,
+        'voice': _ttsVoice,
+        'response_format': 'mp3',
+        'speed': 1.0,
+      });
+
+      // The TTS request (first-connection + TLS + audio generation + binary
+      // download) can stall well past a tight timeout on mobile data. Use the
+      // same generous budget as the Whisper call and retry once on a timeout
+      // before giving up, with logging so we can see where it stalls.
+      http.Response? response;
+      for (int attempt = 1; attempt <= 2; attempt++) {
+        final sw = Stopwatch()..start();
+        try {
+          response = await http
+              .post(
+                Uri.parse('https://api.openai.com/v1/audio/speech'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $openaiKey',
+                },
+                body: body,
+              )
+              .timeout(const Duration(seconds: 60));
+          debugPrint(
+            'TTS attempt $attempt → ${response.statusCode} '
+            'in ${sw.elapsedMilliseconds}ms (${response.bodyBytes.length} bytes)',
+          );
+          break;
+        } on TimeoutException {
+          debugPrint(
+            'TTS attempt $attempt timed out after ${sw.elapsedMilliseconds}ms',
+          );
+          if (attempt == 2) rethrow;
+        }
+      }
+
+      if (response == null) {
+        add(const TTSPlaybackFailedEvent('TTS request returned no response'));
+        return;
+      }
 
       if (response.statusCode != 200) {
+        debugPrint(' TTS error body: ${response.body}');
         add(TTSPlaybackFailedEvent('TTS failed: ${response.statusCode}'));
         return;
       }
@@ -627,16 +823,29 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
     }
   }
 
-  void _onTTSPlaybackFailed(
+  Future<void> _onTTSPlaybackFailed(
     TTSPlaybackFailedEvent event,
     Emitter<MicrophoneTranscribeState> emit,
-  ) {
-    emit(
-      ErrorState(
-        errorMessage: event.error,
-        displayText: 'TTS Playback Error: ${event.error}',
-      ),
-    );
+  ) async {
+    // TTS is non-critical: the reading and its analysis are already computed
+    // and shown on screen. Rather than discarding that result behind an error
+    // screen, fall through to the completed/save flow so the reading is kept.
+    debugPrint('🔇 TTS playback failed: ${event.error}');
+    if (state is PlayingTTSState) {
+      final playingState = state as PlayingTTSState;
+      emit(
+        CompletedState(
+          analysisText: playingState.analysisText,
+          systolic: playingState.systolic,
+          diastolic: playingState.diastolic,
+          category: playingState.category,
+          severity: playingState.severity,
+        ),
+      );
+
+      await Future.delayed(const Duration(seconds: 2));
+      add(const AutoSaveTriggeredEvent());
+    }
   }
 
   Future<void> _onAutoSaveTriggered(
@@ -652,8 +861,11 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
         ),
       );
 
-      // Save to Firestore
-      await _saveBPReading(completedState.systolic, completedState.diastolic);
+      // Persist the actual spoken measurement (not the session average) so the
+      // day's history and any downstream aggregation stay honest.
+      final saveSys = _pendingRawSys ?? completedState.systolic;
+      final saveDia = _pendingRawDia ?? completedState.diastolic;
+      await _saveBPReading(saveSys, saveDia);
     }
   }
 
@@ -662,15 +874,22 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // IMPORTANT: write to `readings` — the single collection the rest of the
+      // app (home, Trends, history, risk score) reads from. Saving elsewhere
+      // (previously `bp_readings`) made voice readings invisible everywhere.
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('bp_readings')
+          .collection('readings')
           .add({
             'systolic': systolic,
             'diastolic': diastolic,
             'date': Timestamp.now(),
           });
+
+      // Let the push-notification service react to this new reading (e.g. a
+      // dangerous value or a sudden spike). Fire-and-forget; it de-duplicates.
+      HealthNotificationService.runChecksForCurrentUser();
     } catch (e) {
       debugPrint('Failed to save BP reading: $e');
     }
@@ -696,4 +915,42 @@ Language: ${_selectedLanguage == 'fr' ? 'French' : 'English'}''';
   void setLanguage(String language) {
     _selectedLanguage = language;
   }
+}
+
+/// Outcome of attempting to parse a spoken blood pressure reading.
+enum BPParseStatus {
+  /// A valid, in-range reading was found.
+  success,
+
+  /// No blood pressure reading could be detected in the speech.
+  notDetected,
+
+  /// A number was found but it falls outside plausible physiological limits.
+  outOfRange,
+}
+
+/// Result of parsing speech into a blood pressure reading. Carries an
+/// explanatory [message] for the non-success cases so the UI can prompt the
+/// user to repeat instead of saving a fabricated or altered value.
+class BPParseResult {
+  final BPParseStatus status;
+  final int? systolic;
+  final int? diastolic;
+  final String message;
+
+  const BPParseResult({
+    required this.status,
+    this.systolic,
+    this.diastolic,
+    this.message = '',
+  });
+}
+
+/// Result of averaging a measurement session: the (possibly averaged)
+/// systolic/diastolic to analyze, and how many readings were folded in.
+class _SessionAverage {
+  const _SessionAverage(this.systolic, this.diastolic, this.count);
+  final int systolic;
+  final int diastolic;
+  final int count;
 }

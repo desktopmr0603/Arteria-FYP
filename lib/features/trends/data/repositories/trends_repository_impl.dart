@@ -141,11 +141,19 @@ class TrendsRepositoryImpl implements TrendsRepository {
   }
 
   @override
-  Stream<List<TrendData>> getTrendDataStream(String userId) {
+  Stream<List<TrendData>> getTrendDataStream({
+    required String userId,
+    required TimeRange timeRange,
+  }) {
     return _firestore
         .collection('users')
         .doc(userId)
         .collection('readings')
+        .where(
+          'date',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(timeRange.start),
+        )
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(timeRange.end))
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -331,52 +339,66 @@ class TrendsRepositoryImpl implements TrendsRepository {
     }
   }
 
-  /// Aggregate data by day
+  /// Aggregate data by calendar day.
   List<AggregatedTrendData> _aggregateByDay(List<TrendData> data) {
-    final groupedData = <DateTime, List<TrendData>>{};
+    return _aggregateByKey(
+      data,
+      (ts) => DateTime(ts.year, ts.month, ts.day),
+    );
+  }
 
+  /// Aggregate data by ISO week (Monday-anchored).
+  List<AggregatedTrendData> _aggregateByWeek(List<TrendData> data) {
+    return _aggregateByKey(data, (ts) {
+      // Anchor each reading to the Monday of its ISO week.
+      final daysFromMonday = ts.weekday - DateTime.monday;
+      final monday = DateTime(ts.year, ts.month, ts.day)
+          .subtract(Duration(days: daysFromMonday));
+      return monday;
+    });
+  }
+
+  /// Aggregate data by calendar month (first of month as bucket key).
+  List<AggregatedTrendData> _aggregateByMonth(List<TrendData> data) {
+    return _aggregateByKey(data, (ts) => DateTime(ts.year, ts.month, 1));
+  }
+
+  /// Generic aggregator: groups readings into buckets defined by [bucketKey],
+  /// then computes mean sys/dia and classifies the bucket category.
+  List<AggregatedTrendData> _aggregateByKey(
+    List<TrendData> data,
+    DateTime Function(DateTime) bucketKey,
+  ) {
+    if (data.isEmpty) return [];
+
+    final grouped = <DateTime, List<TrendData>>{};
     for (final reading in data) {
-      final day = DateTime(
-        reading.timestamp.year,
-        reading.timestamp.month,
-        reading.timestamp.day,
-      );
-      groupedData[day] = (groupedData[day] ?? [])..add(reading);
+      final key = bucketKey(reading.timestamp);
+      grouped.putIfAbsent(key, () => []).add(reading);
     }
 
-    return groupedData.entries.map((entry) {
-      final dayData = entry.value;
-      final avgSystolic =
-          dayData.map((d) => d.systolic).reduce((a, b) => a + b) /
-          dayData.length;
-      final avgDiastolic =
-          dayData.map((d) => d.diastolic).reduce((a, b) => a + b) /
-          dayData.length;
+    final buckets = grouped.entries.map((entry) {
+      final readings = entry.value;
+      final avgSys =
+          readings.map((d) => d.systolic).reduce((a, b) => a + b) /
+          readings.length;
+      final avgDia =
+          readings.map((d) => d.diastolic).reduce((a, b) => a + b) /
+          readings.length;
 
       return AggregatedTrendData(
         period: entry.key,
-        averageSystolic: avgSystolic,
-        averageDiastolic: avgDiastolic,
-        readingCount: dayData.length,
+        averageSystolic: avgSys,
+        averageDiastolic: avgDia,
+        readingCount: readings.length,
         averageCategory: TrendDataModel.classifyBP(
-          avgSystolic.round(),
-          avgDiastolic.round(),
+          avgSys.round(),
+          avgDia.round(),
         ),
       );
     }).toList();
-  }
 
-  /// Aggregate data by week
-  List<AggregatedTrendData> _aggregateByWeek(List<TrendData> data) {
-    // Similar implementation for weekly aggregation
-    // For now, return daily aggregation
-    return _aggregateByDay(data);
-  }
-
-  /// Aggregate data by month
-  List<AggregatedTrendData> _aggregateByMonth(List<TrendData> data) {
-    // Similar implementation for monthly aggregation
-    // For now, return daily aggregation
-    return _aggregateByDay(data);
+    buckets.sort((a, b) => a.period.compareTo(b.period));
+    return buckets;
   }
 }

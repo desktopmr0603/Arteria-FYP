@@ -24,6 +24,17 @@ class BPAnomalyRemoteDataSource {
   static const double _spikeThreshold = 25.0; // mmHg sudden change
   static const int _minimumReadingsForBaseline = 5;
 
+  /// Check if user has enough data for baseline calculation
+  bool get hasBaseline => _baselineSystolicMean != null && _baselineDiastolicMean != null;
+  
+  /// Get baseline status message for user feedback
+  String get baselineStatus {
+    if (hasBaseline) {
+      return 'Personal baseline established from your readings';
+    }
+    return 'Need ${_minimumReadingsForBaseline - (_baselineSystolicMean == null ? 0 : 1)} more readings to establish your baseline';
+  }
+
   /// Initialize the service and calculate user baseline
   Future<void> initialize(String userId) async {
     await _calculateUserBaseline(userId);

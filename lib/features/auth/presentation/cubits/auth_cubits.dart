@@ -82,8 +82,12 @@ class AuthCubits extends Cubit<AuthStates> {
           AuthCredentialError(generalError: "Login failed. Please try again."),
         );
       }
+      // Reset to a terminal state so _AuthWrapper can render (otherwise it
+      // stays stuck on Loading when navigating back to '/').
+      emit(Unauthenticated());
     } catch (e) {
       emit(AuthCredentialError(generalError: "An unexpected error occurred."));
+      emit(Unauthenticated());
     }
   }
 

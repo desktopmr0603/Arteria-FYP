@@ -758,6 +758,108 @@ abstract class AppLocalizations {
   /// **'Microphone permission denied'**
   String get microphonePermissionDenied;
 
+  /// Shown while the spoken reading is being analyzed
+  ///
+  /// In en, this message translates to:
+  /// **'Processing your reading…'**
+  String get micProcessingReading;
+
+  /// Shown when no blood pressure reading could be parsed from speech
+  ///
+  /// In en, this message translates to:
+  /// **'I couldn\'t catch a blood pressure reading. Tap the mic and say it clearly, for example \"120 over 80\".'**
+  String get micCouldNotDetectReading;
+
+  /// Shown when a parsed reading is physiologically implausible
+  ///
+  /// In en, this message translates to:
+  /// **'I heard {systolic}/{diastolic} mmHg, which is outside the measurable range. Tap the mic and say your reading again clearly.'**
+  String micReadingOutOfRange(int systolic, int diastolic);
+
+  /// Shown when the recording contained no recognizable speech
+  ///
+  /// In en, this message translates to:
+  /// **'No speech detected. Tap the mic and try again.'**
+  String get micNoSpeechDetected;
+
+  /// Generic recording failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Recording error. Please try again.'**
+  String get micRecordingError;
+
+  /// Shown when stopping the recorder produced no audio file
+  ///
+  /// In en, this message translates to:
+  /// **'No audio recorded. Please try again.'**
+  String get micNoAudioRecorded;
+
+  /// Generic transcription failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t transcribe your voice. Please try again.'**
+  String get micTranscriptionError;
+
+  /// Shown when a network/socket error occurs during analysis
+  ///
+  /// In en, this message translates to:
+  /// **'Network error — please check your internet connection.'**
+  String get micNetworkError;
+
+  /// Shown when an API request times out
+  ///
+  /// In en, this message translates to:
+  /// **'The server took too long to respond. Please try again.'**
+  String get micServerTimeout;
+
+  /// Generic fallback error message during analysis
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred. Please try again.'**
+  String get micUnexpectedError;
+
+  /// Shown when text-to-speech playback fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t play the audio response.'**
+  String get micTtsError;
+
+  /// Blood pressure category label
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get bpCategoryNormal;
+
+  /// Blood pressure category label
+  ///
+  /// In en, this message translates to:
+  /// **'Elevated'**
+  String get bpCategoryElevated;
+
+  /// Blood pressure category label
+  ///
+  /// In en, this message translates to:
+  /// **'Stage 1 Hypertension'**
+  String get bpCategoryStage1;
+
+  /// Blood pressure category label
+  ///
+  /// In en, this message translates to:
+  /// **'Stage 2 Hypertension'**
+  String get bpCategoryStage2;
+
+  /// Blood pressure category label
+  ///
+  /// In en, this message translates to:
+  /// **'Hypertensive Crisis'**
+  String get bpCategoryCrisis;
+
+  /// Blood pressure category label for hypotension
+  ///
+  /// In en, this message translates to:
+  /// **'Low (Hypotension)'**
+  String get bpCategoryLow;
+
   /// Add reminder button and dialog title
   ///
   /// In en, this message translates to:
@@ -1607,7 +1709,7 @@ abstract class AppLocalizations {
   /// No description provided for @predictiveTimelineSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'AI-powered 30-day health projections'**
+  /// **'Your 7-day health outlook'**
   String get predictiveTimelineSubtitle;
 
   /// No description provided for @predictiveTimelineAnalyzing.
@@ -1687,6 +1789,244 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Medication'**
   String get predictiveTimelineFactorMedication;
+
+  /// No description provided for @predictiveTimelineMethodBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Linear regression · 7-day projection · 95% CI'**
+  String get predictiveTimelineMethodBadge;
+
+  /// No description provided for @predictiveTimelineProjectionUnlocksSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Projection unlocks soon'**
+  String get predictiveTimelineProjectionUnlocksSoon;
+
+  /// No description provided for @predictiveTimelineNeedMoreDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{needed, plural, =1{We need 1 more day of risk history ({available} of {required}). Continue logging daily readings — projections are built from your own data, not a generic baseline.} other{We need {needed} more days of risk history ({available} of {required}). Continue logging daily readings — projections are built from your own data, not a generic baseline.}}'**
+  String predictiveTimelineNeedMoreDays(
+    int needed,
+    int available,
+    int required,
+  );
+
+  /// No description provided for @predictiveTimelineProcessingHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing recent risk history — pull to refresh.'**
+  String get predictiveTimelineProcessingHistory;
+
+  /// No description provided for @predictiveTimelineTooltipProjected.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected'**
+  String get predictiveTimelineTooltipProjected;
+
+  /// No description provided for @predictiveTimelineTooltipObserved.
+  ///
+  /// In en, this message translates to:
+  /// **'Observed'**
+  String get predictiveTimelineTooltipObserved;
+
+  /// No description provided for @predictiveTimelineTooltipRiskValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}% risk'**
+  String predictiveTimelineTooltipRiskValue(int value);
+
+  /// No description provided for @predictiveTimelineTooltipCI.
+  ///
+  /// In en, this message translates to:
+  /// **'95% CI: {lower}–{upper}%'**
+  String predictiveTimelineTooltipCI(int lower, int upper);
+
+  /// No description provided for @predictiveTimelineInsightCurrentRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Where you are today'**
+  String get predictiveTimelineInsightCurrentRisk;
+
+  /// No description provided for @predictiveTimelineInsight7DayProjection.
+  ///
+  /// In en, this message translates to:
+  /// **'Where you\'re heading'**
+  String get predictiveTimelineInsight7DayProjection;
+
+  /// No description provided for @predictiveTimelineInsightWeeklyTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'How it changed this week'**
+  String get predictiveTimelineInsightWeeklyTrend;
+
+  /// No description provided for @predictiveTimelineInsightPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}% / week'**
+  String predictiveTimelineInsightPerWeek(String value);
+
+  /// No description provided for @predictiveTimelineInsightProjectionUncertainty.
+  ///
+  /// In en, this message translates to:
+  /// **'How sure we are'**
+  String get predictiveTimelineInsightProjectionUncertainty;
+
+  /// No description provided for @predictiveTimelineLevelLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get predictiveTimelineLevelLow;
+
+  /// No description provided for @predictiveTimelineLevelModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get predictiveTimelineLevelModerate;
+
+  /// No description provided for @predictiveTimelineLevelElevated.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevated'**
+  String get predictiveTimelineLevelElevated;
+
+  /// No description provided for @predictiveTimelineLevelHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get predictiveTimelineLevelHigh;
+
+  /// No description provided for @predictiveTimelineSummaryHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your risk is {level}'**
+  String predictiveTimelineSummaryHeadline(String level);
+
+  /// No description provided for @predictiveTimelineSummarySteady.
+  ///
+  /// In en, this message translates to:
+  /// **'It should stay about the same over the next 7 days.'**
+  String get predictiveTimelineSummarySteady;
+
+  /// No description provided for @predictiveTimelineSummaryRising.
+  ///
+  /// In en, this message translates to:
+  /// **'It may rise a little over the next 7 days.'**
+  String get predictiveTimelineSummaryRising;
+
+  /// No description provided for @predictiveTimelineSummaryFalling.
+  ///
+  /// In en, this message translates to:
+  /// **'It should keep improving over the next 7 days.'**
+  String get predictiveTimelineSummaryFalling;
+
+  /// No description provided for @predictiveTimelineAxisToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get predictiveTimelineAxisToday;
+
+  /// No description provided for @predictiveTimelineAxisInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'In {days} days'**
+  String predictiveTimelineAxisInDays(int days);
+
+  /// No description provided for @predictiveTimelineAxisWeeksAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{weeks, plural, =1{1 week ago} other{{weeks} weeks ago}}'**
+  String predictiveTimelineAxisWeeksAgo(int weeks);
+
+  /// No description provided for @predictiveTimelineLegendRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get predictiveTimelineLegendRecorded;
+
+  /// No description provided for @predictiveTimelineLegendPredicted.
+  ///
+  /// In en, this message translates to:
+  /// **'Predicted'**
+  String get predictiveTimelineLegendPredicted;
+
+  /// No description provided for @predictiveTimelineLegendRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Likely range'**
+  String get predictiveTimelineLegendRange;
+
+  /// No description provided for @trendHeadlineTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'This week at a glance'**
+  String get trendHeadlineTagline;
+
+  /// No description provided for @trendHeadlineLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading your trends…'**
+  String get trendHeadlineLoading;
+
+  /// No description provided for @trendHeadlineLabelSystolic.
+  ///
+  /// In en, this message translates to:
+  /// **'Systolic'**
+  String get trendHeadlineLabelSystolic;
+
+  /// No description provided for @trendHeadlineLabelDiastolic.
+  ///
+  /// In en, this message translates to:
+  /// **'Diastolic'**
+  String get trendHeadlineLabelDiastolic;
+
+  /// No description provided for @trendHeadlineLabelRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk score'**
+  String get trendHeadlineLabelRisk;
+
+  /// No description provided for @trendHeadlineDeltaStable.
+  ///
+  /// In en, this message translates to:
+  /// **'stable this week'**
+  String get trendHeadlineDeltaStable;
+
+  /// No description provided for @trendHeadlineDeltaUp.
+  ///
+  /// In en, this message translates to:
+  /// **'up {value} vs last week'**
+  String trendHeadlineDeltaUp(String value);
+
+  /// No description provided for @trendHeadlineDeltaDown.
+  ///
+  /// In en, this message translates to:
+  /// **'down {value} vs last week'**
+  String trendHeadlineDeltaDown(String value);
+
+  /// No description provided for @trendHeadlineFallbackHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Your systolic average held steady at {value} mmHg this week, with {missed} missed doses logged.'**
+  String trendHeadlineFallbackHeld(int value, int missed);
+
+  /// No description provided for @trendHeadlineFallbackDropped.
+  ///
+  /// In en, this message translates to:
+  /// **'Your systolic average dropped {delta} mmHg this week to {value}, with {missed} missed doses logged.'**
+  String trendHeadlineFallbackDropped(int delta, int value, int missed);
+
+  /// No description provided for @trendHeadlineFallbackRose.
+  ///
+  /// In en, this message translates to:
+  /// **'Your systolic average rose {delta} mmHg this week to {value}, with {missed} missed doses logged.'**
+  String trendHeadlineFallbackRose(int delta, int value, int missed);
+
+  /// No description provided for @riskTrendAnalysisExplainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Your overall hypertension risk over the last 90 days, with the factors driving it underneath.'**
+  String get riskTrendAnalysisExplainer;
 
   /// No description provided for @riskTrendAnalysisTitle.
   ///
@@ -2114,36 +2454,6 @@ abstract class AppLocalizations {
   /// **'Understanding your health query...'**
   String get statusUnderstandingQuery;
 
-  /// No description provided for @bpCategoryNormal.
-  ///
-  /// In en, this message translates to:
-  /// **'Normal'**
-  String get bpCategoryNormal;
-
-  /// No description provided for @bpCategoryElevated.
-  ///
-  /// In en, this message translates to:
-  /// **'Elevated'**
-  String get bpCategoryElevated;
-
-  /// No description provided for @bpCategoryStage1.
-  ///
-  /// In en, this message translates to:
-  /// **'Stage 1 Hypertension'**
-  String get bpCategoryStage1;
-
-  /// No description provided for @bpCategoryStage2.
-  ///
-  /// In en, this message translates to:
-  /// **'Stage 2 Hypertension'**
-  String get bpCategoryStage2;
-
-  /// No description provided for @bpCategoryCrisis.
-  ///
-  /// In en, this message translates to:
-  /// **'Hypertensive Crisis'**
-  String get bpCategoryCrisis;
-
   /// Page title for the Insights conversational assistant screen
   ///
   /// In en, this message translates to:
@@ -2155,6 +2465,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How are you feeling today?'**
   String get insightsHeroPrompt;
+
+  /// Default greeting prompt on the Insights screen
+  ///
+  /// In en, this message translates to:
+  /// **'How can I help you today?'**
+  String get insightsGreetingDefault;
+
+  /// Suggestion chip for asking about latest BP reading
+  ///
+  /// In en, this message translates to:
+  /// **'How was my latest reading?'**
+  String get insightsSuggestionLatest;
+
+  /// Suggestion chip for asking about weekly BP trend
+  ///
+  /// In en, this message translates to:
+  /// **'Show my weekly trend'**
+  String get insightsSuggestionTrend;
+
+  /// Suggestion chip for asking about hypertension risk
+  ///
+  /// In en, this message translates to:
+  /// **'Any hypertension risk signs?'**
+  String get insightsSuggestionRisk;
+
+  /// Suggestion chip for asking about medication logging
+  ///
+  /// In en, this message translates to:
+  /// **'Did I log medication today?'**
+  String get insightsSuggestionMedication;
+
+  /// Heading title on Insights screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your health insights'**
+  String get insightsHeaderTitle;
+
+  /// Heading subtitle on Insights screen
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about your latest readings'**
+  String get insightsHeaderSubtitle;
+
+  /// Title of the toast shown after a medication is added by voice
+  ///
+  /// In en, this message translates to:
+  /// **'Medication added'**
+  String get medicationFeedbackAdded;
+
+  /// Title of the toast shown after a medication is updated by voice
+  ///
+  /// In en, this message translates to:
+  /// **'Medication updated'**
+  String get medicationFeedbackUpdated;
+
+  /// Title of the toast shown after a medication is switched by voice
+  ///
+  /// In en, this message translates to:
+  /// **'Medication switched'**
+  String get medicationFeedbackSwitched;
+
+  /// Label/title for the in-app notifications screen and bell
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
 }
 
 class _AppLocalizationsDelegate

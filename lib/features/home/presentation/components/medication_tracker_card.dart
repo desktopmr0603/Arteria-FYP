@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:arteria/features/home/domain/entities/medication.dart';
@@ -28,12 +27,12 @@ class MedicationTrackerCard extends StatefulWidget {
 
 class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
   final MedicationRepository _repository = MedicationRepositoryImpl();
-  
+
   // Stream management
   String? _currentUserId;
   Stream<List<Medication>>? _medicationsStream;
   StreamSubscription<User?>? _authSubscription;
-  
+
   // Novel AI Service
   late NovelAIService _novelAIService;
 
@@ -51,15 +50,17 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
           _currentUserId = newUserId;
           _medicationsStream = _repository.watchMedications(newUserId);
         });
-        debugPrint('📋 MedicationTracker: Watching medications for user: $newUserId');
+        debugPrint(
+          '📋 MedicationTracker: Watching medications for user: $newUserId',
+        );
       }
     });
-    
+
     // Initialize immediately with current user
     final currentUser = FirebaseAuth.instance.currentUser;
     _currentUserId = currentUser?.uid ?? 'default_user';
     _medicationsStream = _repository.watchMedications(_currentUserId!);
-    
+
     _novelAIService = NovelAIService(userId: _currentUserId!);
   }
 
@@ -85,9 +86,11 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
           debugPrint('⏳ MedicationTracker: Waiting for data...');
         }
         if (snapshot.hasData) {
-          debugPrint('✅ MedicationTracker: Received ${snapshot.data!.length} medications');
+          debugPrint(
+            '✅ MedicationTracker: Received ${snapshot.data!.length} medications',
+          );
         }
-        
+
         final medications = snapshot.data ?? [];
         final activeMedications = medications.where((m) => m.isActive).toList();
 
@@ -95,64 +98,66 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF10B981,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.medication_rounded,
-                                size: 22,
-                                color: Color(0xFF10B981),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              AppLocalizations.of(context)!.medicationTodaysMedications,
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: isDark
-                                    ? Colors.white
-                                    : const Color(0xFF1E293B),
-                              ),
-                            ),
-                          ],
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        _buildAddButton(isDark),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (activeMedications.isEmpty) ...[
-                      _buildEmptyState(isDark),
-                    ] else ...[
-                      ...activeMedications
-                          .take(3)
-                          .map((med) => _buildMedicationItem(med, isDark)),
-                      if (activeMedications.length > 3) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          AppLocalizations.of(context)!.medicationMoreMedications(activeMedications.length - 3),
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.5)
-                                : const Color(0xFF64748B),
-                          ),
+                        child: const Icon(
+                          Icons.medication_rounded,
+                          size: 22,
+                          color: Color(0xFF10B981),
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.medicationTodaysMedications,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1E293B),
+                        ),
+                      ),
                     ],
-                  ],
+                  ),
+                  _buildAddButton(isDark),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (activeMedications.isEmpty) ...[
+                _buildEmptyState(isDark),
+              ] else ...[
+                ...activeMedications
+                    .take(3)
+                    .map((med) => _buildMedicationItem(med, isDark)),
+                if (activeMedications.length > 3) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.medicationMoreMedications(activeMedications.length - 3),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.5)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ],
+            ],
           ),
         );
       },
@@ -166,8 +171,8 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF6366F1).withValues(alpha: 0.1),
-            const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+            const Color(0xFFF76C5E).withValues(alpha: 0.1),
+            const Color(0xFFF76C5E).withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(10),
@@ -182,7 +187,7 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
             child: const Icon(
               Icons.add_rounded,
               size: 20,
-              color: Color(0xFF6366F1),
+              color: Color(0xFFF76C5E),
             ),
           ),
         ),
@@ -285,8 +290,8 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
                         const Color(0xFFF59E0B).withValues(alpha: 0.1),
                       ]
                     : [
-                        const Color(0xFF6366F1).withValues(alpha: 0.2),
-                        const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                        const Color(0xFFF76C5E).withValues(alpha: 0.2),
+                        const Color(0xFFF76C5E).withValues(alpha: 0.1),
                       ],
               ),
               borderRadius: BorderRadius.circular(12),
@@ -302,7 +307,7 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
                   ? const Color(0xFF10B981)
                   : isPending
                   ? const Color(0xFFF59E0B)
-                  : const Color(0xFF6366F1),
+                  : const Color(0xFFF76C5E),
             ),
           ),
           const SizedBox(width: 14),
@@ -330,9 +335,7 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            med.color?.withValues(alpha: 0.1) ??
-                            const Color(0xFF6366F1).withValues(alpha: 0.1),
+                        color: const Color(0xFFF76C5E).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -340,7 +343,7 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: med.color ?? const Color(0xFF6366F1),
+                          color: const Color(0xFFF76C5E),
                         ),
                       ),
                     ),
@@ -472,7 +475,7 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
       isActive: true,
       takenToday: false,
       createdAt: DateTime.now(),
-      color: const Color(0xFF6366F1),
+      color: const Color(0xFFF76C5E),
     );
 
     _repository.addMedication(userId, medication);
@@ -483,9 +486,8 @@ class _MedicationTrackerCardState extends State<MedicationTrackerCard> {
     showDialog(
       context: context,
       builder: (context) => _AddMedicationDialog(
-        onSave: (name, dosage, frequency, times) => _saveMedication(
-          context, name, dosage, frequency, times
-        ),
+        onSave: (name, dosage, frequency, times) =>
+            _saveMedication(context, name, dosage, frequency, times),
         novelAIService: _novelAIService,
       ),
     );
@@ -510,7 +512,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
   final _dosageController = TextEditingController();
   String _selectedFrequency = 'onceDaily';
   final _timesController = TextEditingController();
-  
+
   // Interaction State
   List<InteractionWarning> _warnings = [];
   bool _isCheckingInteractions = false;
@@ -534,7 +536,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
 
   void _onNameChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    
+
     final name = _nameController.text.trim();
     if (name.length < 3) {
       if (mounted) setState(() => _warnings = []);
@@ -555,15 +557,20 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
       // Ideally we would also check against existing meds, but let's start with this
       final result = await widget.novelAIService.checkInteractions(
         textInput: "I am taking $medName", // Simple mock input for context
-        foodItems: ["grapefruit", "alcohol"], // Default checks for common interactions
+        foodItems: [
+          "grapefruit",
+          "alcohol",
+        ], // Default checks for common interactions
       );
 
       if (mounted && result != null) {
         // Filter warnings to only show ones relevant to the typed medication
-        final relevantWarnings = result.warnings.where((w) => 
-          w.medication.toLowerCase().contains(medName.toLowerCase())
-        ).toList();
-        
+        final relevantWarnings = result.warnings
+            .where(
+              (w) => w.medication.toLowerCase().contains(medName.toLowerCase()),
+            )
+            .toList();
+
         setState(() => _warnings = relevantWarnings);
       }
     } catch (e) {
@@ -590,12 +597,12 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                      color: const Color(0xFFF76C5E).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.medication_rounded,
-                      color: Color(0xFF6366F1),
+                      color: Color(0xFFF76C5E),
                       size: 24,
                     ),
                   ),
@@ -616,20 +623,30 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                 icon: Icons.medication_rounded,
                 hint: 'e.g., Amlodipine',
               ),
-              
+
               // Interaction Warnings
               if (_isCheckingInteractions)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
                     children: [
-                      const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                       const SizedBox(width: 8),
-                      Text("Checking interactions...", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        "Checking interactions...",
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                
+
               if (_warnings.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -668,7 +685,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                     _timesController.text,
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
+                    backgroundColor: const Color(0xFFF76C5E),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -768,26 +785,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: selectedValue, // Keep value for controlled input despite warning if needed, but changing to initialValue if linter insists
-          // Actually, for dropdowns, 'value' is usually correct for controlled state. 
-          // The warning says: "Use initialValue instead. This will set the initial value for the form field."
-          // If I change to initialValue, it might not update when state changes?
-          // Let's try ignoring, OR check if it's actually TextFormField.
-          // The error log says line 795 (was 850 in original).
-          // 850 was inside _buildFrequencyDropdown.
-          // Let's assume I should use value because it IS controlled. 
-          // But I'll replace it if I can.
-          // Wait, 'value' parameter in DropdownButtonFormField IS NOT DEPRECATED in Flutter stable usually.
-          // Maybe sticking to value is safer, but I will suppress? 
-          // Or user said "fix all".
-          // I will use value. 
-          // Wait, the error message: "This feature was deprecated after v3.33.0". Usage of 'value' in FormField?
-          // If I replace with initialValue, I must key the widget to update it.
-          // I'll leave 'value' for now in dropdowns unless I'm sure?
-          // Actually, I'll switch to standard DropdownButton if FormField is annoying, or just ignore. 
-          // Let's replace 'value' with 'initialValue' regarding the tool instruction?
-          // No, I'll replace withOpacity first.
-
+          initialValue: selectedValue,
           onChanged: onChanged,
           items: frequencies
               .map((e) => DropdownMenuItem(value: e.$1, child: Text(e.$2)))
@@ -808,6 +806,4 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
       ],
     );
   }
-
-
 }

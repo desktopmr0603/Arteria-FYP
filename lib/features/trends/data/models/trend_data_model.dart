@@ -32,7 +32,7 @@ class TrendDataModel extends Equatable {
     final timestamp = data['date'] as Timestamp?;
     final systolic = (data['systolic'] as num?)?.toInt() ?? 0;
     final diastolic = (data['diastolic'] as num?)?.toInt() ?? 0;
-    final pulse = data['pulse'] as int?;
+    final pulse = (data['pulse'] as num?)?.toInt();
 
     return TrendDataModel(
       id: documentId,
@@ -99,6 +99,10 @@ class TrendDataModel extends Equatable {
     // Elevated: systolic 121-129 AND diastolic <=80
     if (systolic > 120 && diastolic <= 80) {
       return BPCategory.elevated;
+    }
+    // Hypotension (Low): systolic <90 OR diastolic <60 — checked before Normal
+    if (systolic < 90 || diastolic < 60) {
+      return BPCategory.hypotension;
     }
     // Normal: systolic <120 AND diastolic <80
     return BPCategory.normal;

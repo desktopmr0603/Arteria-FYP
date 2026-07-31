@@ -44,7 +44,7 @@ class MedicationModel {
       takenToday: doc['takenToday'] ?? false,
       createdAt: FirebaseHelpers.parseDateTime(doc['createdAt'])?.toIso8601String() ?? DateTime.now().toIso8601String(),
       instructions: doc['instructions'],
-      color: doc['color'] ?? 0xFF6366F1,
+      color: doc['color'] ?? 0xFFF76C5E,
     );
   }
 

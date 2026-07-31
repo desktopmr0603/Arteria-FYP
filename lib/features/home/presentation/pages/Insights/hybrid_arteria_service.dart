@@ -4,23 +4,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-/// Hybrid Orchestrated Service using GPT-realtime-mini + Qwen3:8B
-///
-/// Architecture:
-/// User (natural language)
-///     ↓
-/// gpt-realtime-mini-2025-12-15 (Intent detection + clarification)
-///     ↓
-/// Structured query / command
-///     ↓
-/// Qwen3:8B (local) (Reasoning + analysis)
-///     ↓
-/// Structured result (JSON)
-///     ↓
-/// gpt-realtime-mini-2025-12-15 (Natural explanation + follow-ups)
-///     ↓
-/// User
-
 class HybridArteriaService {
   // Configuration
   final String serverUrl;
@@ -171,6 +154,11 @@ class HybridArteriaService {
           'inference_time_ms': data['inference_time_ms'],
           'is_hybrid_response': true,
           'type': data['type'],
+          // Pass through so the UI can render action feedback (e.g. the
+          // medication-saved toast). Previously dropped here, which left
+          // the success feedback in InsightsScreen as dead code.
+          'function_calls': data['function_calls'],
+          'medication_feedback': data['medication_feedback'],
         };
       } else {
         throw Exception(

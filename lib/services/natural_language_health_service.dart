@@ -112,10 +112,6 @@ Respond with:
           return await _generateMedicationResponse(intent, language);
         case HealthIntentType.comparison:
           return await _generateComparisonResponse(intent, language);
-        default:
-          return language == 'fr'
-              ? "Je ne sais pas comment vous aider avec cela. Vous pouvez demander sur votre état de santé, score de risque, lectures de tension artérielle, ou tendances de santé."
-              : "I'm not sure how to help with that. You can ask about your health status, risk score, blood pressure readings, or health trends.";
       }
     } catch (e) {
       debugPrint('Error generating health response: $e');
@@ -423,7 +419,7 @@ Respond with:
     for (int i = 0; i < anomalies.length && i < 3; i++) {
       final anomaly = anomalies[i];
       if (i > 0) response.write(' ');
-      response.write('${anomaly.explanations.first}');
+      response.write(anomaly.explanations.first);
     }
 
     final highRiskAnomalies = anomalies
@@ -432,8 +428,8 @@ Respond with:
     if (highRiskAnomalies > 0) {
       response.write(
         isFrench
-            ? ' ${highRiskAnomalies} nécessitent une attention immédiate. '
-            : ' ${highRiskAnomalies} of these require immediate attention. ',
+            ? ' $highRiskAnomalies nécessitent une attention immédiate. '
+            : ' $highRiskAnomalies of these require immediate attention. ',
       );
     }
 
@@ -768,7 +764,7 @@ Respond with:
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(_userId)
-          .collection('bp_readings')
+          .collection('readings')
           .orderBy('date', descending: true)
           .limit(1)
           .get();
@@ -802,7 +798,7 @@ Respond with:
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(_userId)
-          .collection('bp_readings')
+          .collection('readings')
           .where('date', isGreaterThanOrEqualTo: cutoff)
           .orderBy('date', descending: true)
           .limit(50)
@@ -832,7 +828,7 @@ Respond with:
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(_userId)
-          .collection('bp_readings')
+          .collection('readings')
           .where('date', isGreaterThanOrEqualTo: twoWeeksAgo)
           .where('date', isLessThanOrEqualTo: weekAgo)
           .orderBy('date', descending: true)

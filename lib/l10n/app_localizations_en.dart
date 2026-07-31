@@ -363,6 +363,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get microphonePermissionDenied => 'Microphone permission denied';
 
   @override
+  String get micProcessingReading => 'Processing your reading…';
+
+  @override
+  String get micCouldNotDetectReading =>
+      'I couldn\'t catch a blood pressure reading. Tap the mic and say it clearly, for example \"120 over 80\".';
+
+  @override
+  String micReadingOutOfRange(int systolic, int diastolic) {
+    return 'I heard $systolic/$diastolic mmHg, which is outside the measurable range. Tap the mic and say your reading again clearly.';
+  }
+
+  @override
+  String get micNoSpeechDetected =>
+      'No speech detected. Tap the mic and try again.';
+
+  @override
+  String get micRecordingError => 'Recording error. Please try again.';
+
+  @override
+  String get micNoAudioRecorded => 'No audio recorded. Please try again.';
+
+  @override
+  String get micTranscriptionError =>
+      'Couldn\'t transcribe your voice. Please try again.';
+
+  @override
+  String get micNetworkError =>
+      'Network error — please check your internet connection.';
+
+  @override
+  String get micServerTimeout =>
+      'The server took too long to respond. Please try again.';
+
+  @override
+  String get micUnexpectedError =>
+      'An unexpected error occurred. Please try again.';
+
+  @override
+  String get micTtsError => 'Couldn\'t play the audio response.';
+
+  @override
+  String get bpCategoryNormal => 'Normal';
+
+  @override
+  String get bpCategoryElevated => 'Elevated';
+
+  @override
+  String get bpCategoryStage1 => 'Stage 1 Hypertension';
+
+  @override
+  String get bpCategoryStage2 => 'Stage 2 Hypertension';
+
+  @override
+  String get bpCategoryCrisis => 'Hypertensive Crisis';
+
+  @override
+  String get bpCategoryLow => 'Low (Hypotension)';
+
+  @override
   String get addReminder => 'Add Reminder';
 
   @override
@@ -818,8 +877,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get predictiveTimelineTitle => 'Predictive Health Timeline';
 
   @override
-  String get predictiveTimelineSubtitle =>
-      'AI-powered 30-day health projections';
+  String get predictiveTimelineSubtitle => 'Your 7-day health outlook';
 
   @override
   String get predictiveTimelineAnalyzing => 'Analyzing health patterns...';
@@ -859,6 +917,173 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get predictiveTimelineFactorMedication => 'Medication';
+
+  @override
+  String get predictiveTimelineMethodBadge =>
+      'Linear regression · 7-day projection · 95% CI';
+
+  @override
+  String get predictiveTimelineProjectionUnlocksSoon =>
+      'Projection unlocks soon';
+
+  @override
+  String predictiveTimelineNeedMoreDays(
+    int needed,
+    int available,
+    int required,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      needed,
+      locale: localeName,
+      other:
+          'We need $needed more days of risk history ($available of $required). Continue logging daily readings — projections are built from your own data, not a generic baseline.',
+      one:
+          'We need 1 more day of risk history ($available of $required). Continue logging daily readings — projections are built from your own data, not a generic baseline.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get predictiveTimelineProcessingHistory =>
+      'Processing recent risk history — pull to refresh.';
+
+  @override
+  String get predictiveTimelineTooltipProjected => 'Projected';
+
+  @override
+  String get predictiveTimelineTooltipObserved => 'Observed';
+
+  @override
+  String predictiveTimelineTooltipRiskValue(int value) {
+    return '$value% risk';
+  }
+
+  @override
+  String predictiveTimelineTooltipCI(int lower, int upper) {
+    return '95% CI: $lower–$upper%';
+  }
+
+  @override
+  String get predictiveTimelineInsightCurrentRisk => 'Where you are today';
+
+  @override
+  String get predictiveTimelineInsight7DayProjection => 'Where you\'re heading';
+
+  @override
+  String get predictiveTimelineInsightWeeklyTrend => 'How it changed this week';
+
+  @override
+  String predictiveTimelineInsightPerWeek(String value) {
+    return '$value% / week';
+  }
+
+  @override
+  String get predictiveTimelineInsightProjectionUncertainty =>
+      'How sure we are';
+
+  @override
+  String get predictiveTimelineLevelLow => 'Low';
+
+  @override
+  String get predictiveTimelineLevelModerate => 'Moderate';
+
+  @override
+  String get predictiveTimelineLevelElevated => 'Elevated';
+
+  @override
+  String get predictiveTimelineLevelHigh => 'High';
+
+  @override
+  String predictiveTimelineSummaryHeadline(String level) {
+    return 'Your risk is $level';
+  }
+
+  @override
+  String get predictiveTimelineSummarySteady =>
+      'It should stay about the same over the next 7 days.';
+
+  @override
+  String get predictiveTimelineSummaryRising =>
+      'It may rise a little over the next 7 days.';
+
+  @override
+  String get predictiveTimelineSummaryFalling =>
+      'It should keep improving over the next 7 days.';
+
+  @override
+  String get predictiveTimelineAxisToday => 'Today';
+
+  @override
+  String predictiveTimelineAxisInDays(int days) {
+    return 'In $days days';
+  }
+
+  @override
+  String predictiveTimelineAxisWeeksAgo(int weeks) {
+    String _temp0 = intl.Intl.pluralLogic(
+      weeks,
+      locale: localeName,
+      other: '$weeks weeks ago',
+      one: '1 week ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get predictiveTimelineLegendRecorded => 'Recorded';
+
+  @override
+  String get predictiveTimelineLegendPredicted => 'Predicted';
+
+  @override
+  String get predictiveTimelineLegendRange => 'Likely range';
+
+  @override
+  String get trendHeadlineTagline => 'This week at a glance';
+
+  @override
+  String get trendHeadlineLoading => 'Reading your trends…';
+
+  @override
+  String get trendHeadlineLabelSystolic => 'Systolic';
+
+  @override
+  String get trendHeadlineLabelDiastolic => 'Diastolic';
+
+  @override
+  String get trendHeadlineLabelRisk => 'Risk score';
+
+  @override
+  String get trendHeadlineDeltaStable => 'stable this week';
+
+  @override
+  String trendHeadlineDeltaUp(String value) {
+    return 'up $value vs last week';
+  }
+
+  @override
+  String trendHeadlineDeltaDown(String value) {
+    return 'down $value vs last week';
+  }
+
+  @override
+  String trendHeadlineFallbackHeld(int value, int missed) {
+    return 'Your systolic average held steady at $value mmHg this week, with $missed missed doses logged.';
+  }
+
+  @override
+  String trendHeadlineFallbackDropped(int delta, int value, int missed) {
+    return 'Your systolic average dropped $delta mmHg this week to $value, with $missed missed doses logged.';
+  }
+
+  @override
+  String trendHeadlineFallbackRose(int delta, int value, int missed) {
+    return 'Your systolic average rose $delta mmHg this week to $value, with $missed missed doses logged.';
+  }
+
+  @override
+  String get riskTrendAnalysisExplainer =>
+      'Your overall hypertension risk over the last 90 days, with the factors driving it underneath.';
 
   @override
   String get riskTrendAnalysisTitle => 'Risk Trend Analysis';
@@ -1108,23 +1333,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusUnderstandingQuery => 'Understanding your health query...';
 
   @override
-  String get bpCategoryNormal => 'Normal';
-
-  @override
-  String get bpCategoryElevated => 'Elevated';
-
-  @override
-  String get bpCategoryStage1 => 'Stage 1 Hypertension';
-
-  @override
-  String get bpCategoryStage2 => 'Stage 2 Hypertension';
-
-  @override
-  String get bpCategoryCrisis => 'Hypertensive Crisis';
-
-  @override
   String get insightsPageTitle => 'Health Assistant';
 
   @override
   String get insightsHeroPrompt => 'How are you feeling today?';
+
+  @override
+  String get insightsGreetingDefault => 'How can I help you today?';
+
+  @override
+  String get insightsSuggestionLatest => 'How was my latest reading?';
+
+  @override
+  String get insightsSuggestionTrend => 'Show my weekly trend';
+
+  @override
+  String get insightsSuggestionRisk => 'Any hypertension risk signs?';
+
+  @override
+  String get insightsSuggestionMedication => 'Did I log medication today?';
+
+  @override
+  String get insightsHeaderTitle => 'Your health insights';
+
+  @override
+  String get insightsHeaderSubtitle => 'Ask about your latest readings';
+
+  @override
+  String get medicationFeedbackAdded => 'Medication added';
+
+  @override
+  String get medicationFeedbackUpdated => 'Medication updated';
+
+  @override
+  String get medicationFeedbackSwitched => 'Medication switched';
+
+  @override
+  String get notifications => 'Notifications';
 }

@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui';
+
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:record/record.dart';
@@ -23,7 +25,7 @@ import 'package:arteria/features/home/data/repositories/medication_repository_im
 
 import '../settings/bloc/settings_bloc.dart';
 import '../../components/talking_avatar_widget.dart';
-import '../../components/voice_stress_indicator.dart';
+import '../../components/medication_feedback_toast.dart';
 import 'qwen_arteria_service.dart';
 import 'hybrid_arteria_service.dart';
 import '../../bloc/bp_data_bloc.dart';
@@ -31,7 +33,6 @@ import '../whatif/pages/whatif_screen.dart';
 import '../../../data/data_sources/bp_anomaly_remote_data_source.dart';
 import '../../../data/data_sources/health_risk_score_service.dart';
 import 'novel_ai_service.dart';
-import 'package:arteria/services/natural_language_health_service.dart';
 import 'package:arteria/services/health_notification_service.dart';
 
 class InsightsScreen extends StatefulWidget {
@@ -50,12 +51,24 @@ class InsightsScreen extends StatefulWidget {
   State<InsightsScreen> createState() => _InsightsScreenState();
 }
 
-class _InsightsScreenState extends State<InsightsScreen> {
+class _InsightsScreenState extends State<InsightsScreen>
+    with TickerProviderStateMixin {
   // ─────────────── State ───────────────
   bool _isListening = false;
   bool _isSpeaking = false;
+  // Bridges the gap between "thinking" and audible speech: true while the
+  // response is ready and TTS is being generated, before playback begins.
+  bool _isPreparingSpeech = false;
 
   String _statusText = '';
+
+  // ─────────────── Animation Controllers ───────────────
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+  late AnimationController _rippleController;
+  late Animation<double> _rippleAnimation;
 
   // ─────────────── Premium UI State ───────────────
   Medication? _addedMedication;
@@ -81,15 +94,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
   AvatarEmotion _currentEmotion = AvatarEmotion.neutral;
 
   // ─────────────── Enhanced Voice Health Coach ───────────────
-  late NaturalLanguageHealthService _nlHealthService;
   late HealthNotificationService _notificationService;
 
   // ─────────────── Voice Stress Analysis (Novel Feature) ───────────────
   late NovelAIService _novelAIService;
-  VoiceStressResult? _lastStressAnalysis;
-  bool _showStressIndicator = false;
-
-  // ─────────────── Medication Optimizer (Novel Feature) ───────────────
 
   StreamSubscription<QwenEvent>? _qwenEventSub;
   StreamSubscription<HybridEvent>? _hybridEventSub;
@@ -99,11 +107,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
   bool _hasRecordedAudio = false;
 
   // ─────────────── VAD (Voice Activity Detection) ───────────────
-  static const double _silenceThreshold = 0.02;
+  // record's getAmplitude() reports the current loudness in dBFS: 0 dB is the
+  // loudest possible signal and quieter sounds are increasingly negative (a
+  // quiet room's noise floor sits around -45 to -55 dB). Speech is therefore a
+  // RISE above the ambient floor — not a tiny linear value.
+  //
+  // We track the noise floor as the quietest level seen so far, starting from a
+  // safe default. This works whether the user pauses before talking OR talks
+  // the instant they tap: the floor only ever drops toward true silence, so the
+  // END of speech is always detectable. Anything more than [_speechMarginDb]
+  // above that floor counts as the user talking.
+  static const double _speechMarginDb = 14.0; // dB above floor that counts as speech
+  static const double _defaultFloorDb = -45.0; // assumed quiet-room floor at start
   static const Duration _silenceDuration = Duration(milliseconds: 1200);
   Timer? _silenceDetectionTimer;
   Timer? _amplitudeMonitorTimer;
-  double _currentAmplitude = 0;
+  double _noiseFloorDb = _defaultFloorDb;
   bool _wasSpeaking = false;
   bool _speechStarted = false;
 
@@ -114,9 +133,38 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   void initState() {
     super.initState();
+    _initAnimations();
     _initLanguageAndRealtime();
-    // Defer novel AI services init to avoid blocking startup
     Future.microtask(() => _initNovelAIServices());
+  }
+
+  void _initAnimations() {
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 3500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _breathingAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    );
+
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
+    _rippleController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat();
+
+    _rippleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _rippleController, curve: Curves.easeOut),
+    );
   }
 
   List<String> _resolveMedicationTimes(
@@ -146,17 +194,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
     await _anomalyService.initialize(widget.userId);
     await _riskScoreService.initialize();
 
-    // Initialize Enhanced Voice Health Coach
-    _nlHealthService = NaturalLanguageHealthService(
-      serverUrl: Env.qwenServerUrl,
-      userId: widget.userId,
-    );
-
     // Initialize Health Notification Service
     _notificationService = HealthNotificationService(
       userId: widget.userId,
       riskScoreService: _riskScoreService,
-      anomalyService: _anomalyService,
     );
 
     await _notificationService.initialize();
@@ -172,6 +213,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
     _hybridService.dispose();
     _prescriptionTimer?.cancel();
     _notificationService.dispose();
+    _breathingController.dispose();
+    _glowController.dispose();
+    _rippleController.dispose();
     super.dispose();
   }
 
@@ -297,12 +341,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
         break;
 
       case HybridEventType.responseReceived:
-        setState(
-          () => _statusText =
-              AppLocalizations.of(context)?.statusResponseReceived ??
-              'Response received',
-        );
-        _resetUI(); // Reset UI immediately since no TTS
+        // A response is ready; TTS generation + playback still follow in
+        // _stopListening. Don't reset to idle here (that left a dead, silent
+        // gap). Instead show a clear "preparing to speak" state so the user
+        // always has feedback right up until the assistant starts talking.
+        setState(() {
+          _isPreparingSpeech = true;
+          _isListening = false;
+          _statusText =
+              AppLocalizations.of(context)?.statusSpeaking ?? 'Speaking…';
+        });
         break;
 
       case HybridEventType.ready:
@@ -338,6 +386,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
     }
 
     debugPrint('🔊 Starting audio playback...');
+    // Hand off from "preparing" dots to the live speaking wave.
+    _isPreparingSpeech = false;
     _isSpeaking = true;
     setState(() {});
 
@@ -363,17 +413,23 @@ class _InsightsScreenState extends State<InsightsScreen> {
     _recordedChunks.clear();
     _speechStarted = false;
     _wasSpeaking = false;
-    _currentAmplitude = 0;
-    _statusText =
-        AppLocalizations.of(context)?.statusListening ?? 'Listening...';
+    _noiseFloorDb = _defaultFloorDb;
+    if (mounted) {
+      _statusText =
+          AppLocalizations.of(context)?.statusListening ?? 'Listening...';
+    }
 
     final dir = await getTemporaryDirectory();
     _recordingPath =
-        '${dir.path}/qwen_recording_${DateTime.now().millisecondsSinceEpoch}.aac';
+        '${dir.path}/qwen_recording_${DateTime.now().millisecondsSinceEpoch}.wav';
 
+    // Record uncompressed 16 kHz mono WAV (PCM). The backend decodes WAV
+    // natively (via the `wave` module) — AAC/M4A would need ffmpeg, which
+    // is why voice stress analysis was being skipped. WAV also keeps
+    // Whisper transcription accurate. 16 kHz mono keeps the clip small.
     await _audioRecorder.start(
       const RecordConfig(
-        encoder: AudioEncoder.aacLc,
+        encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
       ),
@@ -408,32 +464,49 @@ class _InsightsScreenState extends State<InsightsScreen> {
     _amplitudeMonitorTimer = null;
   }
 
-  void _onAmplitudeChanged(double amplitude) {
+  void _onAmplitudeChanged(double amplitudeDb) {
     if (!_isListening) return;
+    // Guard against -inf/NaN some platforms emit before the first audio frame.
+    if (amplitudeDb.isNaN || amplitudeDb.isInfinite) return;
 
-    _currentAmplitude = amplitude.abs();
-    final isSpeaking = _currentAmplitude > _silenceThreshold;
+    // Continuously track the quietest level seen as the ambient noise floor.
+    // It only drops toward true silence, so speech is detected immediately
+    // (even if the user talks the instant they tap) and the end of speech is
+    // reliably caught when the level falls back near the floor.
+    _noiseFloorDb = math.min(_noiseFloorDb, amplitudeDb);
+
+    final speechThresholdDb = _noiseFloorDb + _speechMarginDb;
+    final isSpeaking = amplitudeDb > speechThresholdDb;
+
+    debugPrint(
+      '🎙️ VAD amp=${amplitudeDb.toStringAsFixed(1)}dB '
+      'floor=${_noiseFloorDb.toStringAsFixed(1)} '
+      'thr=${speechThresholdDb.toStringAsFixed(1)} '
+      'speaking=$isSpeaking started=$_speechStarted',
+    );
 
     if (isSpeaking) {
       if (!_wasSpeaking) {
         _speechStarted = true;
-        if (mounted)
+        if (mounted) {
           setState(
             () => _statusText =
                 AppLocalizations.of(context)?.statusListening ?? 'Listening...',
           );
+        }
       }
       _wasSpeaking = true;
       _silenceDetectionTimer?.cancel();
       _silenceDetectionTimer = null;
     } else if (_speechStarted && _wasSpeaking) {
       if (_silenceDetectionTimer == null) {
-        if (mounted)
+        if (mounted) {
           setState(
             () => _statusText =
                 AppLocalizations.of(context)?.statusDetectingSilence ??
                 'Detecting silence...',
           );
+        }
         _silenceDetectionTimer = Timer(_silenceDuration, () {
           if (mounted && _isListening && _speechStarted) {
             _stopListening();
@@ -463,8 +536,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
     final path = await _audioRecorder.stop();
 
     _isListening = false;
-    _statusText =
-        AppLocalizations.of(context)?.statusProcessing ?? 'Processing...';
+    if (mounted) {
+      _statusText =
+          AppLocalizations.of(context)?.statusProcessing ?? 'Processing...';
+    }
 
     if (mounted) {
       setState(() {});
@@ -484,15 +559,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
           // Process audio directly through hybrid system (STT + reasoning)
           result = await _hybridService.processAudioInput(audioBytes);
 
-          // ENHANCED: Process through Natural Language Health Service
+          // Fallback: if hybrid returned only a transcript but no response,
+          // re-send the transcript through the hybrid TEXT path. We used to
+          // route to NaturalLanguageHealthService here, but that service
+          // re-templates the answer client-side (judging by 30-day average,
+          // English/French fragments interleaved), which discards the
+          // doctor-mode + language-native response from the orchestrator.
           final transcript = result['transcription'] as String? ?? '';
           final responseType = result['type'] as String? ?? '';
           final responseText = result['response'] as String? ?? '';
           if (responseType.isEmpty &&
               responseText.isEmpty &&
               transcript.isNotEmpty) {
-            await _processNaturalLanguageQuery(transcript);
-            return; // Skip the rest since we handled it with NL service
+            result = await _hybridService.processUserInput(transcript);
           }
         } else {
           // Legacy path: full voice interaction handled by Qwen service
@@ -506,6 +585,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
               (result['question'] as String?) ??
               '';
           if (responseText.isNotEmpty) {
+            // Show the "preparing to speak" state for the whole duration of
+            // TTS generation, so the user never sees a silent dead gap
+            // between thinking and the assistant talking.
+            if (mounted) {
+              setState(() {
+                _isPreparingSpeech = true;
+                _statusText =
+                    AppLocalizations.of(context)?.statusSpeaking ?? 'Speaking…';
+              });
+            }
             try {
               debugPrint('🔊 Generating TTS for: "$responseText"');
               final ttsAudio = await _qwenService.speak(responseText);
@@ -515,13 +604,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
               await _playMp3Audio(ttsAudio);
               debugPrint('🔊 Audio playback completed');
             } catch (e) {
+              // TTS failed (e.g. timeout) — return to idle instead of
+              // stranding the UI in the "preparing" state.
               debugPrint('❌ TTS playback error: $e');
-              if (mounted) {
-                setState(() => _statusText = 'Audio playback error');
-              }
+              _resetUI();
             }
           } else {
             debugPrint('⚠️ No response text to convert to speech');
+            _resetUI(); // Nothing to speak — return to idle.
           }
         } else {
           // Non-hybrid path already includes audio_response from processVoiceInteraction
@@ -535,8 +625,28 @@ class _InsightsScreenState extends State<InsightsScreen> {
           debugPrint('🔧 Function call result: $call');
         }
 
-        if (functionCalls.isNotEmpty && mounted) {
-          // Show success message for function calls
+        // The "action completed" toast is only for genuine state-changing
+        // actions. Read-only lookups (get_medications, analyze_bp_trend, …)
+        // also arrive in function_calls — they answer a question but
+        // complete no action, so they must not trigger the toast.
+        const actionTools = <String>{
+          'record_bp_reading',
+          'add_medication',
+          'set_reminder',
+        };
+        final didPerformAction = functionCalls.any(
+          (call) => call is Map && actionTools.contains(call['tool']),
+        );
+
+        // Medication add / update / switch → rich animated confirmation toast.
+        final medFeedback = result['medication_feedback'];
+        if (medFeedback is Map && mounted) {
+          MedicationFeedbackToast.show(
+            context,
+            feedback: Map<String, dynamic>.from(medFeedback),
+          );
+        } else if (didPerformAction && mounted) {
+          // Genuine actions (BP recorded, reminders) keep a lightweight toast.
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -572,19 +682,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
   Future<void> _analyzeStressInParallel(String audioPath) async {
     if (!mounted) return;
 
-    // Show analyzing indicator
-    setState(() {
-      _showStressIndicator = true;
-      _lastStressAnalysis = VoiceStressResult(
-        stressScore: 0,
-        stressLevel: 'low',
-        contributingFactors: [],
-        confidence: 0,
-        transcription: '',
-        response: '',
-      ); // Placeholder while loading
-    });
-
     try {
       final file = File(audioPath);
       if (!await file.exists()) return;
@@ -594,16 +691,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
       final result = await _novelAIService.analyzeVoiceStress(base64Audio);
 
-      if (mounted && result != null) {
-        setState(() {
-          _lastStressAnalysis = result;
-          // Keep showing for a while, or until new recording
-        });
-
-        // If high stress detected, update avatar emotion
-        if (result.stressScore > 70) {
-          setState(() => _currentEmotion = AvatarEmotion.concerned);
-        }
+      // If high stress detected, update avatar emotion
+      if (mounted && result != null && result.stressScore > 70) {
+        setState(() => _currentEmotion = AvatarEmotion.concerned);
       }
     } catch (e) {
       debugPrint('Error in background stress analysis: $e');
@@ -613,6 +703,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
   // ─────────────── Helpers ───────────────
   void _resetUI() {
     _isSpeaking = false;
+    _isPreparingSpeech = false;
     _statusText =
         AppLocalizations.of(context)?.statusTapToSpeak ?? 'Tap to speak';
     // Don't hide stress indicator immediately, let it persist for user to see
@@ -689,12 +780,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   Future<void> _generateHealthReport() async {
-    if (mounted)
+    if (mounted) {
       setState(
         () => _statusText =
             AppLocalizations.of(context)?.statusGeneratingReport ??
             'Generating report...',
       );
+    }
 
     try {
       final profile = await _buildUserProfile();
@@ -716,12 +808,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
       await _playMp3Audio(audio);
     } catch (e) {
       debugPrint('Error generating report: $e');
-      if (mounted)
+      if (mounted) {
         setState(
           () => _statusText =
               AppLocalizations.of(context)?.statusErrorGeneratingReport ??
               'Error generating report',
         );
+      }
     }
   }
 
@@ -1010,101 +1103,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ),
       );
     }
-  }
-
-  // ─────────────── Enhanced Natural Language Processing ───────────────
-  Future<void> _processNaturalLanguageQuery(String transcript) async {
-    try {
-      setState(
-        () => _statusText =
-            AppLocalizations.of(context)?.statusUnderstandingQuery ??
-            'Understanding your health query...',
-      );
-
-      // Get current locale
-      final locale = Localizations.localeOf(context);
-      final languageCode = locale.languageCode; // 'en' or 'fr'
-
-      // Analyze the natural language query with language
-      final intent = await _nlHealthService.analyzeHealthQuery(
-        transcript,
-        language: languageCode,
-      );
-
-      // Generate contextual health response with language
-      final response = await _nlHealthService.generateHealthResponse(
-        intent,
-        language: languageCode,
-      );
-
-      // Update avatar emotion based on query type
-      _updateAvatarEmotion(intent.intent);
-
-      // Convert response to speech
-      setState(
-        () => _statusText =
-            AppLocalizations.of(context)?.statusSpeaking ??
-            'Speaking response...',
-      );
-      if (!_qwenService.isConnected) {
-        await _qwenService.connect();
-      }
-      final audioResponse = await _qwenService.speak(response);
-      await _playMp3Audio(audioResponse);
-
-      debugPrint('🤖 Natural Language Query: "$transcript"');
-      debugPrint('🌐 Language: $languageCode');
-      debugPrint('🎯 Intent: ${intent.intent.name}');
-      debugPrint('💬 Response: "$response"');
-    } catch (e) {
-      debugPrint('❌ Error processing natural language query: $e');
-      setState(
-        () => _statusText =
-            AppLocalizations.of(context)?.statusErrorProcessingAudio ??
-            'Error processing query',
-      );
-
-      // Fallback response - localized
-      final locale = Localizations.localeOf(context);
-      final fallbackResponse = locale.languageCode == 'fr'
-          ? 'Je n\'ai pas pu comprendre cela. Vous pouvez poser des questions sur votre état de santé, votre score de risque, vos lectures de tension artérielle ou les tendances de santé.'
-          : 'I had trouble understanding that. You can ask about your health status, risk score, blood pressure readings, or health trends.';
-      if (!_qwenService.isConnected) {
-        await _qwenService.connect();
-      }
-      final audioResponse = await _qwenService.speak(fallbackResponse);
-      await _playMp3Audio(audioResponse);
-    }
-  }
-
-  void _updateAvatarEmotion(HealthIntentType intent) {
-    AvatarEmotion newEmotion = AvatarEmotion.neutral;
-
-    switch (intent) {
-      case HealthIntentType.healthStatus:
-      case HealthIntentType.recommendations:
-        newEmotion = AvatarEmotion.helpful;
-        break;
-      case HealthIntentType.riskScore:
-      case HealthIntentType.anomalies:
-        newEmotion = AvatarEmotion.concerned;
-        break;
-      case HealthIntentType.trends:
-      case HealthIntentType.comparison:
-        newEmotion = AvatarEmotion.analytical;
-        break;
-      case HealthIntentType.bpReadings:
-      case HealthIntentType.medication:
-        newEmotion = AvatarEmotion.informative;
-        break;
-    }
-
-    setState(() => _currentEmotion = newEmotion);
-
-    // Return to neutral after 5 seconds
-    Timer(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _currentEmotion = AvatarEmotion.neutral);
-    });
   }
 
   Future<Map<String, dynamic>> _buildUserProfile() async {
@@ -1409,270 +1407,584 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  // ─────────────── Premium UI: Luxury Concierge Style ───────────────
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.of(context).size;
-    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final screen = MediaQuery.of(context);
+    final safeH = screen.size.height - screen.padding.top - screen.padding.bottom;
 
-    // Deep rich background for dark mode, soft pearl/off-white for light mode
-    final bgGradient = isDark
-        ? const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF12121A), Color(0xFF0A0A0F)],
-          )
-        : const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFF8F9FA), Color(0xFFF2F2F7)],
-          );
+    // Responsive avatar: fills ~30% of safe height, clamped
+    final avatarSize = (safeH * 0.30).clamp(160.0, 280.0);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF08080D) : const Color(0xFFF4F5F9),
       body: Stack(
         children: [
-          // ── Background Gradient ──
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(gradient: bgGradient),
-          ),
+          // ── Ambient glow layer ──
+          _buildAmbientGlow(isDark, avatarSize),
 
-          // ── Soft Radial Depth Glow (Light Mode) ──
-          if (!isDark)
-            Positioned(
-              top: size.height * 0.15,
-              left: -size.width * 0.2,
-              right: -size.width * 0.2,
-              child: Container(
-                height: size.height * 0.6,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.04),
-                      Colors.transparent,
+          // ── Content ──
+          SafeArea(
+            child: Column(
+              children: [
+                // ── Top: Avatar + Greeting (fills available space) ──
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildCenteredAvatar(isDark, avatarSize),
+                      SizedBox(height: safeH * 0.03),
+                      _buildGreeting(isDark, l10n),
                     ],
                   ),
                 ),
-              ),
-            ),
 
-          // ── Main UI Stack ──
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Elegant "Insights" Title
-                _buildLuxuryTitle(theme),
-
-                // 2. Avatar Hero (Seamlessly Blended)
-                Expanded(
-                  flex: 6,
-                  child: Center(
-                    child: _buildBlendedAvatar(isDark, size, theme),
+                // ── Bottom dock: Chips → Status → Mic ──
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildSuggestionChips(isDark, l10n),
+                      const SizedBox(height: 20),
+                      _buildStatusIndicator(isDark),
+                      const SizedBox(height: 14),
+                      _buildMicButton(isDark),
+                    ],
                   ),
                 ),
-
-                // 3. Lower Content Spacer
-                const Spacer(flex: 1),
-
-                // 4. Elegant Text Prompt
-                _buildElegantPrompt(isDark, theme),
-
-                const SizedBox(height: 36),
-
-                // 5. Luxury Custom Microphone Button
-                Center(
-                  child: _buildLuxuryMicButton(isDark, theme),
-                ),
-
-                const SizedBox(height: 48),
               ],
             ),
           ),
 
           // ── Prescription Overlay ──
-          if (_showPrescription)
-            Positioned.fill(
-              child: Container(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.7)
-                    : Colors.black.withValues(alpha: 0.3),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: _buildPrescriptionOverlay(),
+          _buildPrescriptionOverlay(),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────── Ambient Background ───────────────
+  Widget _buildAmbientGlow(bool isDark, double avatarSize) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _breathingAnimation,
+          builder: (context, _) {
+            final accent = _isListening
+                ? const Color(0xFF5CE1E6)
+                : (_isSpeaking || _isPreparingSpeech)
+                    ? const Color(0xFF818CF8)
+                    : const Color(0xFF3D8B8F);
+            final active = _isListening || _isSpeaking || _isPreparingSpeech;
+            final glowSize = (avatarSize * 2.2) * _breathingAnimation.value;
+
+            return Stack(
+              children: [
+                // Main glow
+                Align(
+                  alignment: const Alignment(0.0, -0.25),
+                  child: Container(
+                    width: glowSize,
+                    height: glowSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          accent.withValues(alpha: isDark ? 0.14 : 0.07),
+                          accent.withValues(alpha: isDark ? 0.04 : 0.02),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                // Focused inner glow when active
+                if (active)
+                  Align(
+                    alignment: const Alignment(0.0, -0.25),
+                    child: Container(
+                      width: avatarSize * 1.4,
+                      height: avatarSize * 1.4,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            accent.withValues(alpha: 0.1),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ─────────────── Avatar ───────────────
+  Widget _buildCenteredAvatar(bool isDark, double size) {
+    final containerSize = size + 12;
+
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, _) {
+        final accent = _isListening
+            ? const Color(0xFF5CE1E6)
+            : (_isSpeaking || _isPreparingSpeech)
+                ? const Color(0xFF818CF8)
+                : const Color(0xFF3D8B8F);
+        final active = _isListening || _isSpeaking || _isPreparingSpeech;
+
+        return Container(
+          width: containerSize,
+          height: containerSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(
+                  alpha: active ? 0.4 * _glowAnimation.value : 0.05,
+                ),
+                blurRadius: active ? 56 : 20,
+                spreadRadius: active ? 10 : 0,
+              ),
+            ],
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(3.5),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: SweepGradient(
+                colors: [
+                  accent.withValues(alpha: active ? 0.55 : 0.18),
+                  accent.withValues(alpha: active ? 0.1 : 0.04),
+                  accent.withValues(alpha: active ? 0.45 : 0.14),
+                  accent.withValues(alpha: active ? 0.08 : 0.03),
+                  accent.withValues(alpha: active ? 0.55 : 0.18),
+                ],
+              ),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark ? const Color(0xFF0C0C14) : const Color(0xFFFBFBFD),
+              ),
+              child: ClipOval(
+                child: TalkingAvatarWidget(
+                  isSpeaking: _isSpeaking,
+                  isListening: _isListening,
+                  emotion: _currentEmotion,
+                  bare: true,
+                  onLoaded: () {},
+                  width: size,
+                  height: size,
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildLuxuryTitle(ThemeData theme) {
-    final l10n = AppLocalizations.of(context);
-    // Use the translated insightsPageTitle, but we will update the arb files
-    // so it simply says "Insights" or "Aperçus" instead of "Health Assistant".
-    final titleText = l10n?.insightsPageTitle ?? 'Insights';
-
+  // ─────────────── Greeting ───────────────
+  Widget _buildGreeting(bool isDark, AppLocalizations? l10n) {
     return Padding(
-      padding: const EdgeInsets.only(top: 24.0, left: 32.0, right: 32.0, bottom: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Text(
-        titleText,
-        style: TextStyle(
-          color: theme.colorScheme.onSurface,
-          fontSize: 34,
+        l10n?.insightsHeroPrompt ?? 'How are you feeling today?',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.dmSans(
+          fontSize: 26,
           fontWeight: FontWeight.w700,
-          letterSpacing: -1.0,
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.9)
+              : const Color(0xFF1B1D2A),
+          height: 1.3,
+          letterSpacing: -0.6,
         ),
       ),
     );
   }
 
-  Widget _buildBlendedAvatar(bool isDark, Size size, ThemeData theme) {
-    // The avatar must blend seamlessly. We give it massive breathing room
-    // and a very soft, premium underlying shadow that adapts to the theme.
-    final avatarSize = size.width * 0.75;
-
-    return Container(
-      width: avatarSize,
-      height: avatarSize,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          // Deep wide shadow for depth
-          BoxShadow(
-            color: isDark 
-                ? Colors.black.withValues(alpha: 0.5) 
-                : theme.colorScheme.primary.withValues(alpha: 0.08),
-            blurRadius: 50,
-            spreadRadius: 5,
-          ),
-          // Subtle accent glow for dark mode
-          if (isDark)
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.08),
-              blurRadius: 40,
-              spreadRadius: -10,
-            ),
-        ],
-      ),
-      child: ClipOval(
-        child: TalkingAvatarWidget(
-          isSpeaking: _isSpeaking,
-          isListening: _isListening,
-          emotion: _currentEmotion,
-          onLoaded: () {},
-          width: avatarSize,
-          height: avatarSize,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildElegantPrompt(bool isDark, ThemeData theme) {
+  // ─────────────── Status ───────────────
+  Widget _buildStatusIndicator(bool isDark) {
     final l10n = AppLocalizations.of(context);
-    
-    // Smooth elegant localized strings
-    final fallbackTapToSpeak = l10n?.statusTapToSpeak ?? 'Tap to speak';
-    final fallbackListening = l10n?.statusListening ?? 'Listening...';
-    
-    String promptText = _isListening ? fallbackListening : _statusText;
-    if (promptText.isEmpty || promptText == fallbackTapToSpeak) {
-      promptText = fallbackTapToSpeak;
-    }
+    final defaultStatus = l10n?.statusTapToSpeak ?? 'Tap to speak';
+    final displayText = _statusText.isNotEmpty ? _statusText : defaultStatus;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: Text(
-          promptText,
-          key: ValueKey(promptText),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: isDark 
-                ? Colors.grey.shade500 
-                : theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.5,
-          ),
+    final accent = _isListening
+        ? const Color(0xFF5CE1E6)
+        : (_isSpeaking || _isPreparingSpeech)
+            ? const Color(0xFF818CF8)
+            : isDark
+                ? Colors.white.withValues(alpha: 0.3)
+                : const Color(0xFF9BA3B5);
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: Text(
+        displayText,
+        key: ValueKey(displayText),
+        style: GoogleFonts.dmSans(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: accent,
+          letterSpacing: 0.4,
         ),
       ),
     );
   }
 
-  Widget _buildLuxuryMicButton(bool isDark, ThemeData theme) {
-    final bool listening = _isListening;
-    
-    // Luxury sizing Custom Container
-    final double buttonSize = listening ? 88.0 : 80.0;
-    
-    // Rich, deliberate colors
-    // Dark mode: a dark, sleek glassmorphic container / rich dark accent 
-    final Color darkBgColor = listening ? const Color(0xFFE53935) : const Color(0xFF1E293B);
-    // Light mode: clean frosty white / soft accent
-    final Color lightBgColor = listening ? const Color(0xFFEF5350) : Colors.white;
-    
-    final Color darkIconColor = Colors.white;
-    final Color lightIconColor = listening ? Colors.white : theme.colorScheme.primary;
-    
-    // Multi-layered refined shadows
-    final List<BoxShadow> darkShadows = listening
-      ? [
-          BoxShadow(color: const Color(0xFFE53935).withValues(alpha: 0.4), blurRadius: 30, spreadRadius: 5),
-        ]
-      : [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 20, offset: const Offset(0, 10)),
-          BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.15), blurRadius: 30, spreadRadius: 2),
-        ];
-        
-    final List<BoxShadow> lightShadows = listening
-      ? [
-          BoxShadow(color: const Color(0xFFEF5350).withValues(alpha: 0.35), blurRadius: 24, spreadRadius: 4),
-        ]
-      : [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 10)),
-          BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.05), blurRadius: 30, spreadRadius: 5),
-        ];
+  // ─────────────── Suggestion Chips ───────────────
+  Widget _buildSuggestionChips(bool isDark, AppLocalizations? l10n) {
+    final chips = <_ChipData>[
+      _ChipData(
+        label: l10n?.insightsSuggestionLatest ?? 'Latest reading',
+        icon: Icons.favorite_outline_rounded,
+        accent: const Color(0xFFE85D75),
+      ),
+      _ChipData(
+        label: l10n?.insightsSuggestionTrend ?? 'Weekly trend',
+        icon: Icons.show_chart_rounded,
+        accent: const Color(0xFF5CAEDB),
+      ),
+      _ChipData(
+        label: l10n?.insightsSuggestionRisk ?? 'Risk signs',
+        icon: Icons.shield_outlined,
+        accent: const Color(0xFFD4993D),
+      ),
+      _ChipData(
+        label: l10n?.insightsSuggestionMedication ?? 'Medications',
+        icon: Icons.medication_outlined,
+        accent: const Color(0xFF52C48A),
+      ),
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: chips.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final chip = chips[index];
+          return GestureDetector(
+            onTap: () => _handleSuggestionTap(chip.label),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? chip.accent.withValues(alpha: 0.1)
+                    : chip.accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: chip.accent.withValues(alpha: isDark ? 0.2 : 0.22),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(chip.icon, size: 15, color: chip.accent),
+                  const SizedBox(width: 6),
+                  Text(
+                    chip.label,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.72)
+                          : const Color(0xFF3A3F4B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Map a localized chip label to a clear natural-language question so the
+  /// backend intent classifier has unambiguous input. We can't trust short
+  /// labels like "Latest reading" — the question form ("What was my latest
+  /// reading?") routes cleanly to UserIntent.LATEST_READING in the hybrid
+  /// orchestrator, which has the doctor-mode + French-native fixes.
+  String _chipToQuery(String chipLabel) {
+    final l10n = AppLocalizations.of(context);
+    final isFr = (Localizations.localeOf(context).languageCode == 'fr');
+    if (l10n != null) {
+      if (chipLabel == l10n.insightsSuggestionLatest) {
+        return isFr
+            ? 'Comment était ma dernière mesure de tension?'
+            : 'How was my latest blood pressure reading?';
+      }
+      if (chipLabel == l10n.insightsSuggestionTrend) {
+        return isFr
+            ? 'Comment ma tension a-t-elle évolué cette semaine?'
+            : 'How has my blood pressure trended this week?';
+      }
+      if (chipLabel == l10n.insightsSuggestionRisk) {
+        return isFr
+            ? 'Suis-je à risque selon mes mesures récentes?'
+            : 'Am I at risk based on my recent readings?';
+      }
+      if (chipLabel == l10n.insightsSuggestionMedication) {
+        return isFr
+            ? 'Quels médicaments est-ce que je prends?'
+            : 'What medications am I currently taking?';
+      }
+    }
+    return chipLabel;
+  }
+
+  Future<void> _handleSuggestionTap(String suggestion) async {
+    if (_isListening || _isSpeaking) return;
+
+    setState(() {
+      _statusText =
+          AppLocalizations.of(context)?.statusProcessing ?? 'Processing...';
+    });
+
+    try {
+      // Route chip taps through the hybrid backend (the same path voice
+      // queries use) so the user gets the doctor-mode + language-native
+      // response built in hybrid_orchestrator.py — NOT the legacy Dart
+      // templates in NaturalLanguageHealthService, which judge by average
+      // and overwrite the server's response.
+      final query = _chipToQuery(suggestion);
+      final result = await _hybridService.processUserInput(query);
+      final responseText = (result['response'] as String?) ?? '';
+      if (responseText.isEmpty) {
+        _resetUI();
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _isPreparingSpeech = true;
+          _statusText =
+              AppLocalizations.of(context)?.statusSpeaking ?? 'Speaking...';
+        });
+      }
+      if (!_qwenService.isConnected) {
+        await _qwenService.connect();
+      }
+      final audio = await _qwenService.speak(responseText);
+      await _playMp3Audio(audio);
+    } catch (e) {
+      debugPrint('Error handling suggestion tap: $e');
+      _resetUI();
+    }
+  }
+
+  // ─────────────── Mic Button ───────────────
+  Widget _buildMicButton(bool isDark) {
+    final bool active = _isListening;
+    final bool speaking = _isSpeaking;
+    final bool preparing = _isPreparingSpeech;
+    const double coreSize = 64.0;
+    const double canvasSize = 120.0;
+
+    final Color accent = active
+        ? const Color(0xFF5CE1E6)
+        : (speaking || preparing)
+            ? const Color(0xFF818CF8)
+            : const Color(0xFF3D8B8F);
 
     return GestureDetector(
-      onTap: listening ? _stopListening : _startListening,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutBack,
-        width: buttonSize,
-        height: buttonSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isDark ? darkBgColor : lightBgColor,
-          boxShadow: isDark ? darkShadows : lightShadows,
-          border: isDark && !listening 
-              ? Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5) 
-              : null,
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Icon(
-              listening ? Icons.stop_rounded : Icons.mic_none_rounded,
-              key: ValueKey(listening),
-              color: isDark ? darkIconColor : lightIconColor,
-              size: 34,
-            ),
-          ),
+      onTap: active ? _stopListening : _startListening,
+      child: SizedBox(
+        width: canvasSize,
+        height: canvasSize,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_breathingAnimation, _rippleAnimation]),
+          builder: (context, _) {
+            return CustomPaint(
+              painter: active || speaking || preparing
+                  ? _MicRipplePainter(
+                      progress: _rippleAnimation.value,
+                      color: accent,
+                      isDark: isDark,
+                      ringCount: active ? 3 : 2,
+                    )
+                  : null,
+              child: Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  width: active ? coreSize + 4 : coreSize,
+                  height: active ? coreSize + 4 : coreSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: active
+                        ? accent
+                        : (isDark ? const Color(0xFF141420) : Colors.white),
+                    boxShadow: [
+                      BoxShadow(
+                        color: active
+                            ? accent.withValues(alpha: 0.45)
+                            : (isDark
+                                ? Colors.black.withValues(alpha: 0.5)
+                                : Colors.black.withValues(alpha: 0.07)),
+                        blurRadius: active ? 28 : 12,
+                        spreadRadius: active ? 2 : 0,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: active
+                        ? null
+                        : Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : const Color(0xFFDFE3EB),
+                            width: 1.2,
+                          ),
+                  ),
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, anim) =>
+                          ScaleTransition(scale: anim, child: child),
+                      child: active
+                          ? Icon(
+                              Icons.stop_rounded,
+                              key: const ValueKey('stop'),
+                              color: const Color(0xFF0A0A0F),
+                              size: 26,
+                            )
+                          : preparing
+                              ? _buildPreparingDots(accent)
+                              : speaking
+                              ? _buildSpeakingWave(accent)
+                              : Icon(
+                                  Icons.mic_rounded,
+                                  key: const ValueKey('mic'),
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.75)
+                                      : accent,
+                                  size: 24,
+                                ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  // Hidden/Removed Stress indicator from main UI but kept for compat
-  // ignore: unused_element
-  Widget _buildStressIndicator(bool isDark) {
-    return Container();
+  /// Staggered pulsing dots shown while the response is ready and TTS is
+  /// being generated — the "about to speak" beat between thinking and the
+  /// live speaking wave.
+  Widget _buildPreparingDots(Color color) {
+    return Row(
+      key: const ValueKey('prep'),
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (i) {
+        return AnimatedBuilder(
+          animation: _glowController,
+          builder: (context, _) {
+            // Offset each dot's phase so the pulse ripples left → right.
+            final phase = _glowController.value * math.pi * 2 + (i * 0.9);
+            final t = (math.sin(phase) + 1) / 2; // 0..1
+            final scale = 0.6 + 0.4 * t;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              width: 7 * scale,
+              height: 7 * scale,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.4 + 0.5 * t),
+                shape: BoxShape.circle,
+              ),
+            );
+          },
+        );
+      }),
+    );
   }
+
+  Widget _buildSpeakingWave(Color color) {
+    return Row(
+      key: const ValueKey('wave'),
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        return AnimatedBuilder(
+          animation: _breathingAnimation,
+          builder: (context, _) {
+            final phase = _breathingAnimation.value * math.pi * 2 + (i * 0.7);
+            final h = 6.0 + 12.0 * ((math.sin(phase) + 1) / 2);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              width: 3,
+              height: h,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(1.5),
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+}
+
+// ─────────────── Data ───────────────
+class _ChipData {
+  final String label;
+  final IconData icon;
+  final Color accent;
+  const _ChipData({required this.label, required this.icon, required this.accent});
+}
+
+// ─────────────── Ripple Painter ───────────────
+class _MicRipplePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final bool isDark;
+  final int ringCount;
+
+  _MicRipplePainter({
+    required this.progress,
+    required this.color,
+    required this.isDark,
+    this.ringCount = 3,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = size.width / 2;
+
+    for (int i = 0; i < ringCount; i++) {
+      final t = (progress + i / ringCount) % 1.0;
+      final r = 32.0 + (maxR - 32.0) * t;
+      final opacity = (1.0 - t) * (isDark ? 0.22 : 0.18);
+
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..color = color.withValues(alpha: opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4 * (1.0 - t * 0.6),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MicRipplePainter old) =>
+      old.progress != progress || old.color != color || old.ringCount != ringCount;
 }

@@ -1,5 +1,6 @@
 import 'package:arteria/Core/Theme/theme_cubit.dart';
-import 'package:arteria/features/auth/data/firebase_auth_repo.dart';
+import 'package:arteria/features/auth/presentation/cubits/auth_cubits.dart';
+import 'package:arteria/features/auth/presentation/cubits/auth_states.dart';
 import 'package:arteria/features/auth/presentation/components/custom_confirmdialog.dart';
 import 'package:arteria/features/auth/presentation/components/custom_loading_dialog.dart';
 import 'package:arteria/features/export/export_screen.dart';
@@ -43,8 +44,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return doc.data();
   }
 
-  void _showLogoutConfirmation(BuildContext context) {
-    showDialog(
+  Future<void> _showLogoutConfirmation(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => CustomConfirmDialog(
         title: AppLocalizations.of(context)!.logOut,
@@ -52,12 +53,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         cancelText: AppLocalizations.of(context)!.cancel,
         confirmText: AppLocalizations.of(context)!.logOut,
       ),
-    ).then((confirmed) async {
-      if (confirmed == true) {
-        if (!mounted) return;
-        _showLogoutLoading(context);
-      }
-    });
+    );
+    if (confirmed != true || !context.mounted) return;
+    _showLogoutLoading(context);
   }
 
   void _showLogoutLoading(BuildContext context) {
@@ -72,24 +70,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _performLogout(BuildContext context) async {
-    final repo = FirebaseAuthRepo();
-    try {
-      await repo.logout();
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Logout failed: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+    // SettingsScreen is a TAB inside Homepage, not a pushed route. When
+    // AuthCubits emits Unauthenticated, _AuthWrapper swaps Homepage ->
+    // OnboardingScreen and this State is disposed — `mounted` becomes false.
+    // Capture rootNav/messenger up-front and dismiss the loading dialog
+    // WITHOUT a mounted guard: the dialog route lives on the root Navigator
+    // independently of this widget, and leaving it orphaned was the bug —
+    // user saw OnboardingScreen stuck behind the spinner and had to press
+    // back to dismiss it.
+    final authCubit = context.read<AuthCubits>();
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    await authCubit.logout();
+
+    if (rootNav.canPop()) {
+      rootNav.pop(); // dismiss the loading dialog
     }
+
+    if (authCubit.state is! Unauthenticated) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Logout failed. Please try again.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+    // No pushNamedAndRemoveUntil needed: _AuthWrapper already renders
+    // OnboardingScreen at '/' for Unauthenticated state, and SettingsScreen
+    // was a tab (not a route) so there's nothing else to pop.
   }
 
   String _capitalizeName(String name) {
@@ -427,18 +436,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: SwitchListTile(
-        title: Text(
-          title,
-          style: GoogleFonts.openSans(
-            color: theme.textTheme.bodyLarge?.color,
-            fontWeight: FontWeight.w500,
-          ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
         ),
-        value: value,
-        onChanged: onChanged,
-        activeThumbColor: const Color(0xFFE63946),
-        activeTrackColor: const Color(0xFFf28482),
+        child: SwitchListTile(
+          title: Text(
+            title,
+            style: GoogleFonts.openSans(
+              color: theme.textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: const Color(0xFFE63946),
+          activeTrackColor: const Color(0xFFf28482),
+        ),
       ),
     );
   }
@@ -451,22 +467,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTap,
     required bool darkMode,
   }) {
-    return ListTile(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      tileColor: theme.cardColor,
-      leading: Icon(icon, color: theme.iconTheme.color),
-      title: Text(
-        title,
-        style: GoogleFonts.openSans(
-          fontWeight: FontWeight.w500,
-          color: theme.textTheme.bodyLarge?.color,
+    return Theme(
+      data: Theme.of(context).copyWith(
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        tileColor: theme.cardColor,
+        leading: Icon(icon, color: theme.iconTheme.color),
+        title: Text(
+          title,
+          style: GoogleFonts.openSans(
+            fontWeight: FontWeight.w500,
+            color: theme.textTheme.bodyLarge?.color,
+          ),
         ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: theme.iconTheme.color?.withValues(alpha: 0.6),
+        ),
+        onTap: onTap,
       ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: theme.iconTheme.color?.withValues(alpha: 0.6),
-      ),
-      onTap: onTap,
     );
   }
 
@@ -533,9 +556,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
-    );
-  }
 }

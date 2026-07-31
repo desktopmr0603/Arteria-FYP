@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:arteria/l10n/app_localizations.dart';
@@ -21,13 +20,13 @@ class _HealthTipsCardState extends State<HealthTipsCard> {
         title: l10n.healthTipMeasureTime,
         description: l10n.healthTipMeasureTimeDesc,
         icon: Icons.access_time_rounded,
-        color: const Color(0xFF6366F1),
+        color: const Color(0xFFF76C5E),
       ),
       HealthTip(
         title: l10n.healthTipRestBefore,
         description: l10n.healthTipRestBeforeDesc,
         icon: Icons.self_improvement_rounded,
-        color: const Color(0xFF8B5CF6),
+        color: const Color(0xFFF76C5E),
       ),
       HealthTip(
         title: l10n.healthTipWatchDiet,
@@ -100,61 +99,65 @@ class _HealthTipsCardState extends State<HealthTipsCard> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.lightbulb_rounded,
-                        size: 22,
-                        color: Color(0xFF10B981),
-                      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      AppLocalizations.of(context)!.healthTipsTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF1E293B),
-                      ),
+                    child: const Icon(
+                      Icons.lightbulb_rounded,
+                      size: 22,
+                      color: Color(0xFF10B981),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    AppLocalizations.of(context)!.healthTipsTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(
-                height: 140,
-                child: Builder(
-                  builder: (context) {
-                    final tips = _getTips(context);
-                    return PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (page) {
-                        setState(() => _currentPage = page);
-                      },
-                      itemCount: tips.length,
-                      itemBuilder: (context, index) {
-                        return _buildTipCard(tips[index], isDark);
-                      },
-                    );
-                  },
-                ),
+            ),
+            SizedBox(
+              height: 140,
+              child: Builder(
+                builder: (context) {
+                  final tips = _getTips(context);
+                  return PageView.builder(
+                    controller: _pageController,
+                    // Clamping (not the default bouncing) physics so this
+                    // horizontal carousel doesn't run its own spring
+                    // simulation that fights the parent vertical scroll's
+                    // bounce when the user reverses direction over it — that
+                    // gesture-arena hand-off was the bottom-of-page jitter.
+                    // PageView still snaps; it just no longer rubber-bands.
+                    physics: const ClampingScrollPhysics(),
+                    onPageChanged: (page) {
+                      setState(() => _currentPage = page);
+                    },
+                    itemCount: tips.length,
+                    itemBuilder: (context, index) {
+                      return _buildTipCard(tips[index], isDark);
+                    },
+                  );
+                },
               ),
-              _buildPageIndicator(_getTips(context).length),
-              const SizedBox(height: 16),
-            ],
-          ),
+            ),
+            _buildPageIndicator(_getTips(context).length),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );

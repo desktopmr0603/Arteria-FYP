@@ -41,6 +41,35 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Rename build outputs from the default `app-<variant>.apk` to
+    // `Arteria.apk`. Each variant gets its own folder
+    // (build/outputs/apk/release/, build/outputs/apk/debug/) so there is
+    // no naming collision between variants.
+    //
+    // Note: Flutter's CLI separately copies the gradle output into
+    // build/app/outputs/flutter-apk/ using a hardcoded `app-{variant}.apk`
+    // name that ignores gradle's outputFileName. The `doLast` block below
+    // adds a second copy with the Arteria.apk name so both locations have
+    // a properly-named release artifact.
+    applicationVariants.all {
+        val variantName = name
+        outputs.all {
+            if (this is com.android.build.gradle.internal.api.BaseVariantOutputImpl) {
+                outputFileName = "Arteria.apk"
+            }
+        }
+        assembleProvider.get().doLast {
+            val gradleApk = file("$buildDir/outputs/apk/$variantName/Arteria.apk")
+            val flutterApkDir = file("$buildDir/outputs/flutter-apk")
+            if (gradleApk.exists() && flutterApkDir.exists()) {
+                gradleApk.copyTo(
+                    flutterApkDir.resolve("Arteria.apk"),
+                    overwrite = true,
+                )
+            }
+        }
+    }
 }
 
 flutter {

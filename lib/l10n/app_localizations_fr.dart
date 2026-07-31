@@ -116,10 +116,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bpNormalToday => 'Votre TA est normale aujourd\'hui ✓';
 
   @override
-  String get recordNewReading => 'Enregistrer une nouvelle lecture';
+  String get recordNewReading => 'Enregistrer une nouvelle mesure';
 
   @override
-  String get takeFirstReading => 'Prenez votre première lecture';
+  String get takeFirstReading => 'Prendre votre première mesure';
 
   @override
   String get viewTrends => 'Voir les tendances';
@@ -367,6 +367,67 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get microphonePermissionDenied => 'Permission du microphone refusée';
+
+  @override
+  String get micProcessingReading => 'Analyse de votre mesure…';
+
+  @override
+  String get micCouldNotDetectReading =>
+      'Je n\'ai pas saisi de mesure de tension artérielle. Appuyez sur le micro et dites-la clairement, par exemple « 120 sur 80 ».';
+
+  @override
+  String micReadingOutOfRange(int systolic, int diastolic) {
+    return 'J\'ai entendu $systolic/$diastolic mmHg, ce qui est hors de la plage mesurable. Appuyez sur le micro et répétez votre mesure clairement.';
+  }
+
+  @override
+  String get micNoSpeechDetected =>
+      'Aucune parole détectée. Appuyez sur le micro et réessayez.';
+
+  @override
+  String get micRecordingError =>
+      'Erreur d\'enregistrement. Veuillez réessayer.';
+
+  @override
+  String get micNoAudioRecorded =>
+      'Aucun audio enregistré. Veuillez réessayer.';
+
+  @override
+  String get micTranscriptionError =>
+      'Impossible de transcrire votre voix. Veuillez réessayer.';
+
+  @override
+  String get micNetworkError =>
+      'Erreur réseau — veuillez vérifier votre connexion Internet.';
+
+  @override
+  String get micServerTimeout =>
+      'Le serveur a mis trop de temps à répondre. Veuillez réessayer.';
+
+  @override
+  String get micUnexpectedError =>
+      'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+
+  @override
+  String get micTtsError => 'Impossible de lire la réponse audio.';
+
+  @override
+  String get bpCategoryNormal => 'Normale';
+
+  @override
+  String get bpCategoryElevated => 'Élevée';
+
+  @override
+  String get bpCategoryStage1 => 'Hypertension Stade 1';
+
+  @override
+  String get bpCategoryStage2 => 'Hypertension Stade 2';
+
+  @override
+  String get bpCategoryCrisis => 'Crise Hypertensive';
+
+  @override
+  String get bpCategoryLow => 'Basse (hypotension)';
 
   @override
   String get addReminder => 'Ajouter un rappel';
@@ -825,8 +886,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get predictiveTimelineTitle => 'Chronologie Prédictive de Santé';
 
   @override
-  String get predictiveTimelineSubtitle =>
-      'Projections de santé sur 30 jours basées sur l\'IA';
+  String get predictiveTimelineSubtitle => 'Votre aperçu santé sur 7 jours';
 
   @override
   String get predictiveTimelineAnalyzing => 'Analyse des modèles de santé...';
@@ -866,6 +926,174 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get predictiveTimelineFactorMedication => 'Médication';
+
+  @override
+  String get predictiveTimelineMethodBadge =>
+      'Régression linéaire · projection 7 jours · IC 95 %';
+
+  @override
+  String get predictiveTimelineProjectionUnlocksSoon =>
+      'Projection bientôt disponible';
+
+  @override
+  String predictiveTimelineNeedMoreDays(
+    int needed,
+    int available,
+    int required,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      needed,
+      locale: localeName,
+      other:
+          'Il nous faut encore $needed jours d\'historique de risque ($available sur $required). Continuez à enregistrer vos mesures quotidiennes — les projections sont basées sur vos propres données, pas sur une référence générique.',
+      one:
+          'Il nous faut encore 1 jour d\'historique de risque ($available sur $required). Continuez à enregistrer vos mesures quotidiennes — les projections sont basées sur vos propres données, pas sur une référence générique.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get predictiveTimelineProcessingHistory =>
+      'Traitement de l\'historique récent de risque — tirez pour actualiser.';
+
+  @override
+  String get predictiveTimelineTooltipProjected => 'Projeté';
+
+  @override
+  String get predictiveTimelineTooltipObserved => 'Observé';
+
+  @override
+  String predictiveTimelineTooltipRiskValue(int value) {
+    return '$value % de risque';
+  }
+
+  @override
+  String predictiveTimelineTooltipCI(int lower, int upper) {
+    return 'IC 95 % : $lower–$upper %';
+  }
+
+  @override
+  String get predictiveTimelineInsightCurrentRisk =>
+      'Où vous en êtes aujourd\'hui';
+
+  @override
+  String get predictiveTimelineInsight7DayProjection => 'Vers où vous allez';
+
+  @override
+  String get predictiveTimelineInsightWeeklyTrend => 'Évolution cette semaine';
+
+  @override
+  String predictiveTimelineInsightPerWeek(String value) {
+    return '$value % / semaine';
+  }
+
+  @override
+  String get predictiveTimelineInsightProjectionUncertainty =>
+      'Notre niveau de confiance';
+
+  @override
+  String get predictiveTimelineLevelLow => 'Faible';
+
+  @override
+  String get predictiveTimelineLevelModerate => 'Modéré';
+
+  @override
+  String get predictiveTimelineLevelElevated => 'Élevé';
+
+  @override
+  String get predictiveTimelineLevelHigh => 'Haut';
+
+  @override
+  String predictiveTimelineSummaryHeadline(String level) {
+    return 'Votre risque est $level';
+  }
+
+  @override
+  String get predictiveTimelineSummarySteady =>
+      'Il devrait rester à peu près identique au cours des 7 prochains jours.';
+
+  @override
+  String get predictiveTimelineSummaryRising =>
+      'Il pourrait augmenter légèrement au cours des 7 prochains jours.';
+
+  @override
+  String get predictiveTimelineSummaryFalling =>
+      'Il devrait continuer à s\'améliorer au cours des 7 prochains jours.';
+
+  @override
+  String get predictiveTimelineAxisToday => 'Aujourd\'hui';
+
+  @override
+  String predictiveTimelineAxisInDays(int days) {
+    return 'Dans $days jours';
+  }
+
+  @override
+  String predictiveTimelineAxisWeeksAgo(int weeks) {
+    String _temp0 = intl.Intl.pluralLogic(
+      weeks,
+      locale: localeName,
+      other: 'Il y a $weeks semaines',
+      one: 'Il y a 1 semaine',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get predictiveTimelineLegendRecorded => 'Enregistré';
+
+  @override
+  String get predictiveTimelineLegendPredicted => 'Prévu';
+
+  @override
+  String get predictiveTimelineLegendRange => 'Plage probable';
+
+  @override
+  String get trendHeadlineTagline => 'Cette semaine en un coup d\'œil';
+
+  @override
+  String get trendHeadlineLoading => 'Lecture de vos tendances…';
+
+  @override
+  String get trendHeadlineLabelSystolic => 'Systolique';
+
+  @override
+  String get trendHeadlineLabelDiastolic => 'Diastolique';
+
+  @override
+  String get trendHeadlineLabelRisk => 'Score de risque';
+
+  @override
+  String get trendHeadlineDeltaStable => 'stable cette semaine';
+
+  @override
+  String trendHeadlineDeltaUp(String value) {
+    return 'en hausse de $value vs semaine dernière';
+  }
+
+  @override
+  String trendHeadlineDeltaDown(String value) {
+    return 'en baisse de $value vs semaine dernière';
+  }
+
+  @override
+  String trendHeadlineFallbackHeld(int value, int missed) {
+    return 'Votre tension systolique est restée stable cette semaine à $value mmHg, avec $missed doses manquées enregistrées.';
+  }
+
+  @override
+  String trendHeadlineFallbackDropped(int delta, int value, int missed) {
+    return 'Votre tension systolique a baissé de $delta mmHg cette semaine à $value, avec $missed doses manquées enregistrées.';
+  }
+
+  @override
+  String trendHeadlineFallbackRose(int delta, int value, int missed) {
+    return 'Votre tension systolique a augmenté de $delta mmHg cette semaine à $value, avec $missed doses manquées enregistrées.';
+  }
+
+  @override
+  String get riskTrendAnalysisExplainer =>
+      'Votre risque global d\'hypertension sur les 90 derniers jours, avec les facteurs qui le déterminent en dessous.';
 
   @override
   String get riskTrendAnalysisTitle => 'Analyse des Tendances de Risque';
@@ -1119,23 +1347,44 @@ class AppLocalizationsFr extends AppLocalizations {
       'Analyse de votre question de santé...';
 
   @override
-  String get bpCategoryNormal => 'Normale';
-
-  @override
-  String get bpCategoryElevated => 'Élevée';
-
-  @override
-  String get bpCategoryStage1 => 'Hypertension Stade 1';
-
-  @override
-  String get bpCategoryStage2 => 'Hypertension Stade 2';
-
-  @override
-  String get bpCategoryCrisis => 'Crise Hypertensive';
-
-  @override
   String get insightsPageTitle => 'Assistant Santé';
 
   @override
   String get insightsHeroPrompt => 'Comment vous sentez-vous aujourd\'hui ?';
+
+  @override
+  String get insightsGreetingDefault =>
+      'Comment puis-je vous aider aujourd\'hui ?';
+
+  @override
+  String get insightsSuggestionLatest => 'Comment était ma dernière mesure ?';
+
+  @override
+  String get insightsSuggestionTrend => 'Montrez ma tendance hebdomadaire';
+
+  @override
+  String get insightsSuggestionRisk => 'Signes de risque d\'hypertension ?';
+
+  @override
+  String get insightsSuggestionMedication =>
+      'Ai-je enregistré mes médicaments ?';
+
+  @override
+  String get insightsHeaderTitle => 'Vos aperçus santé';
+
+  @override
+  String get insightsHeaderSubtitle =>
+      'Renseignez-vous sur vos dernières mesures';
+
+  @override
+  String get medicationFeedbackAdded => 'Médicament ajouté';
+
+  @override
+  String get medicationFeedbackUpdated => 'Médicament mis à jour';
+
+  @override
+  String get medicationFeedbackSwitched => 'Médicament remplacé';
+
+  @override
+  String get notifications => 'Notifications';
 }

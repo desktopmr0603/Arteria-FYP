@@ -259,7 +259,7 @@ class _SignupPageState extends State<SignupPage>
                 false;
 
             if (shouldPop && context.mounted) {
-              Navigator.of(context).pushNamed('/');
+              Navigator.of(context).pushReplacementNamed('/');
             }
           },
           child: Scaffold(

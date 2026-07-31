@@ -14,8 +14,7 @@ migrate_working_dir/
 .env
 lib/env/env.g.dart
 
-# Local AI models / large files
-QwenArteria/
+
 
 # IntelliJ related
 *.iml
@@ -48,3 +47,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+QwenArteria/

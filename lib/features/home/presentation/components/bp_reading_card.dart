@@ -1,5 +1,9 @@
 import 'package:arteria/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:arteria/features/user data/user_bloc.dart';
+import 'package:arteria/features/user data/user_state.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 
 /// Enhanced BP reading card with status indicator
@@ -218,40 +222,65 @@ class BPReadingCard extends StatelessWidget {
   Map<String, dynamic> _getStatusInfo(BuildContext context) {
     final sys = systolic ?? 0;
     final dia = diastolic ?? 0;
+    
+    // Fetch age from bloc if available
+    int? age;
+    try {
+      final state = context.read<UserBloc>().state;
+      if (state is UserLoaded) {
+        age = state.latestReading?['age'] as int?;
+      }
+    } catch (_) {}
+    
+    final isElderly = age != null && age >= 65;
 
     // Blood Pressure Classification (120/80 = Normal)
     if (sys >= 180 || dia >= 120) {
       return {
         'emoji': '🚨',
         'label': AppLocalizations.of(context)!.critical,
-        'borderColor': const Color(0xFFD32F2F),
+        'borderColor': const Color(0xFF9B2226), // Critical
       };
     } else if (sys >= 140 || dia >= 90) {
       return {
-        'emoji': '🟠',
+        'emoji': '🔴',
         'label': AppLocalizations.of(context)!.high,
-        'borderColor': const Color(0xFFFF6F00),
+        'borderColor': const Color(0xFFAE2012), // Stage 2
       };
-    } else if (sys >= 130 || dia > 80) {
-      // Stage 1 Hypertension
+    } else if (sys == 120 && dia == 80) {
+      if (isElderly) {
+        return {
+          'emoji': '🟡',
+          'label': AppLocalizations.of(context)!.elevated,
+          'borderColor': const Color(0xFFCA6702), // Elevated
+        };
+      } else {
+        return {
+          'emoji': '🟢',
+          'label': AppLocalizations.of(context)!.normal,
+          'borderColor': Colors.green, // Normal
+        };
+      }
+    } else if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) {
+      return {
+        'emoji': '🟠',
+        // Fallback to high if there's no specific stage 1 label, or use elevated as before
+        'label': AppLocalizations.of(context)!.high, 
+        'borderColor': const Color(0xFFE85D04), // Stage 1
+      };
+    } else if (sys >= 121 && sys <= 129 && dia < 80) {
+      // Elevated (systolic 121-129; 120 falls through to Normal)
       return {
         'emoji': '🟡',
         'label': AppLocalizations.of(context)!.elevated,
-        'borderColor': const Color(0xFFFFA726),
-      };
-    } else if (sys > 120 && dia <= 80) {
-      // Elevated (systolic 121-129)
-      return {
-        'emoji': '🟡',
-        'label': AppLocalizations.of(context)!.elevated,
-        'borderColor': const Color(0xFFFFA726),
+        'borderColor': const Color(0xFFCA6702), // Elevated
       };
     } else {
-      // Normal (includes 120/80)
+      // Normal (<120/<80)
       return {
         'emoji': '🟢',
         'label': AppLocalizations.of(context)!.normal,
-        'borderColor': const Color(0xFF4CAF50),
+        'borderColor': Colors.green, // Normal
       };
     }
   }

@@ -21,8 +21,14 @@ class HealthRiskScoreService {
   /// Initialize the service
   Future<void> initialize() async {
     if (!_isInitialized) {
-      await _predictor.loadModel();
-      _isInitialized = true;
+      try {
+        await _predictor.loadModel();
+        _isInitialized = true;
+        debugPrint('✅ Health Risk Score Service initialized successfully');
+      } catch (e) {
+        debugPrint('⚠️ Model loading failed, service will use fallback predictions: $e');
+        _isInitialized = true; // Still mark as initialized to use fallbacks
+      }
     }
   }
 
@@ -43,8 +49,13 @@ class HealthRiskScoreService {
     }
 
     try {
-      // Get base risk prediction from TFLite model
+      // Get base risk prediction from TFLite model or fallback
       final baseRiskProbability = _predictor.predictRisk(userFeatures);
+      final usedFallback = !_predictor.isModelAvailable;
+      
+      if (usedFallback) {
+        debugPrint('⚠️ Using rule-based fallback prediction (ML model unavailable)');
+      }
 
       // Calculate feature importance using perturbation analysis
       final featureImportance = await _calculateFeatureImportance(userFeatures);

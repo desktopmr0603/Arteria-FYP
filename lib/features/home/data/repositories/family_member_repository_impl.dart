@@ -1,41 +1,62 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import 'package:arteria/features/home/domain/entities/family_member.dart';
 import 'package:arteria/features/home/domain/repositories/family_member_repository.dart';
 import 'package:arteria/Core/Utils/firebase_helpers.dart';
 
+/// Production family-sharing repository.
+///
+/// Invite codes live in a single top-level `familyInvites` collection keyed
+/// by the code itself, so any signed-in user can redeem a code with an O(1)
+/// document lookup — no composite index and no collection-group query. When
+/// an invite is accepted, a `familyMembers` document is written under BOTH
+/// users (doc id = the other user's uid) so the connection is visible to
+/// each side and can be cleanly removed later.
+///
+/// The previous design wrote invites to the inviter's `outgoingInvites` but
+/// read them from the invitee's `incomingInvites` — a collection nothing
+/// ever populated — so a generated code could never be redeemed.
 class FamilyMemberRepositoryImpl implements FamilyRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  static const Duration _inviteValidity = Duration(days: 7);
+
+  CollectionReference<Map<String, dynamic>> get _invites =>
+      _firestore.collection('familyInvites');
+
+  CollectionReference<Map<String, dynamic>> _familyMembersOf(String uid) =>
+      _firestore.collection('users').doc(uid).collection('familyMembers');
+
+  FamilyMember _memberFromDoc(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+    return FamilyMember(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      name: data['name'] ?? '',
+      profilePicture: data['profilePicture'],
+      permission: SharePermission.values.firstWhere(
+        (e) => e.name == data['permission'],
+        orElse: () => SharePermission.viewOnly,
+      ),
+      status: FamilyInviteStatus.values.firstWhere(
+        (e) => e.name == data['status'],
+        orElse: () => FamilyInviteStatus.accepted,
+      ),
+      lastReadingAt: FirebaseHelpers.parseDateTime(data['lastReadingAt']),
+      lastReading: data['lastReading'],
+      addedAt: FirebaseHelpers.parseDateTime(data['addedAt']) ?? DateTime.now(),
+    );
+  }
 
   @override
   Future<List<FamilyMember>> getFamilyMembers(String userId) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('familyMembers')
+      final snapshot = await _familyMembersOf(userId)
           .where('status', isEqualTo: 'accepted')
           .get();
-
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return FamilyMember(
-          id: doc.id,
-          userId: data['userId'] ?? '',
-          name: data['name'] ?? '',
-          profilePicture: data['profilePicture'],
-          permission: SharePermission.values.firstWhere(
-            (e) => e.name == data['permission'],
-            orElse: () => SharePermission.viewOnly,
-          ),
-          status: FamilyInviteStatus.accepted,
-          lastReadingAt: FirebaseHelpers.parseDateTime(data['lastReadingAt']),
-          lastReading: data['lastReading'],
-          addedAt:
-              FirebaseHelpers.parseDateTime(data['addedAt']) ?? DateTime.now(),
-        );
-      }).toList();
+      return snapshot.docs.map(_memberFromDoc).toList();
     } catch (e) {
       throw Exception('Failed to fetch family members: $e');
     }
@@ -43,49 +64,17 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
 
   @override
   Stream<List<FamilyMember>> watchFamilyMembers(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('familyMembers')
+    return _familyMembersOf(userId)
         .where('status', isEqualTo: 'accepted')
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data();
-            return FamilyMember(
-              id: doc.id,
-              userId: data['userId'] ?? '',
-              name: data['name'] ?? '',
-              profilePicture: data['profilePicture'],
-              permission: SharePermission.values.firstWhere(
-                (e) => e.name == data['permission'],
-                orElse: () => SharePermission.viewOnly,
-              ),
-              status: FamilyInviteStatus.accepted,
-              lastReadingAt: FirebaseHelpers.parseDateTime(
-                data['lastReadingAt'],
-              ),
-              lastReading: data['lastReading'],
-              addedAt:
-                  FirebaseHelpers.parseDateTime(data['addedAt']) ??
-                  DateTime.now(),
-            );
-          }).toList(),
-        );
+        .map((snapshot) => snapshot.docs.map(_memberFromDoc).toList());
   }
 
   @override
   Future<FamilyMember?> getFamilyMember(String userId, String memberId) async {
     try {
-      final doc = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('familyMembers')
-          .doc(memberId)
-          .get();
-
+      final doc = await _familyMembersOf(userId).doc(memberId).get();
       if (!doc.exists) return null;
-
       final data = doc.data()!;
       return FamilyMember(
         id: doc.id,
@@ -111,6 +100,25 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
   }
 
   @override
+  Future<String> generateInviteCode() async {
+    // Unambiguous alphabet — no 0/O/1/I/L — so a spoken or typed code is
+    // hard to get wrong. Doc id = code, so retry on the (vanishingly rare)
+    // collision rather than risk overwriting a live invite.
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    final rng = Random.secure();
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final body =
+          List.generate(8, (_) => alphabet[rng.nextInt(alphabet.length)])
+              .join();
+      final code = 'ART-$body';
+      final existing = await _invites.doc(code).get();
+      if (!existing.exists) return code;
+    }
+    // Fallback — astronomically unlikely to be reached.
+    return 'ART-${DateTime.now().microsecondsSinceEpoch.toRadixString(36).toUpperCase()}';
+  }
+
+  @override
   Future<String> sendInvite(
     String userId,
     String inviterName,
@@ -119,109 +127,143 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
     SharePermission permission,
   ) async {
     try {
-      final inviteCode = await generateInviteCode();
+      final code = await generateInviteCode();
+      final now = DateTime.now();
 
-      final docRef = _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('outgoingInvites')
-          .doc();
-
-      await docRef.set({
+      await _invites.doc(code).set({
+        'inviteCode': code,
         'inviterUserId': userId,
         'inviterName': inviterName,
-        'email': email,
-        'phone': phone,
-        'inviteCode': inviteCode,
+        'email': (email != null && email.isNotEmpty) ? email : null,
+        'phone': (phone != null && phone.isNotEmpty) ? phone : null,
         'permission': permission.name,
         'status': 'pending',
-        'createdAt': DateTime.now().toIso8601String(),
-        'expiresAt': DateTime.now()
-            .add(const Duration(days: 7))
-            .toIso8601String(),
+        'createdAt': now.toIso8601String(),
+        'expiresAt': now.add(_inviteValidity).toIso8601String(),
       });
 
-      return docRef.id;
+      // The repository contract returns the redeemable code.
+      return code;
     } catch (e) {
-      throw Exception('Failed to send invite: $e');
+      throw Exception('Failed to create invite: $e');
+    }
+  }
+
+  @override
+  Future<FamilyInvite?> getInviteByCode(String inviteCode) async {
+    try {
+      final code = inviteCode.trim().toUpperCase();
+      if (code.isEmpty) return null;
+      final doc = await _invites.doc(code).get();
+      if (!doc.exists) return null;
+      return FamilyInvite.fromMap({
+        ...doc.data()!,
+        'id': doc.id,
+        'inviteCode': code,
+      });
+    } catch (e) {
+      throw Exception('Failed to look up invite: $e');
     }
   }
 
   @override
   Future<bool> acceptInvite(String userId, String inviteCode) async {
+    final code = inviteCode.trim().toUpperCase();
+    final inviteRef = _invites.doc(code);
+
     try {
-      final inviteSnapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('incomingInvites')
-          .where('inviteCode', isEqualTo: inviteCode)
-          .limit(1)
-          .get();
+      await _firestore.runTransaction((tx) async {
+        // ---- all reads first (Firestore transaction requirement) ----
+        final inviteSnap = await tx.get(inviteRef);
+        if (!inviteSnap.exists) {
+          throw Exception('Invite code not found.');
+        }
+        final data = inviteSnap.data()!;
 
-      if (inviteSnapshot.docs.isEmpty) {
-        throw Exception('Invite not found');
-      }
+        final status = data['status'];
+        if (status == 'accepted') {
+          throw Exception('This invite has already been used.');
+        }
+        if (status != 'pending') {
+          throw Exception('This invite is no longer available.');
+        }
 
-      final inviteDoc = inviteSnapshot.docs.first;
-      final inviteData = inviteDoc.data();
+        final expiresAt = FirebaseHelpers.parseDateTime(data['expiresAt']);
+        if (expiresAt != null && DateTime.now().isAfter(expiresAt)) {
+          throw Exception('This invite has expired.');
+        }
 
-      if (inviteData['status'] != 'pending') {
-        throw Exception('Invite is no longer valid');
-      }
+        final inviterUserId = (data['inviterUserId'] as String?) ?? '';
+        if (inviterUserId.isEmpty) {
+          throw Exception('This invite is invalid.');
+        }
+        if (inviterUserId == userId) {
+          throw Exception("You can't accept your own invite.");
+        }
 
-      final inviterUserId = inviteData['inviterUserId'];
-      final inviterName = inviteData['inviterName'];
-      final permission = SharePermission.values.firstWhere(
-        (e) => e.name == inviteData['permission'],
-        orElse: () => SharePermission.viewOnly,
-      );
+        final inviterMemberRef = _familyMembersOf(inviterUserId).doc(userId);
+        final myMemberRef = _familyMembersOf(userId).doc(inviterUserId);
+        final meRef = _firestore.collection('users').doc(userId);
 
-      await _firestore.runTransaction((transaction) async {
-        final inviterDocRef = _firestore
-            .collection('users')
-            .doc(inviterUserId)
-            .collection('familyMembers')
-            .doc(userId);
+        final existing = await tx.get(inviterMemberRef);
+        final meSnap = await tx.get(meRef);
 
-        final inviteDocRef = inviteDoc.reference;
-        final incomingInviteRef = _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('incomingInvites')
-            .doc(inviteDoc.id);
+        if (existing.exists) {
+          throw Exception("You're already connected with this family.");
+        }
 
-        transaction.set(inviterDocRef, {
+        // ---- writes ----
+        final inviterName =
+            (data['inviterName'] as String?) ?? 'Family member';
+        final permission = (data['permission'] as String?) ?? 'viewOnly';
+        final myName =
+            ((meSnap.data()?['firstName'] as String?) ?? '').trim();
+        final accepterName = myName.isEmpty ? 'Family member' : myName;
+        final nowIso = DateTime.now().toIso8601String();
+
+        // Inviter sees the new member.
+        tx.set(inviterMemberRef, {
           'userId': userId,
-          'name': inviterName,
-          'permission': permission.name,
+          'name': accepterName,
+          'permission': permission,
           'status': 'accepted',
-          'addedAt': DateTime.now().toIso8601String(),
+          'addedAt': nowIso,
         });
-
-        transaction.update(inviteDocRef, {'status': 'accepted'});
-        transaction.update(incomingInviteRef, {'status': 'accepted'});
+        // Member sees the inviter — the connection is bidirectional.
+        tx.set(myMemberRef, {
+          'userId': inviterUserId,
+          'name': inviterName,
+          'permission': permission,
+          'status': 'accepted',
+          'addedAt': nowIso,
+        });
+        // Retire the invite so the code cannot be reused.
+        tx.update(inviteRef, {
+          'status': 'accepted',
+          'accepterUserId': userId,
+          'accepterName': accepterName,
+          'acceptedAt': nowIso,
+        });
       });
 
       return true;
     } catch (e) {
-      throw Exception('Failed to accept invite: $e');
+      // Surface the human-readable validation message unchanged.
+      final msg = e.toString();
+      throw Exception(
+        msg.startsWith('Exception: ') ? msg.substring(11) : msg,
+      );
     }
   }
 
   @override
   Future<bool> declineInvite(String userId, String inviteCode) async {
     try {
-      final inviteSnapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('incomingInvites')
-          .where('inviteCode', isEqualTo: inviteCode)
-          .limit(1)
-          .get();
-
-      if (inviteSnapshot.docs.isEmpty) return false;
-
-      await inviteSnapshot.docs.first.reference.update({'status': 'declined'});
+      final code = inviteCode.trim().toUpperCase();
+      final ref = _invites.doc(code);
+      final snap = await ref.get();
+      if (!snap.exists) return false;
+      await ref.update({'status': 'declined'});
       return true;
     } catch (e) {
       throw Exception('Failed to decline invite: $e');
@@ -231,28 +273,10 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
   @override
   Future<bool> removeFamilyMember(String userId, String memberId) async {
     try {
+      // doc id is the other user's uid, so both directions delete directly.
       final batch = _firestore.batch();
-
-      batch.delete(
-        _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('familyMembers')
-            .doc(memberId),
-      );
-
-      final memberSnapshot = await _firestore
-          .collection('users')
-          .doc(memberId)
-          .collection('familyMembers')
-          .where('userId', isEqualTo: userId)
-          .limit(1)
-          .get();
-
-      if (memberSnapshot.docs.isNotEmpty) {
-        batch.delete(memberSnapshot.docs.first.reference);
-      }
-
+      batch.delete(_familyMembersOf(userId).doc(memberId));
+      batch.delete(_familyMembersOf(memberId).doc(userId));
       await batch.commit();
       return true;
     } catch (e) {
@@ -267,13 +291,9 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
     SharePermission permission,
   ) async {
     try {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('familyMembers')
+      await _familyMembersOf(userId)
           .doc(memberId)
           .update({'permission': permission.name});
-
       return true;
     } catch (e) {
       throw Exception('Failed to update permission: $e');
@@ -283,35 +303,21 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
   @override
   Future<List<FamilyInvite>> getPendingInvites(String userId) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('outgoingInvites')
-          .where('status', isEqualTo: 'pending')
-          .get();
+      // Single equality filter → Firestore auto-indexes it; no setup needed.
+      final snapshot =
+          await _invites.where('inviterUserId', isEqualTo: userId).get();
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return FamilyInvite(
-          id: doc.id,
-          inviterUserId: data['inviterUserId'] ?? '',
-          inviterName: data['inviterName'] ?? '',
-          email: data['email'],
-          phone: data['phone'],
-          inviteCode: data['inviteCode'] ?? '',
-          permission: SharePermission.values.firstWhere(
-            (e) => e.name == data['permission'],
-            orElse: () => SharePermission.viewOnly,
-          ),
-          status: FamilyInviteStatus.pending,
-          createdAt:
-              FirebaseHelpers.parseDateTime(data['createdAt']) ??
-              DateTime.now(),
-          expiresAt:
-              FirebaseHelpers.parseDateTime(data['expiresAt']) ??
-              DateTime.now().add(const Duration(days: 7)),
-        );
-      }).toList();
+      final invites = <FamilyInvite>[];
+      for (final doc in snapshot.docs) {
+        final invite = FamilyInvite.fromMap({...doc.data(), 'id': doc.id});
+        if (invite.status == FamilyInviteStatus.pending &&
+            !invite.isExpired) {
+          invites.add(invite);
+        }
+      }
+      // Newest first.
+      invites.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return invites;
     } catch (e) {
       throw Exception('Failed to fetch pending invites: $e');
     }
@@ -320,59 +326,15 @@ class FamilyMemberRepositoryImpl implements FamilyRepository {
   @override
   Future<void> cancelInvite(String userId, String inviteId) async {
     try {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('outgoingInvites')
-          .doc(inviteId)
-          .delete();
+      // inviteId is the code (doc id). Only the inviter may revoke it.
+      final code = inviteId.trim().toUpperCase();
+      final ref = _invites.doc(code);
+      final snap = await ref.get();
+      if (snap.exists && snap.data()?['inviterUserId'] == userId) {
+        await ref.update({'status': 'revoked'});
+      }
     } catch (e) {
       throw Exception('Failed to cancel invite: $e');
-    }
-  }
-
-  @override
-  Future<String> generateInviteCode() async {
-    final bytes = utf8.encode('${DateTime.now().millisecondsSinceEpoch}');
-    final hash = sha256.convert(bytes).toString().substring(0, 8).toUpperCase();
-    return 'ART-$hash';
-  }
-
-  @override
-  Future<FamilyInvite?> getInviteByCode(String inviteCode) async {
-    try {
-      final snapshot = await _firestore
-          .collectionGroup('incomingInvites')
-          .where('inviteCode', isEqualTo: inviteCode)
-          .limit(1)
-          .get();
-
-      if (snapshot.docs.isEmpty) return null;
-
-      final data = snapshot.docs.first.data();
-      return FamilyInvite(
-        id: snapshot.docs.first.id,
-        inviterUserId: data['inviterUserId'] ?? '',
-        inviterName: data['inviterName'] ?? '',
-        email: data['email'],
-        phone: data['phone'],
-        inviteCode: inviteCode,
-        permission: SharePermission.values.firstWhere(
-          (e) => e.name == data['permission'],
-          orElse: () => SharePermission.viewOnly,
-        ),
-        status: FamilyInviteStatus.values.firstWhere(
-          (e) => e.name == data['status'],
-          orElse: () => FamilyInviteStatus.pending,
-        ),
-        createdAt:
-            FirebaseHelpers.parseDateTime(data['createdAt']) ?? DateTime.now(),
-        expiresAt:
-            FirebaseHelpers.parseDateTime(data['expiresAt']) ??
-            DateTime.now().add(const Duration(days: 7)),
-      );
-    } catch (e) {
-      throw Exception('Failed to get invite: $e');
     }
   }
 }

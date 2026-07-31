@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -131,9 +130,15 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   }
 
   Widget _buildBackgroundDecorations(bool isDark) {
+    // RepaintBoundary isolates these static radial-gradient circles onto
+    // their own cached layer. Without it, the gradients share a layer with
+    // the scrolling content above them (same Stack) and get re-rasterized
+    // every scroll frame — wasted GPU work that shows up as jitter during
+    // the bottom bounce-overscroll. Cached once, they only composite.
     return Positioned.fill(
-      child: Stack(
-        children: [
+      child: RepaintBoundary(
+        child: Stack(
+          children: [
           Positioned(
             top: -100,
             right: -100,
@@ -186,7 +191,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -218,41 +224,52 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
 
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
-    return Container(
-      margin: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
-      height: 72,
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1E1E2E).withValues(alpha: 0.8)
-            : Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(items.length, (index) {
-                return _buildNavItem(
-                  context,
-                  items[index],
-                  _currentIndex == index,
-                  index,
-                  theme,
-                  isDark,
-                );
-              }),
+    // Note: this used to wrap content in BackdropFilter(sigma=10) for a
+    // glassmorphism look. That blur recomputes every frame as the user
+    // scrolls (it has to re-blur the content moving behind it) and was
+    // the primary source of the bottom-of-page scroll stutter — most
+    // visible when reversing direction at the bottom, since the nav bar
+    // sits right where the user's eyes are. A slightly more opaque solid
+    // bar (alpha 0.92) gives the same floating-above-content feel for
+    // zero per-frame cost.
+    final navBg = isDark
+        ? const Color(0xFF1E1E2E).withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.92);
+    // RepaintBoundary caches the bar (its blurRadius:20 drop shadow in
+    // particular) onto its own layer. With extendBody:true the list scrolls
+    // BEHIND this bar, so without isolation the shadow was re-rasterizing
+    // every frame as content moved under it — the residual bottom-of-page
+    // jitter left over after the BackdropFilter blur was removed. The bar
+    // only repaints on tab change now, not on scroll.
+    return RepaintBoundary(
+      child: Container(
+        margin: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
+        height: 72,
+        decoration: BoxDecoration(
+          color: navBg,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(items.length, (index) {
+              return _buildNavItem(
+                context,
+                items[index],
+                _currentIndex == index,
+                index,
+                theme,
+                isDark,
+              );
+            }),
           ),
         ),
       ),
@@ -345,10 +362,14 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
     if (!mounted) return;
 
     if (result != null) {
+      // The voice flow (MicrophoneTranscribeBloc) has already written this
+      // reading to `readings`. Flag it so UserBloc computes the risk score and
+      // reloads WITHOUT writing a second, duplicate document.
       userBloc.add(
         SaveBPReading(
           systolic: result["systolic"],
           diastolic: result["diastolic"],
+          alreadyPersisted: true,
         ),
       );
     }
@@ -456,14 +477,14 @@ class DashboardContent extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            colors: [Color(0xFFF76C5E), Color(0xFFF76C5E)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+              color: const Color(0xFFF76C5E).withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -478,13 +499,26 @@ class DashboardContent extends StatelessWidget {
               size: 24,
             ),
             const SizedBox(width: 10),
-            Text(
-              buttonText.toUpperCase(),
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                letterSpacing: 1.0,
+            // FittedBox(scaleDown) lets the label auto-shrink for long
+            // translations (the French label is ~70% longer than English)
+            // without forcing us to truncate medical copy with ellipsis.
+            // English renders at full 14pt; French shrinks just enough to
+            // sit on one line at the same button height.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  buttonText.toUpperCase(),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    letterSpacing: 1.0,
+                  ),
+                ),
               ),
             ),
           ],
@@ -533,29 +567,25 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Glassmorphism background - only visible when scrolling
+        // Translucent header bar — fades in as the user scrolls. The
+        // previous implementation wrapped this in a BackdropFilter whose
+        // sigma animated with scroll progress; animated blur sigmas force
+        // a full gaussian recompute every frame and were dropping frames
+        // throughout the page (most visible at the bottom where blur was
+        // at max sigma). A solid translucent bar gives the same "floats
+        // above content" feel for zero per-frame cost.
         if (shrinkOffset > 5)
-          ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: 10 * clampedProgress,
-                sigmaY: 10 * clampedProgress,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color:
-                      (isDark
-                              ? const Color(0xFF0A0A0F)
-                              : const Color(0xFFF8FAFB))
-                          .withValues(alpha: 0.8 * clampedProgress),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: (isDark ? Colors.white : Colors.black).withValues(
-                        alpha: 0.05 * clampedProgress,
-                      ),
-                      width: 1,
-                    ),
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              color: (isDark
+                      ? const Color(0xFF0A0A0F)
+                      : const Color(0xFFF8FAFB))
+                  .withValues(alpha: 0.92 * clampedProgress),
+              border: Border(
+                bottom: BorderSide(
+                  color: (isDark ? Colors.white : Colors.black)
+                      .withValues(alpha: 0.05 * clampedProgress),
+                  width: 1,
                 ),
               ),
             ),
@@ -626,3 +656,4 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.topPadding != topPadding;
   }
 }
+

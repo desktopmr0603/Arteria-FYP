@@ -2,482 +2,414 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../features/home/data/data_sources/health_risk_score_service.dart';
-import '../features/home/data/data_sources/bp_anomaly_remote_data_source.dart';
 
-/// Health Notification Service
+/// Pushes real phone notifications for clinically meaningful events derived
+/// from the user's own data:
+///   • a dangerous latest reading (Stage 2 hypertension or crisis)
+///   • a sudden jump from the previous reading
+///   • blood pressure trending up week-over-week
+///   • a notable increase in the health risk score
+///   • missed medication doses for the day
 ///
-/// Monitors health data and sends contextual notifications for important
-/// health events, thresholds, and trends.
-///
-/// Features:
-/// - Real-time health event monitoring
-/// - Contextual alert generation
-/// - Smart notification scheduling
-/// - Alert history tracking
+/// Every notification is de-duplicated through `users/{uid}/notification_history`
+/// so a given event is never pushed twice. Local notifications fire while the
+/// app is running; the checks are run with the real signed-in user on app open
+/// and right after a reading is saved (see [runChecksForCurrentUser]).
 class HealthNotificationService {
   final String _userId;
   final HealthRiskScoreService _riskScoreService;
-  final BPAnomalyRemoteDataSource _anomalyService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   Timer? _monitoringTimer;
-  Timer? _dailySummaryTimer;
 
-  // Notification thresholds
-  static const double _riskChangeThreshold = 0.15; // 15% change
+  // Thresholds.
+  static const int _minRiskPointChange = 8; // points out of 100
+  static const int _minHoursBetweenScores = 6;
+  static const int _trendMmHgThreshold = 8; // week-over-week systolic rise
+  static const int _spikeSysThreshold = 20; // jump vs previous reading
+  static const int _spikeDiaThreshold = 15;
   static const int _monitoringIntervalHours = 6;
-  static const int _dailySummaryHour = 20; // 8 PM
 
   HealthNotificationService({
     required String userId,
     required HealthRiskScoreService riskScoreService,
-    required BPAnomalyRemoteDataSource anomalyService,
-  }) : _userId = userId,
-       _riskScoreService = riskScoreService,
-       _anomalyService = anomalyService;
+  })  : _userId = userId,
+        _riskScoreService = riskScoreService;
 
-  /// Initialize notification service and start monitoring
-  Future<void> initialize() async {
-    await _initializeNotifications();
-    await _startHealthMonitoring();
-    await _scheduleDailySummary();
+  // ── Public entry points ────────────────────────────────────────────
+
+  /// One-shot check for the currently-authenticated user. Builds its own
+  /// dependencies, runs the checks once (no background timer), then tears them
+  /// down. Safe to call after a reading is saved or on app open — the
+  /// de-duplication store keeps it from pushing the same event twice.
+  static Future<void> runChecksForCurrentUser() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final risk = HealthRiskScoreService();
+      await risk.initialize();
+      final service =
+          HealthNotificationService(userId: uid, riskScoreService: risk);
+      await service.runOnce();
+      risk.dispose();
+    } catch (e) {
+      debugPrint('⚠️ Push notification check failed: $e');
+    }
   }
 
-  /// Initialize local notifications
-  Future<void> _initializeNotifications() async {
-    const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+  /// Initialize the notification plugin and start periodic monitoring while the
+  /// app is alive (used by long-lived screens such as Insights).
+  Future<void> initialize() async {
+    await _initializeNotifications();
+    _monitoringTimer = Timer.periodic(
+      const Duration(hours: _monitoringIntervalHours),
+      (_) => _performHealthCheck(),
     );
+    await _performHealthCheck();
+  }
+
+  /// Initialize the plugin and run every check exactly once (no timers).
+  Future<void> runOnce() async {
+    await _initializeNotifications();
+    await _performHealthCheck();
+  }
+
+  void dispose() {
+    _monitoringTimer?.cancel();
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────
+
+  Future<void> _initializeNotifications() async {
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
+    await _notifications.initialize(settings);
 
-    await _notifications.initialize(
-      settings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
+    // Android 13+ requires asking for POST_NOTIFICATIONS at runtime (iOS is
+    // covered by the Darwin settings above).
+    await _notifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
   }
 
-  /// Start background health monitoring
-  Future<void> _startHealthMonitoring() async {
-    _monitoringTimer = Timer.periodic(
-      Duration(hours: _monitoringIntervalHours),
-      (_) => _performHealthCheck(),
-    );
+  // ── Orchestration ───────────────────────────────────────────────────
 
-    // Perform initial check
-    await _performHealthCheck();
-  }
-
-  /// Schedule daily health summary
-  Future<void> _scheduleDailySummary() async {
-    final now = DateTime.now();
-    final scheduledTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      _dailySummaryHour,
-      0,
-      0,
-    );
-
-    final initialDelay = scheduledTime.isAfter(now)
-        ? scheduledTime.difference(now)
-        : Duration(days: 1) - now.difference(scheduledTime);
-
-    _dailySummaryTimer = Timer(initialDelay, () {
-      _sendDailyHealthSummary();
-      // Schedule next day
-      _scheduleDailySummary();
-    });
-  }
-
-  /// Perform comprehensive health check
   Future<void> _performHealthCheck() async {
     try {
-      debugPrint('🔍 Performing health check for user $_userId');
-
-      // Check risk score changes
+      await _checkAbnormalReading();
+      await _checkBPTrend();
       await _checkRiskScoreChanges();
-
-      // Check for new anomalies
-      await _checkForAnomalies();
-
-      // Check BP trends
-      await _checkBPTrends();
-
-      // Check medication adherence
       await _checkMedicationAdherence();
-
-      debugPrint('✅ Health check completed');
     } catch (e) {
       debugPrint('❌ Error during health check: $e');
     }
   }
 
-  /// Check for significant risk score changes
+  // ── 1. Dangerous / spiking latest reading ───────────────────────────
+
+  Future<void> _checkAbnormalReading() async {
+    final readings = await _getRecentBPReadings(days: 3);
+    if (readings.isEmpty) return;
+
+    final latest = readings.first;
+    final sys = latest['systolic'] as int;
+    final dia = latest['diastolic'] as int;
+    final id = latest['id'] as String;
+
+    String? title;
+    String? body;
+    String? key;
+
+    if (sys > 180 || dia > 120) {
+      title = '🚨 Very High Blood Pressure';
+      body =
+          'Your latest reading was $sys/$dia mmHg — in the hypertensive crisis range. If you have chest pain, shortness of breath, or vision changes, seek emergency care now.';
+      key = 'reading_$id';
+    } else if (sys >= 140 || dia >= 90) {
+      title = '⚠️ High Blood Pressure';
+      body =
+          'Your latest reading was $sys/$dia mmHg — in the Stage 2 hypertension range. Consider following up with your healthcare provider.';
+      key = 'reading_$id';
+    } else {
+      // Not absolutely high, but flag a sudden jump from the previous reading.
+      final pSys = latest['previous_systolic'] as int?;
+      final pDia = latest['previous_diastolic'] as int?;
+      if (pSys != null &&
+          pDia != null &&
+          ((sys - pSys) >= _spikeSysThreshold ||
+              (dia - pDia) >= _spikeDiaThreshold)) {
+        title = '⚠️ Sudden BP Increase';
+        body =
+            'Your blood pressure jumped to $sys/$dia mmHg (up +${sys - pSys}/+${dia - pDia} from your previous reading). Rest a few minutes and measure again.';
+        key = 'spike_$id';
+      } else {
+        return;
+      }
+    }
+
+    if (await _alreadyNotified(key)) return;
+    await _showNotification(title: title, body: body, payload: 'reading');
+    await _markNotified(key, 'reading');
+  }
+
+  // ── 2. Week-over-week BP trend ──────────────────────────────────────
+
+  Future<void> _checkBPTrend() async {
+    final thisWeek = await _getRecentBPReadings(days: 7);
+    final lastWeek = await _getPreviousWeekReadings();
+    if (thisWeek.length < 2 || lastWeek.isEmpty) return;
+
+    double avg(List<Map<String, dynamic>> r) =>
+        r.map((e) => e['systolic'] as int).reduce((a, b) => a + b) / r.length;
+
+    final change = (avg(thisWeek) - avg(lastWeek)).round();
+    if (change < _trendMmHgThreshold) return;
+
+    final key = 'trend_${_weekKey(DateTime.now())}';
+    if (await _alreadyNotified(key)) return;
+    await _showNotification(
+      title: '📈 Blood Pressure Trending Up',
+      body:
+          'Your average systolic is up $change mmHg compared with last week. Review your salt, sleep, and stress, and keep monitoring.',
+      payload: 'trend',
+    );
+    await _markNotified(key, 'trend');
+  }
+
+  // ── 3. Notable risk-score increase ──────────────────────────────────
+
   Future<void> _checkRiskScoreChanges() async {
     try {
       final userProfile = await _buildUserProfile();
-      final currentReport = await _riskScoreService.calculateRiskScore(
+      final current = await _riskScoreService.calculateRiskScore(
         userId: _userId,
         userFeatures: userProfile,
       );
 
-      // Get previous risk score
-      final previousScore = await _getPreviousRiskScore();
+      final previous = await _getPreviousRiskScore();
+      if (previous == null) return;
 
-      if (previousScore != null) {
-        final change = (currentReport.overallScore - previousScore.score).abs();
-        final percentageChange = change / previousScore.score;
+      final pointChange = current.overallScore - previous.score;
+      final hoursApart =
+          DateTime.now().difference(previous.timestamp).inHours;
 
-        if (percentageChange >= _riskChangeThreshold) {
-          await _sendRiskChangeNotification(
-            currentReport,
-            previousScore,
-            percentageChange,
-          );
-        }
+      // Only push a meaningful *increase* measured over a real time gap, so we
+      // don't fire on the noise between two back-to-back recalculations.
+      if (pointChange >= _minRiskPointChange &&
+          hoursApart >= _minHoursBetweenScores) {
+        final key = 'risk_${previous.timestamp.millisecondsSinceEpoch}';
+        if (await _alreadyNotified(key)) return;
+        await _showNotification(
+          title: '⚠️ Health Risk Increased',
+          body:
+              'Your risk score rose by $pointChange points to ${current.overallScore}/100 (was ${previous.score}). Consider reviewing your recent readings and habits.',
+          payload: 'risk',
+        );
+        await _markNotified(key, 'risk');
       }
-
-      // Store current score for future comparison
-      await _storeRiskScore(currentReport);
     } catch (e) {
       debugPrint('Error checking risk score changes: $e');
     }
   }
 
-  /// Check for new anomalies
-  Future<void> _checkForAnomalies() async {
-    try {
-      final recentReadings = await _getRecentBPReadings(days: 1);
+  // ── 4. Missed medication ────────────────────────────────────────────
 
-      for (final reading in recentReadings) {
-        final anomaly = _anomalyService.detectAnomaly(
-          systolic: reading['systolic'] as int,
-          diastolic: reading['diastolic'] as int,
-          previousSystolic: reading['previous_systolic'] as int?,
-          previousDiastolic: reading['previous_diastolic'] as int?,
-        );
-
-        if (anomaly.isAnomaly) {
-          final alreadyNotified = await _wasAnomalyNotified(anomaly);
-          if (!alreadyNotified) {
-            await _sendAnomalyNotification(anomaly, reading);
-            await _markAnomalyNotified(anomaly);
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error checking for anomalies: $e');
-    }
-  }
-
-  /// Check BP trends
-  Future<void> _checkBPTrends() async {
-    try {
-      final weeklyReadings = await _getRecentBPReadings(days: 7);
-
-      if (weeklyReadings.length < 3) return;
-
-      // Calculate trend
-      final avgSystolic =
-          weeklyReadings
-              .map((r) => r['systolic'] as int)
-              .reduce((a, b) => a + b) /
-          weeklyReadings.length;
-
-      final previousWeekReadings = await _getPreviousWeekReadings();
-      if (previousWeekReadings.isNotEmpty) {
-        final prevAvgSystolic =
-            previousWeekReadings
-                .map((r) => r['systolic'] as int)
-                .reduce((a, b) => a + b) /
-            previousWeekReadings.length;
-
-        final change = avgSystolic - prevAvgSystolic;
-
-        // Send trend notification if significant change
-        if (change > 10) {
-          await _sendBPTrendNotification('increasing', change.round());
-        } else if (change < -10) {
-          await _sendBPTrendNotification('decreasing', change.abs().round());
-        }
-      }
-    } catch (e) {
-      debugPrint('Error checking BP trends: $e');
-    }
-  }
-
-  /// Check medication adherence
   Future<void> _checkMedicationAdherence() async {
+    final meds = await _getActiveMedications();
+    if (meds.isEmpty) return;
+
+    final now = DateTime.now();
+    final startToday = DateTime(now.year, now.month, now.day);
+
+    // Doses that should have been taken by now, spread evenly across the day.
+    var dueSoFar = 0;
+    for (final m in meds) {
+      final perDay = m['doses_per_day'] as int;
+      dueSoFar += (perDay * (now.hour / 24)).round();
+    }
+    if (dueSoFar == 0) return;
+
+    final taken = await _countDosesTakenSince(startToday);
+    final missed = dueSoFar - taken;
+    if (missed <= 0) return;
+
+    // Once per calendar day.
+    final key = 'med_${startToday.toIso8601String().substring(0, 10)}';
+    if (await _alreadyNotified(key)) return;
+    await _showNotification(
+      title: '💊 Medication Reminder',
+      body:
+          'You have $missed dose${missed == 1 ? '' : 's'} due but not yet logged today. Consistent timing helps keep your blood pressure controlled.',
+      payload: 'medication',
+    );
+    await _markNotified(key, 'medication');
+  }
+
+  // ── Data fetches ────────────────────────────────────────────────────
+
+  /// Recent readings, newest first, each annotated with the chronologically
+  /// previous reading's values (for spike detection).
+  Future<List<Map<String, dynamic>>> _getRecentBPReadings({
+    required int days,
+  }) async {
     try {
-      final medications = await _getActiveMedications();
-      final today = DateTime.now();
+      final since = DateTime.now().subtract(Duration(days: days));
+      final snap = await _firestore
+          .collection('users')
+          .doc(_userId)
+          .collection('readings')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+          .orderBy('date', descending: true)
+          .get();
 
-      for (final medication in medications) {
-        if (!medication['taken_today']) {
-          final lastTaken = medication['last_taken'] as Timestamp?;
-          final daysSinceLastTaken = lastTaken != null
-              ? today.difference(lastTaken.toDate()).inDays
-              : 999;
+      final docs = snap.docs;
+      final out = <Map<String, dynamic>>[];
+      for (var i = 0; i < docs.length; i++) {
+        final data = docs[i].data();
+        final sys = (data['systolic'] as num?)?.toInt();
+        final dia = (data['diastolic'] as num?)?.toInt();
+        if (sys == null || dia == null) continue;
+        final prev = i + 1 < docs.length ? docs[i + 1].data() : null;
+        out.add({
+          'id': docs[i].id,
+          'systolic': sys,
+          'diastolic': dia,
+          'previous_systolic': (prev?['systolic'] as num?)?.toInt(),
+          'previous_diastolic': (prev?['diastolic'] as num?)?.toInt(),
+        });
+      }
+      return out;
+    } catch (e) {
+      debugPrint('Error fetching recent readings: $e');
+      return [];
+    }
+  }
 
-          if (daysSinceLastTaken >= 2) {
-            await _sendMedicationAdherenceNotification(
-              medication['name'] as String,
-              daysSinceLastTaken,
-            );
-          }
+  /// Readings from the 7–14 day window (the week before this one).
+  Future<List<Map<String, dynamic>>> _getPreviousWeekReadings() async {
+    try {
+      final now = DateTime.now();
+      final weekAgo = now.subtract(const Duration(days: 7));
+      final twoWeeksAgo = now.subtract(const Duration(days: 14));
+
+      final snap = await _firestore
+          .collection('users')
+          .doc(_userId)
+          .collection('readings')
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(twoWeeksAgo))
+          .where('date', isLessThan: Timestamp.fromDate(weekAgo))
+          .orderBy('date', descending: true)
+          .get();
+
+      return snap.docs
+          .map((d) {
+            final data = d.data();
+            return {
+              'systolic': (data['systolic'] as num?)?.toInt() ?? 0,
+              'diastolic': (data['diastolic'] as num?)?.toInt() ?? 0,
+            };
+          })
+          .where((m) => (m['systolic'] as int) > 0)
+          .toList();
+    } catch (e) {
+      debugPrint('Error fetching previous week readings: $e');
+      return [];
+    }
+  }
+
+  /// Active medications reduced to their per-day dose count.
+  Future<List<Map<String, dynamic>>> _getActiveMedications() async {
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(_userId)
+          .collection('medications')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snap.docs.map((d) {
+        final freq = (d.data()['frequency'] as String?) ?? 'onceDaily';
+        return {'doses_per_day': _dosesPerDay(freq)};
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching active medications: $e');
+      return [];
+    }
+  }
+
+  Future<int> _countDosesTakenSince(DateTime start) async {
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(_userId)
+          .collection('medicationLogs')
+          .get();
+
+      var count = 0;
+      for (final d in snap.docs) {
+        final data = d.data();
+        final raw = data['takenAt'];
+        DateTime? ts;
+        if (raw is Timestamp) {
+          ts = raw.toDate();
+        } else if (raw is String) {
+          ts = DateTime.tryParse(raw);
+        }
+        if (ts != null && !ts.isBefore(start) && data['skipped'] != true) {
+          count++;
         }
       }
+      return count;
     } catch (e) {
-      debugPrint('Error checking medication adherence: $e');
+      debugPrint('Error counting medication logs: $e');
+      return 0;
     }
   }
 
-  /// Send risk score change notification
-  Future<void> _sendRiskChangeNotification(
-    HealthRiskReport currentReport,
-    HistoricalScore previousScore,
-    double percentageChange,
-  ) async {
-    final isIncrease = currentReport.overallScore > previousScore.score;
-    final direction = isIncrease ? 'increased' : 'decreased';
-
-    String title;
-    String body;
-
-    if (isIncrease) {
-      title = '⚠️ Health Risk Increased';
-      body =
-          'Your risk score has $direction by ${(percentageChange * 100).round()}%. Current score: ${currentReport.overallScore}/100';
-    } else {
-      title = '🎉 Health Risk Improved';
-      body =
-          'Great news! Your risk score has $direction by ${(percentageChange * 100).round()}%. Current score: ${currentReport.overallScore}/100';
-    }
-
-    await _showNotification(
-      title: title,
-      body: body,
-      payload: 'risk_change',
-      data: {
-        'previous_score': previousScore.score,
-        'current_score': currentReport.overallScore,
-        'percentage_change': percentageChange,
-      },
-    );
-  }
-
-  /// Send anomaly notification
-  Future<void> _sendAnomalyNotification(
-    AnomalyResult anomaly,
-    Map<String, dynamic> reading,
-  ) async {
-    String title;
-    String body;
-
-    switch (anomaly.riskLevel) {
-      case AnomalyRiskLevel.high:
-        title = '🚨 Critical Health Alert';
-        body =
-            'Unusual BP pattern detected: ${reading['systolic']}/${reading['diastolic']} mmHg. Please check your reading.';
-        break;
-      case AnomalyRiskLevel.moderate:
-        title = '⚠️ Health Alert';
-        body =
-            'Unusual BP reading: ${reading['systolic']}/${reading['diastolic']} mmHg. Consider taking another reading.';
-        break;
-      case AnomalyRiskLevel.low:
-        title = 'ℹ️ Health Notice';
-        body =
-            'Slightly unusual BP reading: ${reading['systolic']}/${reading['diastolic']} mmHg.';
-        break;
+  int _dosesPerDay(String frequency) {
+    switch (frequency) {
+      case 'twiceDaily':
+        return 2;
+      case 'threeTimesDaily':
+        return 3;
+      case 'weekly':
+      case 'asNeeded':
+        return 0;
+      case 'onceDaily':
       default:
-        return; // Don't send notification for no risk
-    }
-
-    await _showNotification(
-      title: title,
-      body: body,
-      payload: 'anomaly',
-      data: {
-        'systolic': reading['systolic'],
-        'diastolic': reading['diastolic'],
-        'risk_level': anomaly.riskLevel.name,
-        'explanations': anomaly.explanations,
-      },
-    );
-  }
-
-  /// Send BP trend notification
-  Future<void> _sendBPTrendNotification(String direction, int change) async {
-    final title = direction == 'increasing'
-        ? '📈 BP Trend Alert'
-        : '📉 BP Trend Update';
-
-    final body = direction == 'increasing'
-        ? 'Your blood pressure has been trending upward by $change mmHg this week. Consider reviewing your lifestyle factors.'
-        : 'Great progress! Your blood pressure has decreased by $change mmHg this week. Keep up the good work!';
-
-    await _showNotification(
-      title: title,
-      body: body,
-      payload: 'bp_trend',
-      data: {'direction': direction, 'change': change},
-    );
-  }
-
-  /// Send medication adherence notification
-  Future<void> _sendMedicationAdherenceNotification(
-    String medicationName,
-    int daysSinceLastTaken,
-  ) async {
-    final title = '💊 Medication Reminder';
-    final body =
-        'You haven\'t taken $medicationName for $daysSinceLastTaken day${daysSinceLastTaken == 1 ? '' : 's'}. Please check your medication schedule.';
-
-    await _showNotification(
-      title: title,
-      body: body,
-      payload: 'medication_adherence',
-      data: {
-        'medication': medicationName,
-        'days_since_last_taken': daysSinceLastTaken,
-      },
-    );
-  }
-
-  /// Send daily health summary
-  Future<void> _sendDailyHealthSummary() async {
-    try {
-      final userProfile = await _buildUserProfile();
-      final riskReport = await _riskScoreService.calculateRiskScore(
-        userId: _userId,
-        userFeatures: userProfile,
-      );
-
-      final todayReadings = await _getRecentBPReadings(days: 1);
-      final todayAnomalies = await _getTodayAnomalies();
-
-      String summary = 'Daily Health Summary:\n';
-      summary +=
-          'Risk Score: ${riskReport.overallScore}/100 (${riskReport.category.name})\n';
-
-      if (todayReadings.isNotEmpty) {
-        final latest = todayReadings.first;
-        summary +=
-            'Latest BP: ${latest['systolic']}/${latest['diastolic']} mmHg\n';
-      }
-
-      if (todayAnomalies.isNotEmpty) {
-        summary += 'Anomalies detected: ${todayAnomalies.length}\n';
-      } else {
-        summary += 'No anomalies detected today\n';
-      }
-
-      await _showNotification(
-        title: '📊 Daily Health Summary',
-        body: summary,
-        payload: 'daily_summary',
-        data: {
-          'risk_score': riskReport.overallScore,
-          'readings_count': todayReadings.length,
-          'anomalies_count': todayAnomalies.length,
-        },
-      );
-    } catch (e) {
-      debugPrint('Error sending daily summary: $e');
+        return 1;
     }
   }
 
-  /// Show notification
-  Future<void> _showNotification({
-    required String title,
-    required String body,
-    required String payload,
-    Map<String, dynamic>? data,
-  }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'health_notifications',
-      'Health Notifications',
-      channelDescription: 'Important health alerts and updates',
-      importance: Importance.high,
-      priority: Priority.high,
-      enableVibration: true,
-      playSound: true,
-    );
+  // ── Risk-score helpers ──────────────────────────────────────────────
 
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notifications.show(
-      DateTime.now().millisecondsSinceEpoch.remainder(100000),
-      title,
-      body,
-      details,
-      payload: payload,
-    );
-  }
-
-  /// Handle notification tap
-  void _onNotificationTapped(NotificationResponse response) {
-    debugPrint('Notification tapped: ${response.payload}');
-    // Handle navigation based on payload
-    switch (response.payload) {
-      case 'risk_change':
-        // Navigate to insights/risk details
-        break;
-      case 'anomaly':
-        // Navigate to BP readings with anomaly highlighted
-        break;
-      case 'bp_trend':
-        // Navigate to trends screen
-        break;
-      case 'medication_adherence':
-        // Navigate to medications screen
-        break;
-      case 'daily_summary':
-        // Navigate to insights screen
-        break;
-    }
-  }
-
-  // Helper methods
   Future<Map<String, dynamic>> _buildUserProfile() async {
     try {
       final userRef = _firestore.collection('users').doc(_userId);
 
-      // Fetch user profile
       final userDoc = await userRef.get();
       final userData = userDoc.data() ?? {};
       final age = userData['age'] as int? ?? 40;
       final gender = userData['gender'] as String? ?? 'unknown';
 
-      // Fetch medical profile
-      final medicalDoc = await userRef
-          .collection('medicalProfile')
-          .doc('current')
-          .get();
+      final medicalDoc =
+          await userRef.collection('medicalProfile').doc('current').get();
       final medical = medicalDoc.exists
           ? medicalDoc.data() ?? {}
           : <String, dynamic>{};
@@ -492,7 +424,6 @@ class HealthNotificationService {
         bmi = weight / (heightM * heightM);
       }
 
-      // Map physical activity to a score
       final activityStr = (medical['physicalActivity'] as String?) ?? '';
       double activityScore = 1.0;
       switch (activityStr.toLowerCase()) {
@@ -514,7 +445,6 @@ class HealthNotificationService {
           break;
       }
 
-      // Fetch recent BP readings for averages
       final monthAgo = DateTime.now().subtract(const Duration(days: 30));
       final readingsQuery = await userRef
           .collection('readings')
@@ -542,7 +472,6 @@ class HealthNotificationService {
         }
       }
 
-      // Estimate sedentary minutes from activity level
       double sedentaryMinutes = 360;
       if (activityScore >= 2.0) {
         sedentaryMinutes = 180;
@@ -568,7 +497,6 @@ class HealthNotificationService {
       };
     } catch (e) {
       debugPrint('⚠️ Error building user profile, using defaults: $e');
-      // Fallback to safe defaults
       return {
         'age': 40,
         'gender': 'unknown',
@@ -586,7 +514,7 @@ class HealthNotificationService {
     }
   }
 
-  Future<HistoricalScore?> _getPreviousRiskScore() async {
+  Future<_PreviousScore?> _getPreviousRiskScore() async {
     try {
       final snapshot = await _firestore
           .collection('users')
@@ -600,8 +528,8 @@ class HealthNotificationService {
         final data = snapshot.docs.last.data();
         final timestamp =
             (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-        return HistoricalScore(
-          score: data['score'] as int,
+        return _PreviousScore(
+          score: (data['score'] as num?)?.toInt() ?? 0,
           timestamp: timestamp,
         );
       }
@@ -611,94 +539,82 @@ class HealthNotificationService {
     return null;
   }
 
-  Future<void> _storeRiskScore(HealthRiskReport report) async {
+  // ── De-duplication ──────────────────────────────────────────────────
+
+  Future<bool> _alreadyNotified(String key) async {
     try {
-      await _firestore
-          .collection('users')
-          .doc(_userId)
-          .collection('risk_scores')
-          .add({
-            'score': report.overallScore,
-            'category': report.category.name,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-    } catch (e) {
-      debugPrint('Error storing risk score: $e');
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getRecentBPReadings({
-    required int days,
-  }) async {
-    // Integration with existing BP data service
-    return [];
-  }
-
-  Future<List<Map<String, dynamic>>> _getPreviousWeekReadings() async {
-    // Integration with existing BP data service
-    return [];
-  }
-
-  Future<List<Map<String, dynamic>>> _getActiveMedications() async {
-    // Integration with existing medication service
-    return [];
-  }
-
-  Future<bool> _wasAnomalyNotified(AnomalyResult anomaly) async {
-    try {
-      final snapshot = await _firestore
+      final snap = await _firestore
           .collection('users')
           .doc(_userId)
           .collection('notification_history')
-          .where('type', isEqualTo: 'anomaly')
-          .where(
-            'created_at',
-            isGreaterThan: Timestamp.fromDate(
-              DateTime.now().subtract(const Duration(hours: 24)),
-            ),
-          )
+          .where('key', isEqualTo: key)
+          .limit(1)
           .get();
-
-      return snapshot.docs.isNotEmpty;
-    } catch (e) {
-      debugPrint('Error checking anomaly notification history: $e');
+      return snap.docs.isNotEmpty;
+    } catch (_) {
       return false;
     }
   }
 
-  Future<void> _markAnomalyNotified(AnomalyResult anomaly) async {
+  Future<void> _markNotified(String key, String type) async {
     try {
       await _firestore
           .collection('users')
           .doc(_userId)
           .collection('notification_history')
           .add({
-            'type': 'anomaly',
-            'risk_level': anomaly.riskLevel.name,
-            'explanations': anomaly.explanations,
-            'created_at': FieldValue.serverTimestamp(),
-          });
+        'key': key,
+        'type': type,
+        'created_at': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
-      debugPrint('Error marking anomaly notified: $e');
+      debugPrint('Error marking notification: $e');
     }
   }
 
-  Future<List<AnomalyResult>> _getTodayAnomalies() async {
-    // Integration with existing anomaly service
-    return [];
+  // ── Show ────────────────────────────────────────────────────────────
+
+  Future<void> _showNotification({
+    required String title,
+    required String body,
+    required String payload,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'health_notifications',
+      'Health Notifications',
+      channelDescription: 'Important health alerts and updates',
+      importance: Importance.high,
+      priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    await _notifications.show(
+      DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title,
+      body,
+      details,
+      payload: payload,
+    );
   }
 
-  /// Dispose resources
-  void dispose() {
-    _monitoringTimer?.cancel();
-    _dailySummaryTimer?.cancel();
+  /// Year + week-of-year, enough to de-duplicate once per calendar week.
+  String _weekKey(DateTime d) {
+    final firstDay = DateTime(d.year, 1, 1);
+    final week = (d.difference(firstDay).inDays / 7).floor();
+    return '${d.year}-w$week';
   }
 }
 
-// Data class for historical scores
-class HistoricalScore {
+/// A previously-recorded risk score used for change detection.
+class _PreviousScore {
+  const _PreviousScore({required this.score, required this.timestamp});
   final int score;
   final DateTime timestamp;
-
-  HistoricalScore({required this.score, required this.timestamp});
 }

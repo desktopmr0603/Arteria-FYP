@@ -22,6 +22,10 @@ class InsightModel {
   final String? type;
   final DateTime? createdAt;
 
+  /// BCP-47 language the title/message were generated in ('en'/'fr'). Older
+  /// documents predate this field and are treated as English.
+  final String lang;
+
   const InsightModel({
     required this.title,
     required this.message,
@@ -29,6 +33,7 @@ class InsightModel {
     this.icon,
     this.type,
     this.createdAt,
+    this.lang = 'en',
   });
 
   factory InsightModel.fromFirestore(
@@ -42,6 +47,7 @@ class InsightModel {
       icon: data['icon'] as String?,
       type: data['type'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      lang: (data['lang'] as String?)?.toLowerCase() ?? 'en',
     );
   }
 

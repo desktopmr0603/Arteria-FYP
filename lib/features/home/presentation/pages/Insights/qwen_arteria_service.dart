@@ -152,7 +152,7 @@ class QwenArteriaService {
 Arteria blood pressure app. 
 Context: Medical dictation, systolic/diastolic readings, pulse, medications.
 Keywords: systolic, diastolic, mmHg, pulse, heart rate.
-Meds: Telmisartan, Amlodipine, Lisinopril, Losartan, Metoprolol, Valsartan, Atenolol, Hydrochlorothiazide.
+Meds: Telmisartan, Amlodipine, Lisinopril, Losartan, Losartan potassium, Metoprolol, Valsartan, Atenolol, Hydrochlorothiazide, Nifedipine.
 Dosages: 5mg, 10mg, 20mg, 40mg, 80mg.
 ''',
                 'enable_vad': true,
@@ -499,7 +499,9 @@ Dosages: 5mg, 10mg, 20mg, 40mg, 80mg.
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'text': text, 'language': language}),
           )
-          .timeout(const Duration(seconds: 30));
+          // Long, doctor-style answers take longer to synthesize. 30s was
+          // tripping a TimeoutException on multi-sentence clinical replies.
+          .timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final audioBytes = response.bodyBytes;
